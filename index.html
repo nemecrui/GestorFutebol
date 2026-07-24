@@ -89,7 +89,13 @@
     padding:10px 16px;border-radius:20px;font-size:13px;z-index:50;opacity:0;transition:.3s;max-width:90%;text-align:center}
   .toast.show{opacity:1}
   .modal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:40;padding:20px}
-  .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;max-width:420px;width:100%;max-height:85vh;overflow:auto}
+  .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;max-width:420px;width:100%;max-height:85vh;overflow:auto;position:relative}
+  .ev-h{text-align:left}
+  .ev-a{text-align:right}
+  #goalBanner{position:absolute;left:0;right:0;top:36%;text-align:center;font-size:34px;font-weight:900;
+    color:var(--accent);text-shadow:0 2px 14px #000,0 0 4px #000;opacity:0;pointer-events:none;z-index:5}
+  #goalBanner.show{animation:goalpop .9s ease-out}
+  @keyframes goalpop{0%{opacity:0;transform:scale(.4)}20%{opacity:1;transform:scale(1.18)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
   .stat .v{font-size:18px;font-weight:800}.stat .l{font-size:11px;color:var(--muted)}
@@ -315,10 +321,17 @@ function simulate(home,away,hLine,aLine){
   const ax=clamp((aAtt-26)/9.5,0.3,3.9);
   const events=[]; let hg=0,ag=0;
   for(let m=1;m<=90;m++){
-    if(Math.random()<hx/90){hg++; events.push({m,side:"H",club:home,line:hLine})}
-    if(Math.random()<ax/90){ag++; events.push({m,side:"A",club:away,line:aLine})}
+    if(Math.random()<hx/90){hg++; events.push({m,side:"H",club:home,line:hLine,type:"goal"})}
+    if(Math.random()<ax/90){ag++; events.push({m,side:"A",club:away,line:aLine,type:"goal"})}
   }
+  genCards("H",home,hLine,events);
+  genCards("A",away,aLine,events);
   return {hg,ag,events};
+}
+function genCards(side,club,line,events){
+  const nY=ri(0,3), nR=Math.random()<0.08?1:0;   // amarelos ~0-3, vermelho raro
+  for(let k=0;k<nY;k++)events.push({m:ri(3,90),side,club,line,type:"yellow"});
+  if(nR)events.push({m:ri(20,90),side,club,line,type:"red"});
 }
 function aiStrength(club){
   const line=autoPickLineup(club,"4-4-2");
@@ -355,6 +368,7 @@ function applyResult(home,away,hg,ag,events){
   else if(hg<ag){away.W++;home.L++;away.Pts+=3}
   else{home.D++;away.D++;home.Pts++;away.Pts++}
   events.forEach(e=>{
+    if(e.type!=="goal")return;                    // ignora cartões na contagem de golos
     const scorers=e.line.map(id=>e.club.squad.find(p=>p.id===id)).filter(p=>p&&p.pos!=="GR");
     const w=scorers.map(p=>(p.pos==="AVA"?3:p.pos==="MED"?1.5:0.5)*effSkill(p));
     const s=weighted(scorers,w); if(s)s.goals++;
@@ -661,7 +675,7 @@ function viewTable(){
     t.forEach((c,i)=>{
       const zone=i<G.upSlots?"zone-up":(i>=n-G.downSlots?"zone-down":"");
       h+=`<tr class="${c.id===G.myId?'me':''} ${zone}">
-      <td>${i+1}</td><td class="name">${clubTag(c,true)}</td><td>${c.P}</td><td>${c.W}</td><td>${c.D}</td><td>${c.L}</td>
+      <td>${i+1}</td><td class="name">${swatch(c,true)} ${c.name}</td><td>${c.P}</td><td>${c.W}</td><td>${c.D}</td><td>${c.L}</td>
       <td>${(c.GF-c.GA>0?'+':'')+(c.GF-c.GA)}</td><td><b>${c.Pts}</b></td></tr>`;});
     h+=`</tbody></table></div>
       <div class="card muted" style="font-size:12px"><span style="color:var(--green2)">▌</span> Sobe ao Pró-Nacional (${G.upSlots}) &nbsp; <span style="color:var(--red)">▌</span> Desce à 1ª Divisão (${G.downSlots})</div>`;
@@ -669,7 +683,7 @@ function viewTable(){
     const all=[]; G.clubs.forEach(c=>c.squad.forEach(p=>{if(p.goals>0)all.push({p,c})}));
     all.sort((a,b)=>b.p.goals-a.p.goals);
     h+=`<div class="card" style="padding:6px"><table><thead><tr><th>#</th><th class="name">Jogador</th><th>Clube</th><th>⚽</th></tr></thead><tbody>`;
-    all.slice(0,20).forEach((x,i)=>{h+=`<tr class="${x.c.id===G.myId?'me':''}"><td>${i+1}</td><td class="name">${x.p.name}</td><td>${x.c.short}</td><td><b>${x.p.goals}</b></td></tr>`});
+    all.slice(0,20).forEach((x,i)=>{h+=`<tr class="${x.c.id===G.myId?'me':''}"><td>${i+1}</td><td class="name">${x.p.name}</td><td class="name">${swatch(x.c,true)} ${x.c.name}</td><td><b>${x.p.goals}</b></td></tr>`});
     if(!all.length)h+=`<tr><td colspan="4" class="muted">Ainda sem golos.</td></tr>`;
     h+=`</tbody></table></div>`;
   } else {
@@ -677,8 +691,8 @@ function viewTable(){
     h+=`<div class="card"><h2>Jornada ${wk+1}${G.week>=G.fixtures.length?' (final)':''}</h2>`+
       round.map(([hh,aa],i)=>{const H=G.clubs[hh],A=G.clubs[aa],r=res&&res[i];
         return `<div class="fx" style="${(hh===G.myId||aa===G.myId)?'border-color:var(--accent)':''}">
-          <div class="t">${clubTag(H)}</div><div class="sc">${r?r.hg+' - '+r.ag:'–'}</div>
-          <div class="t a">${clubTag(A)}</div></div>`;}).join("")+`</div>`;
+          <div class="t">${clubTagFull(H)}</div><div class="sc">${r?r.hg+' - '+r.ag:'–'}</div>
+          <div class="t a">${clubTagFull(A)}</div></div>`;}).join("")+`</div>`;
   }
   return h;
 }
@@ -692,7 +706,8 @@ function playMatchAnimated(){
   const aLine=next.home?autoPickLineup(away,"4-4-2"):G.lineup;
   const r=simulate(home,away,hLine,aLine);
   const mo=document.createElement("div");mo.className="modal";
-  mo.innerHTML=`<div class="box"><div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}</h2></div>
+  mo.innerHTML=`<div class="box"><div id="goalBanner">⚽ GOLO!</div>
+    <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}</h2></div>
     <div class="fx"><div class="t">${clubTag(home)}</div>
       <div class="sc" id="liveScore">0 - 0</div><div class="t a">${clubTag(away)}</div></div>
     <div class="center muted" id="liveMin">0'</div><div class="live" id="liveEv"></div>
@@ -706,18 +721,34 @@ function playMatchAnimated(){
     playWeek(r);const done=mo.querySelector("#liveDone");done.style.display="block";
     mo.querySelector("#liveSkip").style.display="none";done.onclick=()=>{mo.remove();render()};}
   mo.querySelector("#liveSkip").onclick=finish;
+  const goalBanner=mo.querySelector("#goalBanner");
+  function addEvLine(e,icon,name){
+    const club=e.side==="H"?home.short:away.short;
+    const d=document.createElement("div");d.className="ev ev-"+(e.side==="H"?"h":"a");
+    d.innerHTML=`<b>${e.m}'</b> ${icon} ${club} — ${name}`;
+    evBox.prepend(d);
+  }
+  function goalFlash(){
+    goalBanner.classList.remove("show"); void goalBanner.offsetWidth; goalBanner.classList.add("show");
+    if(scoreEl.animate)scoreEl.animate([{transform:"scale(1)"},{transform:"scale(1.35)"},{transform:"scale(1)"}],{duration:450});
+  }
   timer=setInterval(()=>{minute+=3;if(minute>90)minute=90;minEl.textContent=minute+"'";
-    while(i<evs.length&&evs[i].m<=minute){const e=evs[i];if(e.side==="H")hg++;else ag++;
-      scoreEl.textContent=hg+" - "+ag;
-      const d=document.createElement("div");d.className="ev";
-      d.innerHTML=`<b>${e.m}'</b> ⚽ ${(e.side==="H"?home.short:away.short)} — ${pickScorerName(e)}`;
-      evBox.prepend(d);i++;}
+    while(i<evs.length&&evs[i].m<=minute){const e=evs[i];i++;
+      if(e.type==="goal"){if(e.side==="H")hg++;else ag++;scoreEl.textContent=hg+" - "+ag;goalFlash();addEvLine(e,"⚽",pickScorerName(e));}
+      else if(e.type==="yellow"){addEvLine(e,"🟨",pickFoulName(e));}
+      else if(e.type==="red"){addEvLine(e,"🟥",pickFoulName(e));}
+    }
     if(minute>=90)finish();},220);
 }
 function pickScorerName(e){
   const c=e.line.map(id=>e.club.squad.find(p=>p.id===id)).filter(p=>p&&p.pos!=="GR");
   const w=c.map(p=>(p.pos==="AVA"?3:p.pos==="MED"?1.5:0.6)*effSkill(p));
   const s=weighted(c,w);return s?s.name:"golo";
+}
+function pickFoulName(e){
+  const c=e.line.map(id=>e.club.squad.find(p=>p.id===id)).filter(Boolean);
+  const w=c.map(p=>(p.pos==="DEF"?3:p.pos==="MED"?2:p.pos==="GR"?0.5:1));
+  const s=weighted(c,w);return s?s.name:"jogador";
 }
 
 // ---- arrastar jogadores (campo/suplentes) ----
