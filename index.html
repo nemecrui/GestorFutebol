@@ -199,6 +199,24 @@ const RESERVE=[
   {n:"GDR Abação",           s:"ABA", str:60, c1:"#1d4ed8", c2:"#c1121f"},
   {n:"GD São Cristóvão",     s:"SCR", str:59, c1:"#7b1e2b", c2:"#f2c200"},
 ];
+// ---- 1ª Divisão Distrital AF Braga — Série D (segunda divisão jogável) ----
+// Clubes reais; níveis abaixo da Divisão de Honra. Cores PROVISÓRIAS.
+const DIV1=[
+  {n:"Desportivo de Ronfe",  s:"RON", str:58, c1:"#c1121f", c2:"#ffffff"},
+  {n:"AD Serzedelo",         s:"SER", str:57, c1:"#1d4ed8", c2:"#ffffff"},
+  {n:"GD Ribeirão",          s:"RIB", str:56, c1:"#111111", c2:"#f2c200"},
+  {n:"AD Lousado",           s:"LOU", str:55, c1:"#15803d", c2:"#ffffff"},
+  {n:"FC Delães",            s:"DEL", str:54, c1:"#6b21a8", c2:"#ffffff"},
+  {n:"GD Calendário",        s:"CAL", str:54, c1:"#e07a1f", c2:"#111111"},
+  {n:"CD Fradelos",          s:"FRA", str:53, c1:"#1d4ed8", c2:"#c1121f"},
+  {n:"GD São Cosme",         s:"SCO", str:52, c1:"#7b1e2b", c2:"#ffffff"},
+  {n:"GD Airão",             s:"AIR", str:52, c1:"#14274e", c2:"#f2c200"},
+  {n:"GD Gondifelos",        s:"GON", str:51, c1:"#15803d", c2:"#111111"},
+  {n:"Juv. de Mouquim",      s:"MOU", str:50, c1:"#c1121f", c2:"#111111"},
+  {n:"GD Louro",             s:"LOR", str:49, c1:"#2f9be0", c2:"#ffffff"},
+  {n:"Ruivanense FC",        s:"RUI", str:48, c1:"#f2c200", c2:"#1d4ed8"},
+  {n:"GD Carreira",          s:"CAR", str:47, c1:"#111111", c2:"#ffffff"},
+];
 
 let G=null;
 
@@ -222,7 +240,7 @@ function makePlayer(pos,base){
   const potential=clamp(skill+(age<23?ri(2,12):ri(-2,3)),skill,92);
   const value=Math.max(0.03, Math.round(Math.pow(skill/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
   return {id:PID++, name:pick(FIRST)+" "+pick(LAST), pos, skill, age, potential,
-    value, form:0, goals:0, apps:0, wage:Math.round(value*0.12*100)/100+0.01};
+    value, form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
 }
 function makeSquad(base){
   const sq=[];
@@ -238,22 +256,26 @@ function clubFromDef(d,id){
     susp:[], P:0,W:0,D:0,L:0,GF:0,GA:0,Pts:0};
 }
 
+// ---------- helpers de divisão ----------
+function myDivObj(){return G.divisions[G.myDiv];}
+function myClubs(){return myDivObj().clubs;}
+function me(){return myClubs()[G.myId];}
+
 // ---------- novo jogo ----------
-function newGame(myClubIdx){
+function makeDivision(name,defs,upSlots,downSlots){
+  const clubs=defs.map((d,i)=>clubFromDef(d,i));
+  return {name, clubs, fixtures:buildFixtures(clubs.length), results:[], week:0, upSlots, downSlots};
+}
+function newGame(divIdx, clubIdx){
   PID=1;
-  const clubs=CLUBS.map((d,i)=>clubFromDef(d,i));
-  const reserve=RESERVE.map(d=>({name:d.n,short:d.s,strength:d.str,c1:d.c1,c2:d.c2}));
-  const me=clubs[myClubIdx];
-  G={
-    version:3, myId:myClubIdx, week:0, season:1, date:"Set",
-    clubs, reserve, fixtures:buildFixtures(clubs.length),
-    formation:"4-4-2", mentality:"Equilibrado",
-    lineup:autoPickLineup(me,"4-4-2"),
-    results:[], news:[], seasonDone:false,
-    upSlots:1, downSlots:3
-  };
-  addNews("Início da época na Divisão de Honra (AF Braga) com o "+me.name+".");
-  addNews("Verba de transferências: "+money(me.budget)+".");
+  const d0=makeDivision("Divisão de Honra", CLUBS, 0, 3);   // topo: campeão fica; 3 descem
+  const d1=makeDivision("1ª Divisão", DIV1, 3, 0);          // 3 sobem; nada abaixo
+  G={version:4, divisions:[d0,d1], myDiv:divIdx, myId:clubIdx,
+     week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
+     lineup:[], news:[], seasonDone:false};
+  G.lineup=autoPickLineup(me(),G.formation);
+  addNews("Início da carreira no "+me().name+" ("+myDivObj().name+").");
+  addNews("Verba de transferências: "+money(me().budget)+".");
   save();
 }
 
@@ -369,27 +391,39 @@ function aiStrength(club){
 }
 
 // ---------- jornada ----------
-function playWeek(preMy){
-  if(G.week>=G.fixtures.length)return;
-  const round=G.fixtures[G.week], weekRes=[];
+function simRound(d, preMy, hasUser){
+  if(d.week>=d.fixtures.length)return;
+  const round=d.fixtures[d.week], weekRes=[];
   round.forEach(([h,a])=>{
-    const home=G.clubs[h], away=G.clubs[a];
+    const home=d.clubs[h], away=d.clubs[a];
     let r;
-    if(preMy&&(h===G.myId||a===G.myId)){
-      r=preMy;                                   // usa o resultado já mostrado na janela do jogo
-    } else {
-      const hLine=(h===G.myId)?availableLineup(home,G.lineup):autoPickLineup(home,"4-4-2",home.susp);
-      const aLine=(a===G.myId)?availableLineup(away,G.lineup):autoPickLineup(away,"4-4-2",away.susp);
+    const userMatch=hasUser&&(h===G.myId||a===G.myId);
+    if(preMy&&userMatch){ r=preMy; }
+    else {
+      const hLine=(hasUser&&h===G.myId)?availableLineup(home,G.lineup):autoPickLineup(home,"4-4-2",home.susp);
+      const aLine=(hasUser&&a===G.myId)?availableLineup(away,G.lineup):autoPickLineup(away,"4-4-2",away.susp);
       r=simulate(home,away,hLine,aLine);
     }
     applyResult(home,away,r.hg,r.ag,r.events);
-    home.susp=r.expelledH||[]; away.susp=r.expelledA||[];   // ban para o próximo jogo
+    home.susp=r.expelledH||[]; away.susp=r.expelledA||[];
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
-  G.results.push(weekRes);
-  G.week++;
+  d.results.push(weekRes);
+  d.week++;
+}
+function playWeek(preMy){
+  const myD=myDivObj();
+  if(myD.week>=myD.fixtures.length)return;
+  simRound(myD, preMy, true);
+  // as outras divisões avançam em paralelo (fundo)
+  G.divisions.forEach((d,di)=>{ if(di!==G.myDiv && d.week<d.fixtures.length) simRound(d,null,false); });
+  G.week=myD.week;
   advanceMonth();
-  if(G.week>=G.fixtures.length)endSeason();
+  if(myD.week>=myD.fixtures.length){
+    // garante que as outras divisões terminam a época
+    G.divisions.forEach((d,di)=>{ if(di!==G.myDiv){ while(d.week<d.fixtures.length) simRound(d,null,false); } });
+    endSeason();
+  }
   save();
 }
 function applyResult(home,away,hg,ag,events){
@@ -398,10 +432,15 @@ function applyResult(home,away,hg,ag,events){
   else if(hg<ag){away.W++;home.L++;away.Pts+=3}
   else{home.D++;away.D++;home.Pts++;away.Pts++}
   events.forEach(e=>{
-    if(e.type!=="goal")return;                    // ignora cartões na contagem de golos
-    const scorers=e.line.map(id=>e.club.squad.find(p=>p.id===id)).filter(p=>p&&p.pos!=="GR");
-    const w=scorers.map(p=>(p.pos==="AVA"?3:p.pos==="MED"?1.5:0.5)*effSkill(p));
-    const s=weighted(scorers,w); if(s)s.goals++;
+    if(e.type==="goal"){
+      const scorers=e.line.map(id=>e.club.squad.find(p=>p.id===id)).filter(p=>p&&p.pos!=="GR");
+      const w=scorers.map(p=>(p.pos==="AVA"?3:p.pos==="MED"?1.5:0.5)*effSkill(p));
+      const s=weighted(scorers,w); if(s)s.goals++;
+    } else {                                        // acumula cartões por jogador
+      const club=e.side==="H"?home:away;
+      const p=club.squad.find(x=>x.id===e.pid);
+      if(p){ if(e.type==="yellow")p.yc=(p.yc||0)+1; else if(e.type==="red")p.rc=(p.rc||0)+1; }
+    }
   });
 }
 function weighted(items,w){
@@ -412,92 +451,82 @@ function weighted(items,w){
 }
 const MONTHS=["Set","Out","Nov","Dez","Jan","Fev","Mar","Abr","Mai"];
 function advanceMonth(){
-  const idx=Math.min(MONTHS.length-1,Math.floor(G.week/(G.fixtures.length/MONTHS.length)));
+  const d=myDivObj();
+  const idx=Math.min(MONTHS.length-1,Math.floor(d.week/(d.fixtures.length/MONTHS.length)));
   G.date=MONTHS[idx];
 }
 
 // ---------- fim de época + subida/descida ----------
 function endSeason(){
   G.seasonDone=true;
-  const table=sortedTable();
-  const champ=table[0];
-  const meRank=table.findIndex(c=>c.id===G.myId)+1;
-  addNews("Fim da época "+G.season+". Campeão: "+champ.name+". Ficaste em "+meRank+"º.");
-  const prize=Math.max(0.03,(G.clubs.length-meRank+1)*0.02);
-  G.clubs[G.myId].budget=Math.round((G.clubs[G.myId].budget+prize)*100)/100;
+  const d=myDivObj(); const table=sortedTable(d);
+  const champ=table[0]; const meRank=table.findIndex(c=>c.id===G.myId)+1;
+  addNews("Fim da época "+G.season+" ("+d.name+"). Campeão: "+champ.name+". Ficaste em "+meRank+"º.");
+  const prize=Math.max(0.03,(d.clubs.length-meRank+1)*0.02);
+  me().budget=Math.round((me().budget+prize)*100)/100;
 }
 function newSeason(){
-  const table=sortedTable();
-  const up=table.slice(0,G.upSlots);
-  const down=table.slice(table.length-G.downSlots);
-  let meMoved=null;
-  if(up.some(c=>c.id===G.myId))meMoved="up";
-  else if(down.some(c=>c.id===G.myId))meMoved="down";
-  const mineShort=G.clubs[G.myId].short;
-
-  // o teu clube mantém-se sempre nesta liga (continuidade de carreira):
-  // nunca "sai" nem vai para a reserva, evitando duplicados
-  const leavingClubs=[...up,...down].filter(c=>c.id!==G.myId);
-  const leavingIds=new Set(leavingClubs.map(c=>c.id));
-  const staying=G.clubs.filter(c=>!leavingIds.has(c.id));
-  const nIn=leavingClubs.length;
-  const incoming=[];
-  for(let i=0;i<nIn;i++){
-    const d=G.reserve.shift();
-    if(!d)break;
-    incoming.push(clubFromDef({n:d.name,s:d.short,str:d.strength,c1:d.c1,c2:d.c2}, 2000+G.season*20+i));
-  }
-  leavingClubs.forEach(c=>G.reserve.push({name:c.name,short:c.short,strength:c.strength,c1:c.c1,c2:c.c2}));
-
-  let clubs=staying.concat(incoming);
-  clubs.forEach((c,i)=>c.id=i);
-  const myId=clubs.findIndex(c=>c.short===mineShort);
-
-  clubs.forEach(c=>{c.P=c.W=c.D=c.L=c.GF=c.GA=c.Pts=0;
-    c.squad.forEach(p=>{p.goals=0;p.apps=0;
-      if(p.age<24&&p.skill<p.potential)p.skill=clamp(p.skill+ri(0,3),38,p.potential);
-      else if(p.age>32)p.skill=clamp(p.skill-ri(0,2),38,99);
-      p.age++;
+  const d0=G.divisions[0], d1=G.divisions[1];
+  const t0=sortedTable(d0), t1=sortedTable(d1);
+  const releg=t0.slice(t0.length-d0.downSlots);     // descem da Honra
+  const promo=t1.slice(0,d1.upSlots);               // sobem da 1ª Divisão
+  const mineShort=me().short;
+  // trocar clubes entre as duas divisões
+  d0.clubs=d0.clubs.filter(c=>!releg.includes(c)).concat(promo);
+  d1.clubs=d1.clubs.filter(c=>!promo.includes(c)).concat(releg);
+  // reindexar, reset de stats/fixtures e evolução de idades
+  G.divisions.forEach(d=>{
+    d.clubs.forEach((c,i)=>c.id=i);
+    d.clubs.forEach(c=>{c.P=c.W=c.D=c.L=c.GF=c.GA=c.Pts=0; c.susp=[];
+      c.squad.forEach(p=>{p.goals=0;p.apps=0;p.yc=0;p.rc=0;
+        if(p.age<24&&p.skill<p.potential)p.skill=clamp(p.skill+ri(0,3),38,p.potential);
+        else if(p.age>32)p.skill=clamp(p.skill-ri(0,2),38,99);
+        p.age++;
+      });
     });
+    d.fixtures=buildFixtures(d.clubs.length); d.results=[]; d.week=0;
   });
-
-  G.clubs=clubs; G.myId=myId; G.season++; G.week=0; G.results=[]; G.seasonDone=false; G.date="Set";
-  G.fixtures=buildFixtures(clubs.length);
-  G.lineup=autoPickLineup(clubs[myId],G.formation);
-  if(meMoved==="up")addNews("Foste campeão e subiste! (continuas jogável nesta liga para a carreira seguir)");
-  else if(meMoved==="down")addNews("Desceste de divisão, mas continuas a competir aqui.");
-  addNews("Nova época "+G.season+". Entraram: "+incoming.map(c=>c.short).join(", ")+".");
+  // recolocar o meu clube na divisão certa
+  for(let di=0;di<G.divisions.length;di++){
+    const idx=G.divisions[di].clubs.findIndex(c=>c.short===mineShort);
+    if(idx>=0){G.myDiv=di; G.myId=idx; break;}
+  }
+  G.season++; G.week=0; G.seasonDone=false; G.date="Set";
+  G.lineup=autoPickLineup(me(),G.formation);
+  if(promo.some(c=>c.short===mineShort))addNews("Subiste à Divisão de Honra!");
+  else if(releg.some(c=>c.short===mineShort))addNews("Desceste à 1ª Divisão.");
+  addNews("Nova época "+G.season+". Sobem: "+promo.map(c=>c.short).join(", ")+". Descem: "+releg.map(c=>c.short).join(", ")+".");
   save();
 }
 
-function sortedTable(){
-  return G.clubs.slice().sort((a,b)=>
+function sortedTable(d){
+  return d.clubs.slice().sort((a,b)=>
     b.Pts-a.Pts||(b.GF-b.GA)-(a.GF-a.GA)||b.GF-a.GF||a.name.localeCompare(b.name));
 }
 
 // ---------- mercado ----------
 function buyPlayer(fromClubId,playerId){
-  const me=G.clubs[G.myId], from=G.clubs[fromClubId];
+  const meC=me(), from=myClubs()[fromClubId];
   const p=from.squad.find(x=>x.id===playerId); if(!p)return;
   const price=Math.round(p.value*rnd(1.05,1.35)*100)/100;
-  if(me.budget<price){toast("Verba insuficiente ("+money(price)+")");return}
-  me.budget=Math.round((me.budget-price)*100)/100;
-  from.squad=from.squad.filter(x=>x.id!==playerId); me.squad.push(p);
+  if(meC.budget<price){toast("Verba insuficiente ("+money(price)+")");return}
+  meC.budget=Math.round((meC.budget-price)*100)/100;
+  from.squad=from.squad.filter(x=>x.id!==playerId); meC.squad.push(p);
   addNews("Contrataste "+p.name+" ("+p.skill+") por "+money(price)+".");
   toast("Contratado: "+p.name);
-  G.lineup=autoPickLineup(me,G.formation); save(); render();
+  G.lineup=autoPickLineup(meC,G.formation); save(); render();
 }
 function sellPlayer(playerId){
-  const me=G.clubs[G.myId];
-  if(me.squad.length<=12){toast("Plantel demasiado pequeno");return}
-  const p=me.squad.find(x=>x.id===playerId); if(!p)return;
+  const meC=me();
+  if(meC.squad.length<=12){toast("Plantel demasiado pequeno");return}
+  const p=meC.squad.find(x=>x.id===playerId); if(!p)return;
   const price=Math.round(p.value*rnd(0.75,1.05)*100)/100;
-  me.budget=Math.round((me.budget+price)*100)/100;
-  me.squad=me.squad.filter(x=>x.id!==playerId);
-  const other=pick(G.clubs.filter(c=>c.id!==G.myId)); other.squad.push(p);
+  meC.budget=Math.round((meC.budget+price)*100)/100;
+  meC.squad=meC.squad.filter(x=>x.id!==playerId);
+  const other=pick(myClubs().filter(c=>c.id!==G.myId)); other.squad.push(p);
   addNews("Vendeste "+p.name+" por "+money(price)+".");
   toast("Vendido: "+p.name+" ("+money(price)+")");
-  G.lineup=autoPickLineup(me,G.formation); save(); render();
+  G.lineup=autoPickLineup(meC,G.formation); save(); render();
 }
 function addNews(t){G.news.unshift({t}); if(G.news.length>40)G.news.pop()}
 
@@ -518,10 +547,10 @@ function clubTag(club,sm){return swatch(club,sm)+`<span>${club.short}</span>`}
 function clubTagFull(club){return swatch(club)+`<span class="full">${club.name}</span>`}
 
 function header(){
-  const me=G.clubs[G.myId];
-  $("#hBadge").style.background=`linear-gradient(135deg,${me.c1} 0 55%,${me.c2} 55% 100%)`;
-  $("#hSub").textContent=me.name+" · Div. Honra";
-  $("#hCash").textContent=money(me.budget);
+  const c=me();
+  $("#hBadge").style.background=`linear-gradient(135deg,${c.c1} 0 55%,${c.c2} 55% 100%)`;
+  $("#hSub").textContent=c.name+" · "+myDivObj().name;
+  $("#hCash").textContent=money(c.budget);
 }
 function render(){
   if(!G)return; header();
@@ -542,35 +571,35 @@ function renderNav(){
 
 // ---- INÍCIO ----
 function viewHome(){
-  const me=G.clubs[G.myId], table=sortedTable();
-  const rank=table.findIndex(c=>c.id===G.myId)+1;
-  const next=nextFixture(), done=G.week>=G.fixtures.length;
+  const c=me(), d=myDivObj(), table=sortedTable(d);
+  const rank=table.findIndex(x=>x.id===G.myId)+1;
+  const next=nextFixture(), done=d.week>=d.fixtures.length;
   let h="";
   if(!done&&next){
-    const opp=G.clubs[next.opp], home=next.home?me:opp, away=next.home?opp:me;
-    h+=`<div class="card"><h2>Jornada ${G.week+1} · ${G.date}</h2>
+    const opp=myClubs()[next.opp], home=next.home?c:opp, away=next.home?opp:c;
+    h+=`<div class="card"><h2>${d.name} · Jornada ${d.week+1} · ${G.date}</h2>
       <div class="fx"><div class="t">${clubTagFull(home)}</div>
       <div class="sc">${next.home?"CASA":"FORA"}</div>
       <div class="t a">${clubTagFull(away)}</div></div>
-      ${me.susp&&me.susp.length?`<div class="center" style="color:var(--red);font-size:12px;margin:6px 0">⛔ Suspenso(s): ${me.squad.filter(p=>me.susp.includes(p.id)).map(p=>p.name).join(", ")}</div>`:""}
+      ${c.susp&&c.susp.length?`<div class="center" style="color:var(--red);font-size:12px;margin:6px 0">⛔ Suspenso(s): ${c.squad.filter(p=>c.susp.includes(p.id)).map(p=>p.name).join(", ")}</div>`:""}
       <button class="btn" id="btnPlay" style="margin-top:4px">▶ Jogar jornada</button>
       <button class="btn sec small" id="btnSim" style="width:100%;margin-top:8px">⏩ Simular resto da época</button></div>`;
   } else if(G.seasonDone){
     h+=`<div class="card center"><h2>Época ${G.season} terminada</h2>
       <div class="big">${rank}º lugar</div>
-      <div class="muted" style="margin:6px 0 12px">${table[0].name} foi campeão</div>
+      <div class="muted" style="margin:6px 0 12px">${table[0].name} — campeão da ${d.name}</div>
       <button class="btn" id="btnNewSeason">▶ Começar época ${G.season+1}</button></div>`;
   }
-  h+=`<div class="card"><h2>Situação</h2><div class="grid2">
+  h+=`<div class="card"><h2>Situação · ${d.name}</h2><div class="grid2">
       <div class="stat"><div class="v">${rank}º</div><div class="l">Classificação</div></div>
-      <div class="stat"><div class="v">${me.Pts}</div><div class="l">Pontos</div></div>
-      <div class="stat"><div class="v">${me.W}-${me.D}-${me.L}</div><div class="l">V-E-D</div></div>
-      <div class="stat"><div class="v">${me.GF}:${me.GA}</div><div class="l">Golos</div></div>
+      <div class="stat"><div class="v">${c.Pts}</div><div class="l">Pontos</div></div>
+      <div class="stat"><div class="v">${c.W}-${c.D}-${c.L}</div><div class="l">V-E-D</div></div>
+      <div class="stat"><div class="v">${c.GF}:${c.GA}</div><div class="l">Golos</div></div>
     </div></div>`;
-  if(G.results.length){
-    const last=G.results[G.results.length-1];
+  if(d.results.length){
+    const last=d.results[d.results.length-1];
     h+=`<div class="card"><h2>Última jornada</h2>`+last.map(r=>{
-      const H=G.clubs[r.h],A=G.clubs[r.a],mine=(r.h===G.myId||r.a===G.myId);
+      const H=myClubs()[r.h],A=myClubs()[r.a],mine=(r.h===G.myId||r.a===G.myId);
       return `<div class="fx" style="${mine?'border-color:var(--accent)':''}">
         <div class="t">${clubTagFull(H)}</div><div class="sc">${r.hg} - ${r.ag}</div>
         <div class="t a">${clubTagFull(A)}</div></div>`;
@@ -581,8 +610,9 @@ function viewHome(){
   return h;
 }
 function nextFixture(){
-  if(G.week>=G.fixtures.length)return null;
-  for(const [h,a] of G.fixtures[G.week]){
+  const d=myDivObj();
+  if(d.week>=d.fixtures.length)return null;
+  for(const [h,a] of d.fixtures[d.week]){
     if(h===G.myId)return{opp:a,home:true};
     if(a===G.myId)return{opp:h,home:false};
   }
@@ -592,12 +622,12 @@ function nextFixture(){
 // ---- PLANTEL ----
 let squadFilter="all";
 function viewSquad(){
-  const me=G.clubs[G.myId], inXI=new Set(G.lineup);
-  let list=me.squad.slice().sort((a,b)=>POS.indexOf(a.pos)-POS.indexOf(b.pos)||effSkill(b)-effSkill(a));
+  const c=me(), inXI=new Set(G.lineup);
+  let list=c.squad.slice().sort((a,b)=>POS.indexOf(a.pos)-POS.indexOf(b.pos)||effSkill(b)-effSkill(a));
   if(squadFilter!=="all")list=list.filter(p=>p.pos===squadFilter);
-  const avg=Math.round(G.lineup.map(id=>me.squad.find(p=>p.id===id)).filter(Boolean)
+  const avg=Math.round(G.lineup.map(id=>c.squad.find(p=>p.id===id)).filter(Boolean)
     .reduce((s,p)=>s+effSkill(p),0)/Math.max(1,G.lineup.length));
-  let h=`<div class="card between row"><div class="row">${swatch(me)}<div><b>${me.name}</b><div class="muted" style="font-size:11px">${me.squad.length} jogadores</div></div></div>
+  let h=`<div class="card between row"><div class="row">${swatch(c)}<div><b>${c.name}</b><div class="muted" style="font-size:11px">${c.squad.length} jogadores</div></div></div>
     <div class="rating ${ratingClass(avg)}">${avg}</div></div>`;
   h+=`<div class="seg" id="segPos">`+["all",...POS].map(p=>
     `<button data-p="${p}" class="${squadFilter===p?'active':''}">${p==="all"?"Todos":p}</button>`).join("")+`</div>`;
@@ -606,7 +636,7 @@ function viewSquad(){
     return `<div class="pl"><div class="num">${on?'<span style="color:var(--accent)">●</span>':'○'}</div>
       <div class="rating ${ratingClass(effSkill(p))}">${effSkill(p)}</div>
       <div class="info"><div class="nm">${p.name}</div>
-        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${money(p.value)} · ⚽${p.goals}</div></div>
+        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${money(p.value)} · ⚽${p.goals} · 🟨${p.yc||0} 🟥${p.rc||0}</div></div>
       <button class="btn small ${on?'warn':'sec'}" data-sell="${p.id}">Vender</button></div>`;
   }).join("")+`</div>`;
   return h;
@@ -614,10 +644,10 @@ function viewSquad(){
 
 // ---- TÁTICA (com campo) ----
 function viewTactics(){
-  const me=G.clubs[G.myId];
-  const s=teamStrength(me,G.lineup,G.formation,G.mentality);
-  let h=`<div class="card"><h2>Campo · ${G.formation}</h2>${pitchHTML(me)}</div>`;
-  h+=`<div class="card"><h2>Suplentes</h2>${benchHTML(me)}</div>`;
+  const c=me();
+  const s=teamStrength(c,G.lineup,G.formation,G.mentality);
+  let h=`<div class="card"><h2>Campo · ${G.formation}</h2>${pitchHTML(c)}</div>`;
+  h+=`<div class="card"><h2>Suplentes</h2>${benchHTML(c)}</div>`;
   h+=`<div class="card"><h2>Formação</h2>
     <select id="selForm">${Object.keys(FORMATIONS).map(f=>`<option ${f===G.formation?'selected':''}>${f}</option>`).join("")}</select></div>`;
   h+=`<div class="card"><h2>Mentalidade</h2>
@@ -675,15 +705,15 @@ function bar(l,v){const pct=clamp((v-40)/55*100,3,100);
 // ---- MERCADO ----
 let marketPos="all";
 function viewMarket(){
-  const me=G.clubs[G.myId];
+  const meC=me();
   let pool=[];
-  G.clubs.forEach(c=>{if(c.id===G.myId)return; c.squad.forEach(p=>pool.push({p,from:c.id,fromName:c.short}))});
+  myClubs().forEach(cl=>{if(cl.id===G.myId)return; cl.squad.forEach(p=>pool.push({p,from:cl.id,fromName:cl.short}))});
   if(marketPos!=="all")pool=pool.filter(x=>x.p.pos===marketPos);
   pool.sort((a,b)=>effSkill(b.p)-effSkill(a.p)); pool=pool.slice(0,40);
-  let h=`<div class="card between row"><div>Verba</div><div class="big" style="font-size:18px">${money(me.budget)}</div></div>`;
+  let h=`<div class="card between row"><div>Verba · ${myDivObj().name}</div><div class="big" style="font-size:18px">${money(meC.budget)}</div></div>`;
   h+=`<div class="seg" id="segMkt">`+["all",...POS].map(p=>`<button data-p="${p}" class="${marketPos===p?'active':''}">${p==="all"?"Todos":p}</button>`).join("")+`</div>`;
   h+=`<div class="plist">`+pool.map(x=>{
-    const p=x.p, price=Math.round(p.value*1.2*100)/100, ok=me.budget>=price;
+    const p=x.p, price=Math.round(p.value*1.2*100)/100, ok=meC.budget>=price;
     return `<div class="pl"><div class="rating ${ratingClass(effSkill(p))}">${effSkill(p)}</div>
       <div class="info"><div class="nm">${p.name}</div>
       <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${x.fromName} · pot.${p.potential}</div></div>
@@ -694,34 +724,44 @@ function viewMarket(){
 
 // ---- LIGA ----
 let tableTab="table";
+let leagueDiv=null;   // divisão em visualização (null = a do jogador)
 function viewTable(){
-  let h=`<div class="seg" id="segLeague">
+  if(leagueDiv===null)leagueDiv=G.myDiv;
+  const d=G.divisions[leagueDiv];
+  const mineHere=leagueDiv===G.myDiv;
+  let h=`<div class="seg" id="segDiv">`+G.divisions.map((dv,i)=>
+    `<button data-d="${i}" class="${leagueDiv===i?'active':''}">${dv.name}</button>`).join("")+`</div>`;
+  h+=`<div class="seg" id="segLeague">
     <button data-t="table" class="${tableTab==='table'?'active':''}">Classificação</button>
     <button data-t="scorers" class="${tableTab==='scorers'?'active':''}">Marcadores</button>
     <button data-t="fixtures" class="${tableTab==='fixtures'?'active':''}">Jornada</button></div>`;
   if(tableTab==="table"){
-    const t=sortedTable(), n=t.length;
+    const t=sortedTable(d), n=t.length;
     h+=`<div class="card" style="padding:6px"><table><thead><tr>
       <th>#</th><th class="name">Clube</th><th>J</th><th>V</th><th>E</th><th>D</th><th>DG</th><th>P</th></tr></thead><tbody>`;
     t.forEach((c,i)=>{
-      const zone=i<G.upSlots?"zone-up":(i>=n-G.downSlots?"zone-down":"");
-      h+=`<tr class="${c.id===G.myId?'me':''} ${zone}">
+      const zone=(d.upSlots&&i<d.upSlots)?"zone-up":((d.downSlots&&i>=n-d.downSlots)?"zone-down":"");
+      h+=`<tr class="${(mineHere&&c.id===G.myId)?'me':''} ${zone}">
       <td>${i+1}</td><td class="name">${swatch(c,true)} ${c.name}</td><td>${c.P}</td><td>${c.W}</td><td>${c.D}</td><td>${c.L}</td>
       <td>${(c.GF-c.GA>0?'+':'')+(c.GF-c.GA)}</td><td><b>${c.Pts}</b></td></tr>`;});
-    h+=`</tbody></table></div>
-      <div class="card muted" style="font-size:12px"><span style="color:var(--green2)">▌</span> Sobe ao Pró-Nacional (${G.upSlots}) &nbsp; <span style="color:var(--red)">▌</span> Desce à 1ª Divisão (${G.downSlots})</div>`;
+    h+=`</tbody></table></div>`;
+    const leg=[];
+    if(d.upSlots)leg.push(`<span style="color:var(--green2)">▌</span> Sobe à Divisão de Honra (${d.upSlots})`);
+    if(d.downSlots)leg.push(`<span style="color:var(--red)">▌</span> Desce à 1ª Divisão (${d.downSlots})`);
+    if(leg.length)h+=`<div class="card muted" style="font-size:12px">${leg.join(" &nbsp; ")}</div>`;
   } else if(tableTab==="scorers"){
-    const all=[]; G.clubs.forEach(c=>c.squad.forEach(p=>{if(p.goals>0)all.push({p,c})}));
+    const all=[]; d.clubs.forEach(c=>c.squad.forEach(p=>{if(p.goals>0)all.push({p,c})}));
     all.sort((a,b)=>b.p.goals-a.p.goals);
     h+=`<div class="card" style="padding:6px"><table><thead><tr><th>#</th><th class="name">Jogador</th><th>Clube</th><th>⚽</th></tr></thead><tbody>`;
-    all.slice(0,20).forEach((x,i)=>{h+=`<tr class="${x.c.id===G.myId?'me':''}"><td>${i+1}</td><td class="name">${x.p.name}</td><td class="name">${swatch(x.c,true)} ${x.c.name}</td><td><b>${x.p.goals}</b></td></tr>`});
+    all.slice(0,20).forEach((x,i)=>{h+=`<tr class="${(mineHere&&x.c.id===G.myId)?'me':''}"><td>${i+1}</td><td class="name">${x.p.name}</td><td class="name">${swatch(x.c,true)} ${x.c.name}</td><td><b>${x.p.goals}</b></td></tr>`});
     if(!all.length)h+=`<tr><td colspan="4" class="muted">Ainda sem golos.</td></tr>`;
     h+=`</tbody></table></div>`;
   } else {
-    const wk=Math.min(G.week,G.fixtures.length-1), round=G.fixtures[wk]||[], res=G.results[wk];
-    h+=`<div class="card"><h2>Jornada ${wk+1}${G.week>=G.fixtures.length?' (final)':''}</h2>`+
-      round.map(([hh,aa],i)=>{const H=G.clubs[hh],A=G.clubs[aa],r=res&&res[i];
-        return `<div class="fx" style="${(hh===G.myId||aa===G.myId)?'border-color:var(--accent)':''}">
+    const wk=Math.min(d.week,d.fixtures.length-1), round=d.fixtures[wk]||[], res=d.results[wk];
+    h+=`<div class="card"><h2>${d.name} · Jornada ${wk+1}${d.week>=d.fixtures.length?' (final)':''}</h2>`+
+      round.map(([hh,aa],i)=>{const H=d.clubs[hh],A=d.clubs[aa],r=res&&res[i];
+        const mine=(mineHere&&(hh===G.myId||aa===G.myId));
+        return `<div class="fx" style="${mine?'border-color:var(--accent)':''}">
           <div class="t">${clubTagFull(H)}</div><div class="sc">${r?r.hg+' - '+r.ag:'–'}</div>
           <div class="t a">${clubTagFull(A)}</div></div>`;}).join("")+`</div>`;
   }
@@ -731,9 +771,9 @@ function viewTable(){
 // ---- jogo animado ----
 function playMatchAnimated(){
   const next=nextFixture(); if(!next){playWeek();render();return}
-  const me=G.clubs[G.myId], opp=G.clubs[next.opp];
-  const home=next.home?me:opp, away=next.home?opp:me;
-  const myLine=availableLineup(me,G.lineup);
+  const c=me(), opp=myClubs()[next.opp];
+  const home=next.home?c:opp, away=next.home?opp:c;
+  const myLine=availableLineup(c,G.lineup);
   const oppLine=autoPickLineup(opp,"4-4-2",opp.susp);
   const hLine=next.home?myLine:oppLine;
   const aLine=next.home?oppLine:myLine;
@@ -843,38 +883,45 @@ function initTacticsDrag(){
 
 function bindView(){
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>playMatchAnimated();
-  const bs=$("#btnSim");if(bs)bs.onclick=()=>{while(G.week<G.fixtures.length)playWeek();toast("Época simulada");render();};
+  const bs=$("#btnSim");if(bs)bs.onclick=()=>{const d=myDivObj();while(d.week<d.fixtures.length)playWeek();toast("Época simulada");render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();TAB="home";render();};
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
   const sp=$("#segPos");if(sp)sp.querySelectorAll("button").forEach(b=>b.onclick=()=>{squadFilter=b.dataset.p;render()});
   document.querySelectorAll("[data-sell]").forEach(b=>b.onclick=()=>{if(confirm("Vender este jogador?"))sellPlayer(+b.dataset.sell)});
-  const sf=$("#selForm");if(sf)sf.onchange=()=>{G.formation=sf.value;G.lineup=autoPickLineup(G.clubs[G.myId],G.formation);save();render()};
+  const sf=$("#selForm");if(sf)sf.onchange=()=>{G.formation=sf.value;G.lineup=autoPickLineup(me(),G.formation);save();render()};
   const sm=$("#selMent");if(sm)sm.onchange=()=>{G.mentality=sm.value;save();render()};
-  const ba=$("#btnAuto");if(ba)ba.onclick=()=>{G.lineup=autoPickLineup(G.clubs[G.myId],G.formation);save();toast("Onze otimizado");render()};
+  const ba=$("#btnAuto");if(ba)ba.onclick=()=>{G.lineup=autoPickLineup(me(),G.formation);save();toast("Onze otimizado");render()};
   const smk=$("#segMkt");if(smk)smk.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketPos=b.dataset.p;render()});
   document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>buyPlayer(+b.dataset.from,+b.dataset.buy));
   const sl=$("#segLeague");if(sl)sl.querySelectorAll("button").forEach(b=>b.onclick=()=>{tableTab=b.dataset.t;render()});
+  const sdv=$("#segDiv");if(sdv)sdv.querySelectorAll("button").forEach(b=>b.onclick=()=>{leagueDiv=+b.dataset.d;render()});
   if(document.querySelector(".pitch"))initTacticsDrag();
 }
 
 // ---- ecrã inicial ----
 function splashScreen(){
   const el=document.createElement("div");el.className="splash";el.id="splash";
+  const divDefs=[{name:"Divisão de Honra",clubs:CLUBS},{name:"1ª Divisão",clubs:DIV1}];
   el.innerHTML=`<div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#16a34a 0 55%,#ffcc00 55% 100%)"></div>
     <h1 style="font-size:24px;margin:14px 0 2px">Gestor AF Braga</h1>
-    <div class="muted" style="margin-bottom:20px">Divisão de Honra · Série A</div>
+    <div class="muted" style="margin-bottom:20px">Divisão de Honra & 1ª Divisão</div>
     <div style="width:100%;max-width:360px">
-      <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Escolhe o teu clube:</div>
-      <select id="clubSel" style="margin-bottom:14px">${CLUBS.map((c,i)=>`<option value="${i}">${c.n}</option>`).join("")}</select>
+      <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Divisão:</div>
+      <select id="divSel" style="margin-bottom:12px"><option value="0">Divisão de Honra</option><option value="1">1ª Divisão</option></select>
+      <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Clube:</div>
+      <select id="clubSel" style="margin-bottom:14px"></select>
       <button class="btn" id="startBtn">▶ Começar carreira</button></div>
     <div class="muted" style="font-size:11px;margin-top:16px;max-width:340px">Clubes e nomes reais da AF Braga. Cores provisórias — podem ser corrigidas. Jogadores fictícios.</div>`;
   document.body.appendChild(el);
-  el.querySelector("#startBtn").onclick=()=>{newGame(+el.querySelector("#clubSel").value);el.remove();TAB="home";render();};
+  const divSel=el.querySelector("#divSel"), clubSel=el.querySelector("#clubSel");
+  function fillClubs(){clubSel.innerHTML=divDefs[+divSel.value].clubs.map((c,i)=>`<option value="${i}">${c.n}</option>`).join("");}
+  fillClubs(); divSel.onchange=fillClubs;
+  el.querySelector("#startBtn").onclick=()=>{newGame(+divSel.value,+clubSel.value);el.remove();TAB="home";render();};
 }
 function boot(){
   document.getElementById("splash")?.remove();
-  if(load()&&G&&G.version===3){TAB="home";render();}
-  else{if(G&&G.version!==3)wipe();splashScreen();}
+  if(load()&&G&&G.version===4){TAB="home";render();}
+  else{if(G&&G.version!==4)wipe();splashScreen();}
 }
 
 // ---- PWA ----
