@@ -235,7 +235,7 @@ function makeSquad(base){
 function clubFromDef(d,id){
   return {id, name:d.n, short:d.s, c1:d.c1, c2:d.c2, strength:d.str,
     budget:Math.round(rnd(0.06,0.28)*100)/100, squad:makeSquad(d.str-6),
-    P:0,W:0,D:0,L:0,GF:0,GA:0,Pts:0};
+    susp:[], P:0,W:0,D:0,L:0,GF:0,GA:0,Pts:0};
 }
 
 // ---------- novo jogo ----------
@@ -280,8 +280,8 @@ function bestByPos(squad,pos,n,exclude){
   return squad.filter(p=>p.pos===pos&&!exclude.has(p.id))
     .sort((a,b)=>effSkill(b)-effSkill(a)).slice(0,n).map(p=>p.id);
 }
-function autoPickLineup(club,formation){
-  const f=FORMATIONS[formation], used=new Set(), line=[];
+function autoPickLineup(club,formation,banned){
+  const f=FORMATIONS[formation], used=new Set(banned||[]), line=[];
   const gk=bestByPos(club.squad,"GR",1,used); gk.forEach(i=>used.add(i)); line.push(...gk);
   ["DEF","MED","AVA"].forEach(pos=>{
     const ids=bestByPos(club.squad,pos,f[pos],used);
@@ -292,6 +292,16 @@ function autoPickLineup(club,formation){
     if(!extra)break; used.add(extra.id); line.push(extra.id);
   }
   return line;
+}
+// onze do utilizador respeitando suspensões (substitui suspensos pelos melhores disponíveis)
+function availableLineup(club,baseLineup){
+  const susp=new Set(club.susp||[]);
+  const used=new Set(), line=[];
+  baseLineup.forEach(id=>{ if(!susp.has(id)){line.push(id);used.add(id)} else line.push(null); });
+  const subs=club.squad.filter(p=>!used.has(p.id)&&!susp.has(p.id)).sort((a,b)=>effSkill(b)-effSkill(a));
+  let si=0;
+  for(let i=0;i<line.length;i++){ if(line[i]===null){ const s=subs[si++]; line[i]=s?s.id:null; } }
+  return line.filter(x=>x!=null);
 }
 function effSkill(p){return clamp(p.skill+p.form,30,99)}
 
@@ -314,24 +324,43 @@ function teamStrength(club,lineup,formation,mentality){
 // ---------- motor ----------
 function simulate(home,away,hLine,aLine){
   const hS=teamStrength(home,hLine,G.formation,G.mentality);
-  const aS=aiStrength(away);
-  const hAtt=(hS.atk*0.6+hS.mid*0.4)+3 - aS.def*0.48;
-  const aAtt=(aS.atk*0.6+aS.mid*0.4) - hS.def*0.48;
-  const hx=clamp((hAtt-24)/9.5,0.35,4.2);
-  const ax=clamp((aAtt-26)/9.5,0.3,3.9);
-  const events=[]; let hg=0,ag=0;
-  for(let m=1;m<=90;m++){
-    if(Math.random()<hx/90){hg++; events.push({m,side:"H",club:home,line:hLine,type:"goal"})}
-    if(Math.random()<ax/90){ag++; events.push({m,side:"A",club:away,line:aLine,type:"goal"})}
+  const aS=teamStrength(away,aLine,"4-4-2",pick(["Defensivo","Equilibrado","Equilibrado","Atacante"]));
+  const events=[]; let hg=0,ag=0,hRed=0,aRed=0;
+  const yc={}, expelledH=[], expelledA=[];
+  function offRate(){
+    const hPen=1-hRed*0.18, aPen=1-aRed*0.18;        // cada expulsão ~18% mais fraco
+    const hAtt=((hS.atk*0.6+hS.mid*0.4)*hPen)+3-(aS.def*aPen)*0.48;
+    const aAtt=((aS.atk*0.6+aS.mid*0.4)*aPen)-(hS.def*hPen)*0.48;
+    return {hx:clamp((hAtt-24)/9.5,0.12,4.2), ax:clamp((aAtt-26)/9.5,0.1,3.9)};
   }
-  genCards("H",home,hLine,events);
-  genCards("A",away,aLine,events);
-  return {hg,ag,events};
-}
-function genCards(side,club,line,events){
-  const nY=ri(0,3), nR=Math.random()<0.08?1:0;   // amarelos ~0-3, vermelho raro
-  for(let k=0;k<nY;k++)events.push({m:ri(3,90),side,club,line,type:"yellow"});
-  if(nR)events.push({m:ri(20,90),side,club,line,type:"red"});
+  function foul(side){
+    const club=side==="H"?home:away, line=side==="H"?hLine:aLine;
+    const gone=new Set(side==="H"?expelledH:expelledA);
+    const cands=line.map(id=>club.squad.find(p=>p.id===id)).filter(p=>p&&!gone.has(p.id));
+    const w=cands.map(p=>(p.pos==="DEF"?3:p.pos==="MED"?2:p.pos==="GR"?0.5:1));
+    return weighted(cands,w);
+  }
+  function sendOff(side,p,m,second){
+    events.push({m,side,type:"red",pid:p.id,second});
+    if(side==="H"){hRed++;expelledH.push(p.id)}else{aRed++;expelledA.push(p.id)}
+  }
+  for(let m=1;m<=90;m++){
+    const rt=offRate();
+    if(Math.random()<rt.hx/90){hg++; events.push({m,side:"H",club:home,line:hLine,type:"goal"})}
+    if(Math.random()<rt.ax/90){ag++; events.push({m,side:"A",club:away,line:aLine,type:"goal"})}
+    ["H","A"].forEach(side=>{
+      if(Math.random()<0.024){                          // incidente disciplinar
+        const p=foul(side); if(!p)return;
+        if(Math.random()<0.045){ sendOff(side,p,m,false); }   // vermelho direto
+        else {
+          yc[p.id]=(yc[p.id]||0)+1;
+          events.push({m,side,type:"yellow",pid:p.id});
+          if(yc[p.id]>=2)sendOff(side,p,m,true);          // 2º amarelo => vermelho
+        }
+      }
+    });
+  }
+  return {hg,ag,events,expelledH,expelledA};
 }
 function aiStrength(club){
   const line=autoPickLineup(club,"4-4-2");
@@ -349,11 +378,12 @@ function playWeek(preMy){
     if(preMy&&(h===G.myId||a===G.myId)){
       r=preMy;                                   // usa o resultado já mostrado na janela do jogo
     } else {
-      const hLine=(h===G.myId)?G.lineup:autoPickLineup(home,"4-4-2");
-      const aLine=(a===G.myId)?G.lineup:autoPickLineup(away,"4-4-2");
+      const hLine=(h===G.myId)?availableLineup(home,G.lineup):autoPickLineup(home,"4-4-2",home.susp);
+      const aLine=(a===G.myId)?availableLineup(away,G.lineup):autoPickLineup(away,"4-4-2",away.susp);
       r=simulate(home,away,hLine,aLine);
     }
     applyResult(home,away,r.hg,r.ag,r.events);
+    home.susp=r.expelledH||[]; away.susp=r.expelledA||[];   // ban para o próximo jogo
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   G.results.push(weekRes);
@@ -522,6 +552,7 @@ function viewHome(){
       <div class="fx"><div class="t">${clubTagFull(home)}</div>
       <div class="sc">${next.home?"CASA":"FORA"}</div>
       <div class="t a">${clubTagFull(away)}</div></div>
+      ${me.susp&&me.susp.length?`<div class="center" style="color:var(--red);font-size:12px;margin:6px 0">⛔ Suspenso(s): ${me.squad.filter(p=>me.susp.includes(p.id)).map(p=>p.name).join(", ")}</div>`:""}
       <button class="btn" id="btnPlay" style="margin-top:4px">▶ Jogar jornada</button>
       <button class="btn sec small" id="btnSim" style="width:100%;margin-top:8px">⏩ Simular resto da época</button></div>`;
   } else if(G.seasonDone){
@@ -541,8 +572,8 @@ function viewHome(){
     h+=`<div class="card"><h2>Última jornada</h2>`+last.map(r=>{
       const H=G.clubs[r.h],A=G.clubs[r.a],mine=(r.h===G.myId||r.a===G.myId);
       return `<div class="fx" style="${mine?'border-color:var(--accent)':''}">
-        <div class="t">${clubTag(H)}</div><div class="sc">${r.hg} - ${r.ag}</div>
-        <div class="t a">${clubTag(A)}</div></div>`;
+        <div class="t">${clubTagFull(H)}</div><div class="sc">${r.hg} - ${r.ag}</div>
+        <div class="t a">${clubTagFull(A)}</div></div>`;
     }).join("")+`</div>`;
   }
   h+=`<div class="card"><h2>Notícias</h2>${G.news.slice(0,5).map(n=>`<div class="ev">${n.t}</div>`).join("")||'<div class="muted">Sem notícias.</div>'}</div>`;
@@ -702,8 +733,10 @@ function playMatchAnimated(){
   const next=nextFixture(); if(!next){playWeek();render();return}
   const me=G.clubs[G.myId], opp=G.clubs[next.opp];
   const home=next.home?me:opp, away=next.home?opp:me;
-  const hLine=next.home?G.lineup:autoPickLineup(home,"4-4-2");
-  const aLine=next.home?autoPickLineup(away,"4-4-2"):G.lineup;
+  const myLine=availableLineup(me,G.lineup);
+  const oppLine=autoPickLineup(opp,"4-4-2",opp.susp);
+  const hLine=next.home?myLine:oppLine;
+  const aLine=next.home?oppLine:myLine;
   const r=simulate(home,away,hLine,aLine);
   const mo=document.createElement("div");mo.className="modal";
   mo.innerHTML=`<div class="box"><div id="goalBanner">⚽ GOLO!</div>
@@ -722,6 +755,7 @@ function playMatchAnimated(){
     mo.querySelector("#liveSkip").style.display="none";done.onclick=()=>{mo.remove();render()};}
   mo.querySelector("#liveSkip").onclick=finish;
   const goalBanner=mo.querySelector("#goalBanner");
+  function nameByPid(side,pid){const club=side==="H"?home:away;const p=club.squad.find(x=>x.id===pid);return p?p.name:"jogador";}
   function addEvLine(e,icon,name){
     const club=e.side==="H"?home.short:away.short;
     const d=document.createElement("div");d.className="ev ev-"+(e.side==="H"?"h":"a");
@@ -732,11 +766,14 @@ function playMatchAnimated(){
     goalBanner.classList.remove("show"); void goalBanner.offsetWidth; goalBanner.classList.add("show");
     if(scoreEl.animate)scoreEl.animate([{transform:"scale(1)"},{transform:"scale(1.35)"},{transform:"scale(1)"}],{duration:450});
   }
-  timer=setInterval(()=>{minute+=3;if(minute>90)minute=90;minEl.textContent=minute+"'";
+  let pauseUntil=0;
+  timer=setInterval(()=>{
+    if(Date.now()<pauseUntil)return;                       // relógio suspenso durante a animação de golo
+    minute+=3;if(minute>90)minute=90;minEl.textContent=minute+"'";
     while(i<evs.length&&evs[i].m<=minute){const e=evs[i];i++;
-      if(e.type==="goal"){if(e.side==="H")hg++;else ag++;scoreEl.textContent=hg+" - "+ag;goalFlash();addEvLine(e,"⚽",pickScorerName(e));}
-      else if(e.type==="yellow"){addEvLine(e,"🟨",pickFoulName(e));}
-      else if(e.type==="red"){addEvLine(e,"🟥",pickFoulName(e));}
+      if(e.type==="goal"){if(e.side==="H")hg++;else ag++;scoreEl.textContent=hg+" - "+ag;goalFlash();addEvLine(e,"⚽",pickScorerName(e));pauseUntil=Date.now()+900;}
+      else if(e.type==="yellow"){addEvLine(e,"🟨",nameByPid(e.side,e.pid));}
+      else if(e.type==="red"){addEvLine(e,"🟥",nameByPid(e.side,e.pid)+(e.second?" (2º amarelo)":""));}
     }
     if(minute>=90)finish();},220);
 }
