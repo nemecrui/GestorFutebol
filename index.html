@@ -327,14 +327,19 @@ function aiStrength(club){
 }
 
 // ---------- jornada ----------
-function playWeek(){
+function playWeek(preMy){
   if(G.week>=G.fixtures.length)return;
   const round=G.fixtures[G.week], weekRes=[];
   round.forEach(([h,a])=>{
     const home=G.clubs[h], away=G.clubs[a];
-    const hLine=(h===G.myId)?G.lineup:autoPickLineup(home,"4-4-2");
-    const aLine=(a===G.myId)?G.lineup:autoPickLineup(away,"4-4-2");
-    const r=simulate(home,away,hLine,aLine);
+    let r;
+    if(preMy&&(h===G.myId||a===G.myId)){
+      r=preMy;                                   // usa o resultado já mostrado na janela do jogo
+    } else {
+      const hLine=(h===G.myId)?G.lineup:autoPickLineup(home,"4-4-2");
+      const aLine=(a===G.myId)?G.lineup:autoPickLineup(away,"4-4-2");
+      r=simulate(home,away,hLine,aLine);
+    }
     applyResult(home,away,r.hg,r.ag,r.events);
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
@@ -698,7 +703,7 @@ function playMatchAnimated(){
   let hg=0,ag=0,i=0,minute=0,timer;
   const evs=r.events.slice().sort((a,b)=>a.m-b.m);
   function finish(){clearInterval(timer);scoreEl.textContent=r.hg+" - "+r.ag;minEl.textContent="Final";
-    playWeek();const done=mo.querySelector("#liveDone");done.style.display="block";
+    playWeek(r);const done=mo.querySelector("#liveDone");done.style.display="block";
     mo.querySelector("#liveSkip").style.display="none";done.onclick=()=>{mo.remove();render()};}
   mo.querySelector("#liveSkip").onclick=finish;
   timer=setInterval(()=>{minute+=3;if(minute>90)minute=90;minEl.textContent=minute+"'";
