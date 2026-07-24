@@ -110,6 +110,19 @@
     font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 1px 3px #0006}
   .spot .lbl{font-size:10px;margin-top:2px;background:#000a;padding:1px 4px;border-radius:4px;white-space:nowrap;
     max-width:70px;overflow:hidden;text-overflow:ellipsis}
+  .spot{touch-action:none;cursor:grab}
+  .spot.dragging{opacity:.25}
+  .dragclone{position:fixed;z-index:80;pointer-events:none;transform:translate(-50%,-50%);opacity:.92}
+  .drop-ok .dot{outline:3px solid var(--accent);outline-offset:2px}
+  .drop-ok.benchpl{outline:2px dashed var(--accent);outline-offset:1px}
+  .bench{display:flex;flex-direction:column;gap:6px}
+  .benchpl{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:7px 10px;touch-action:none}
+  .benchpl.dragging{opacity:.25}
+  .benchpl .info{flex:1;min-width:0}
+  .benchpl .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .benchpl .sub{font-size:11px;color:var(--muted)}
+  .fx .t span.full{font-size:13px;line-height:1.15;font-weight:600}
 </style>
 </head>
 <body>
@@ -453,6 +466,7 @@ function ratingClass(s){return s>=72?"r-hi":s>=60?"r-mid":"r-lo"}
 function posClass(p){return "pos-"+p}
 function swatch(club,sm){return `<span class="swatch ${sm?'sm':''}" style="background:linear-gradient(135deg,${club.c1} 0 55%,${club.c2} 55% 100%)"></span>`}
 function clubTag(club,sm){return swatch(club,sm)+`<span>${club.short}</span>`}
+function clubTagFull(club){return swatch(club)+`<span class="full">${club.name}</span>`}
 
 function header(){
   const me=G.clubs[G.myId];
@@ -486,11 +500,10 @@ function viewHome(){
   if(!done&&next){
     const opp=G.clubs[next.opp], home=next.home?me:opp, away=next.home?opp:me;
     h+=`<div class="card"><h2>Jornada ${G.week+1} · ${G.date}</h2>
-      <div class="fx"><div class="t">${clubTag(home)}</div>
+      <div class="fx"><div class="t">${clubTagFull(home)}</div>
       <div class="sc">${next.home?"CASA":"FORA"}</div>
-      <div class="t a">${clubTag(away)}</div></div>
-      <div class="center muted" style="margin:6px 0 10px">${home.name} vs ${away.name}</div>
-      <button class="btn" id="btnPlay">▶ Jogar jornada</button>
+      <div class="t a">${clubTagFull(away)}</div></div>
+      <button class="btn" id="btnPlay" style="margin-top:4px">▶ Jogar jornada</button>
       <button class="btn sec small" id="btnSim" style="width:100%;margin-top:8px">⏩ Simular resto da época</button></div>`;
   } else if(G.seasonDone){
     h+=`<div class="card center"><h2>Época ${G.season} terminada</h2>
@@ -554,6 +567,7 @@ function viewTactics(){
   const me=G.clubs[G.myId];
   const s=teamStrength(me,G.lineup,G.formation,G.mentality);
   let h=`<div class="card"><h2>Campo · ${G.formation}</h2>${pitchHTML(me)}</div>`;
+  h+=`<div class="card"><h2>Suplentes</h2>${benchHTML(me)}</div>`;
   h+=`<div class="card"><h2>Formação</h2>
     <select id="selForm">${Object.keys(FORMATIONS).map(f=>`<option ${f===G.formation?'selected':''}>${f}</option>`).join("")}</select></div>`;
   h+=`<div class="card"><h2>Mentalidade</h2>
@@ -568,16 +582,18 @@ function pitchHTML(me){
   const f=FORMATIONS[G.formation];
   const lines=[["GR",1],["DEF",f.DEF],["MED",f.MED],["AVA",f.AVA]];
   const ys={GR:88,DEF:66,MED:43,AVA:18};
-  const players=G.lineup.map(id=>me.squad.find(p=>p.id===id)).filter(Boolean);
   const tc=textOn(me.c1);
-  let idx=0, spots="";
+  let slot=0, spots="";
   lines.forEach(([pos,n])=>{
     for(let i=0;i<n;i++){
-      const p=players[idx++]; if(!p)continue;
-      const x= n===1?50 : 8+(84*i/(n-1));
-      spots+=`<div class="spot" style="left:${x}%;top:${ys[pos]}%">
-        <div class="dot" style="background:${me.c1};color:${tc};border-color:${me.c2}">${effSkill(p)}</div>
-        <div class="lbl">${p.name.split(" ").slice(-1)[0]}</div></div>`;
+      const p=me.squad.find(x=>x.id===G.lineup[slot]);
+      const x=(i+1)/(n+1)*100;                       // distribuição uniforme
+      const rat=p?effSkill(p):"–";
+      const label=p?p.name.split(" ").slice(-1)[0]:"—";
+      spots+=`<div class="spot" data-slot="${slot}" style="left:${x}%;top:${ys[pos]}%">
+        <div class="dot" style="background:${me.c1};color:${tc};border-color:${me.c2}">${rat}</div>
+        <div class="lbl">${label}</div></div>`;
+      slot++;
     }
   });
   return `<div class="pitch"><div class="lines">
@@ -586,7 +602,21 @@ function pitchHTML(me){
         <rect x="1" y="1" width="66" height="98"/><line x1="1" y1="50" x2="67" y2="50"/>
         <circle cx="34" cy="50" r="8"/><rect x="20" y="1" width="28" height="14"/><rect x="20" y="85" width="28" height="14"/>
       </g></svg></div>${spots}</div>
-    <div class="center muted" style="font-size:11px;margin-top:6px">Cada círculo é um titular (número = qualidade). Cores do ${me.name}.</div>`;
+    <div class="center muted" style="font-size:11px;margin-top:6px">Arrasta jogadores no campo para trocar posições. Arrasta um suplente para o campo para o pôr a titular.</div>`;
+}
+function subsOf(me){
+  const inXI=new Set(G.lineup);
+  return me.squad.filter(p=>!inXI.has(p.id))
+    .sort((a,b)=>POS.indexOf(a.pos)-POS.indexOf(b.pos)||effSkill(b)-effSkill(a));
+}
+function benchHTML(me){
+  const subs=subsOf(me);
+  if(!subs.length)return `<div class="muted">Sem suplentes.</div>`;
+  return `<div class="bench" id="benchList">`+subs.map(p=>
+    `<div class="benchpl" data-pid="${p.id}"><div class="rating ${ratingClass(effSkill(p))}">${effSkill(p)}</div>
+      <div class="info"><div class="nm">${p.name}</div>
+      <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${money(p.value)}</div></div>
+      <span class="muted" style="font-size:17px">⠿</span></div>`).join("")+`</div>`;
 }
 function bar(l,v){const pct=clamp((v-40)/55*100,3,100);
   return `<div style="margin:7px 0"><div class="row between"><span>${l}</span><b>${Math.round(v)}</b></div>
@@ -685,6 +715,59 @@ function pickScorerName(e){
   const s=weighted(c,w);return s?s.name:"golo";
 }
 
+// ---- arrastar jogadores (campo/suplentes) ----
+function initTacticsDrag(){
+  let drag=null;
+  function targetAt(e){
+    const el=document.elementFromPoint(e.clientX,e.clientY);
+    return el?el.closest("[data-slot],[data-pid]"):null;
+  }
+  function moveClone(e){if(drag&&drag.clone){drag.clone.style.left=e.clientX+"px";drag.clone.style.top=e.clientY+"px";}}
+  function start(e,el){
+    drag={el, type:el.hasAttribute("data-slot")?"slot":"bench",
+      slot:el.hasAttribute("data-slot")?+el.dataset.slot:null,
+      pid:el.hasAttribute("data-pid")?+el.dataset.pid:null};
+    el.classList.add("dragging");
+    const clone=el.cloneNode(true);clone.classList.add("dragclone");
+    clone.style.left="-999px";clone.style.top="-999px";
+    if(drag.type==="bench")clone.style.width=el.offsetWidth+"px";
+    document.body.appendChild(clone);drag.clone=clone;moveClone(e);
+    try{el.setPointerCapture(e.pointerId);}catch(_){}
+    e.preventDefault();
+  }
+  function move(e){
+    if(!drag)return; moveClone(e); e.preventDefault();
+    document.querySelectorAll(".drop-ok").forEach(x=>x.classList.remove("drop-ok"));
+    const t=targetAt(e); if(t&&t!==drag.el)t.classList.add("drop-ok");
+  }
+  function end(e){
+    if(!drag)return;
+    const t=targetAt(e);
+    if(t&&t!==drag.el){
+      const isSlot=t.hasAttribute("data-slot");
+      if(drag.type==="slot"&&isSlot){
+        const i=drag.slot,j=+t.dataset.slot,tmp=G.lineup[i];G.lineup[i]=G.lineup[j];G.lineup[j]=tmp;
+      } else if(drag.type==="slot"&&!isSlot){
+        G.lineup[drag.slot]=+t.dataset.pid;            // titular ↔ suplente
+      } else if(drag.type==="bench"&&isSlot){
+        G.lineup[+t.dataset.slot]=drag.pid;            // suplente entra
+      }
+      save();
+    }
+    cleanup(); render();
+  }
+  function cleanup(){
+    if(drag){drag.el.classList.remove("dragging");if(drag.clone)drag.clone.remove();drag=null;}
+    document.querySelectorAll(".drop-ok").forEach(x=>x.classList.remove("drop-ok"));
+  }
+  document.querySelectorAll(".pitch .spot, #benchList .benchpl").forEach(el=>{
+    el.addEventListener("pointerdown",e=>start(e,el));
+    el.addEventListener("pointermove",move);
+    el.addEventListener("pointerup",end);
+    el.addEventListener("pointercancel",cleanup);
+  });
+}
+
 function bindView(){
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>playMatchAnimated();
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{while(G.week<G.fixtures.length)playWeek();toast("Época simulada");render();};
@@ -698,6 +781,7 @@ function bindView(){
   const smk=$("#segMkt");if(smk)smk.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketPos=b.dataset.p;render()});
   document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>buyPlayer(+b.dataset.from,+b.dataset.buy));
   const sl=$("#segLeague");if(sl)sl.querySelectorAll("button").forEach(b=>b.onclick=()=>{tableTab=b.dataset.t;render()});
+  if(document.querySelector(".pitch"))initTacticsDrag();
 }
 
 // ---- ecrã inicial ----
