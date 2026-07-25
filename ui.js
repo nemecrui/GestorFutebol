@@ -323,6 +323,7 @@ function playMatchAnimated(){
     <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}</h2></div>
     <div class="fx"><div class="t">${clubTag(home)}</div><div class="sc" id="liveScore">0 - 0</div><div class="t a">${clubTag(away)}</div></div>
     <div class="center muted" id="liveMin">0'</div><div class="live" id="liveEv"></div>
+    <div id="liveRatings"></div>
     <button class="btn" id="liveDone" style="display:none">Continuar</button>
     <button class="btn sec small" id="liveSkip" style="width:100%;margin-top:8px">Saltar</button></div>`;
   document.body.appendChild(mo);
@@ -334,6 +335,9 @@ function playMatchAnimated(){
   function addEvLine(side,icon,txt){const club=side==="H"?home.short:away.short;const d=document.createElement("div");d.className="ev ev-"+(side==="H"?"h":"a");d.innerHTML=`<b>${txt.m}'</b> ${icon} ${club} — ${txt.name}`;evBox.prepend(d);}
   function goalFlash(){goalBanner.classList.remove("show");void goalBanner.offsetWidth;goalBanner.classList.add("show");if(scoreEl.animate)scoreEl.animate([{transform:"scale(1)"},{transform:"scale(1.35)"},{transform:"scale(1)"}],{duration:450});}
   function finish(){clearInterval(timer);scoreEl.textContent=r.hg+" - "+r.ag;minEl.textContent="Final";playWeek(r);
+    const cc=me(), rc=v=>v>=7?"#16a34a":v>=5?"#d9a400":"#e5484d";
+    const rl=myLine.map(id=>cc.squad.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>(b.lastRating||0)-(a.lastRating||0));
+    mo.querySelector("#liveRatings").innerHTML=`<h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">Notas dos teus jogadores</h2>`+rl.map(p=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:4px 2px;font-size:13px"><span>${p.name} <span class="pill ${posClass(p.pos)}" style="font-size:9px">${p.pos}</span></span><b style="color:${rc(p.lastRating||6)}">${p.lastRating!=null?p.lastRating:"—"}</b></div>`).join("");
     const done=mo.querySelector("#liveDone");done.style.display="block";mo.querySelector("#liveSkip").style.display="none";done.onclick=()=>{mo.remove();render();};}
   mo.querySelector("#liveSkip").onclick=finish;
   timer=setInterval(()=>{

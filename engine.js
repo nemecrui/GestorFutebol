@@ -279,15 +279,15 @@ function weightedObj(items,w){
   if(!items.length)return null; const tot=w.reduce((a,b)=>a+b,0); let r=Math.random()*tot;
   for(let i=0;i<items.length;i++){r-=w[i]; if(r<=0)return items[i];} return items[items.length-1];
 }
-function bestFieldByAttr(club,lineup,attr){
+function bestFieldByAttr(club,lineup,attr,gone){
   let best=null,bv=-1;
-  lineup.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(p&&p.attrs[attr]>bv){bv=p.attrs[attr];best=p;}});
+  lineup.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(p&&!(gone&&gone.has(p.id))&&p.attrs[attr]>bv){bv=p.attrs[attr];best=p;}});
   return best;
 }
-function pickGoal(club,lineup,formation){
+function pickGoal(club,lineup,formation,gone){
   const slots=FORMATIONS[formation].slots;
   const cands=lineup.map((id,i)=>({p:club.squad.find(x=>x.id===id),pos:slots[i]?slots[i].pos:"MC"}))
-    .filter(o=>o.p&&GROUP[o.pos]!=="GK");
+    .filter(o=>o.p&&GROUP[o.pos]!=="GK"&&!(gone&&gone.has(o.p.id)));
   if(!cands.length)return null;
   const w=cands.map(o=>{const g=GROUP[o.pos]; const base=(g==="ATT"?3:g==="MID"?1.4:0.4); return base*(o.p.attrs.rem+o.p.attrs.rea+8);});
   const sel=weightedObj(cands,w); if(!sel)return null;
@@ -295,8 +295,8 @@ function pickGoal(club,lineup,formation){
   if(r<0.07)gtype="penalty"; else if(r<0.12)gtype="freekick";
   else if(Math.random()<0.12+sel.p.attrs.cab/70)gtype="header";
   let pid=sel.p.id;
-  if(gtype==="penalty"){const b=bestFieldByAttr(club,lineup,"pen"); if(b)pid=b.id;}
-  else if(gtype==="freekick"){const b=bestFieldByAttr(club,lineup,"liv"); if(b)pid=b.id;}
+  if(gtype==="penalty"){const b=bestFieldByAttr(club,lineup,"pen",gone); if(b)pid=b.id;}
+  else if(gtype==="freekick"){const b=bestFieldByAttr(club,lineup,"liv",gone); if(b)pid=b.id;}
   return {pid,gtype};
 }
 function pickFoul(club,lineup,gone){
@@ -321,7 +321,8 @@ function simulate(home,away,hLine,aLine,eHome,eAway){
     return {hx:clamp((hAtt-24)/9.5,0.12,4.2), ax:clamp((aAtt-26)/9.5,0.1,3.9)};
   }
   function goal(side,club,line,m){
-    const g=pickGoal(club,line,side==="H"?G.formation:"4-4-2");
+    const gone=new Set(side==="H"?expelledH:expelledA);
+    const g=pickGoal(club,line,side==="H"?G.formation:"4-4-2",gone);
     events.push({m,side,type:"goal",club,line,scorer:g?g.pid:null,gtype:g?g.gtype:"open"});
   }
   function sendOff(side,p,m,second){ events.push({m,side,type:"red",pid:p.id,second});
