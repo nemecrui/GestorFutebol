@@ -50,6 +50,17 @@ function viewHome(){
   const rank=table.findIndex(x=>x.id===G.myId)+1;
   const next=nextFixture(), done=d.week>=d.fixtures.length;
   let h="";
+  if(G.fired){
+    let fh=`<div class="card center"><h2 style="color:var(--red);justify-content:center">Foste despedido</h2>
+      <div class="muted" style="margin:6px 0 12px">A direção do ${c.name} dispensou-te dos teus serviços.</div>`;
+    if((G.offers||[]).length){
+      fh+=`<div class="muted" style="font-size:13px;margin-bottom:8px">Clubes interessados em ti:</div>`;
+      G.offers.forEach((o,i)=>{fh+=`<button class="btn sec" data-job="${i}" style="margin-bottom:8px">Assumir ${o.name} · ${G.divisions[o.divIdx].name}</button>`;});
+    } else { fh+=`<div class="muted" style="margin-bottom:8px">Sem propostas de momento.</div>`; }
+    fh+=`<button class="btn warn small" id="btnJobRestart" style="width:100%;margin-top:4px">↺ Recomeçar carreira do zero</button></div>`;
+    fh+=`<div class="card"><h2>Notícias</h2>${(G.news||[]).slice(0,6).map(n=>`<div class="ev">${n.t}</div>`).join("")}</div>`;
+    return fh;
+  }
   if(!done&&next){
     const opp=myClubs()[next.opp], home=next.home?c:opp, away=next.home?opp:c;
     h+=`<div class="card"><h2>${d.name} · Jornada ${d.week+1} · ${G.date}</h2>
@@ -61,6 +72,16 @@ function viewHome(){
     h+=`<div class="card center"><h2>Época ${G.season} terminada</h2><div class="big">${rank}º lugar</div>
       <div class="muted" style="margin:6px 0 12px">${table[0].name} — campeão da ${d.name}</div>
       <button class="btn" id="btnNewSeason">▶ Começar época ${G.season+1}</button></div>`;
+  }
+  if(G.manager&&!G.fired){
+    const conf=G.board?G.board.confidence:60;
+    const confColor=conf>=55?"var(--green2)":conf>=30?"var(--accent)":"var(--red)";
+    h+=`<div class="card"><h2>Direção · ${G.manager.name}</h2>
+      <div class="row between" style="margin-bottom:6px"><span class="muted">Objetivo</span><b>${me().objective?me().objective.label:"—"}</b></div>
+      <div class="row between" style="margin-bottom:2px"><span class="muted">Confiança da direção</span><b>${conf}%</b></div>
+      <div class="barwrap"><div class="bar" style="width:${conf}%;background:${confColor}"></div></div>
+      <div class="row between" style="margin-top:8px"><span class="muted">Contrato</span><b>${G.contract?G.contract.seasonsLeft:"—"} época(s)</b></div>
+      <div class="row between"><span class="muted">Reputação</span><b>${G.manager.reputation}</b></div></div>`;
   }
   h+=`<div class="card"><h2>Situação · ${d.name}</h2><div class="grid2">
       <div class="stat"><div class="v">${rank}º</div><div class="l">Classificação</div></div>
@@ -317,6 +338,8 @@ function bindView(){
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length)playWeek();toast("Época simulada");render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();TAB="home";render();};
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
+  document.querySelectorAll("[data-job]").forEach(b=>b.onclick=()=>{takeNewJob(+b.dataset.job);TAB="home";render();});
+  const bjr=$("#btnJobRestart");if(bjr)bjr.onclick=()=>{if(confirm("Recomeçar carreira do zero?")){wipe();boot();}};
   const sp=$("#segPos");if(sp)sp.querySelectorAll("button").forEach(b=>b.onclick=()=>{squadFilter=b.dataset.p;render();});
   document.querySelectorAll("[data-sell]").forEach(b=>b.onclick=e=>{e.stopPropagation();if(confirm("Vender este jogador?")){const r=sellPlayer(+b.dataset.sell);toast(r.msg);render();}});
   document.querySelectorAll("[data-detail]").forEach(el=>el.onclick=()=>openPlayer(+el.dataset.detail));
@@ -340,6 +363,8 @@ function splashScreen(){
     <h1 style="font-size:24px;margin:14px 0 2px">Gestor AF Braga</h1>
     <div class="muted" style="margin-bottom:20px">Divisão de Honra & 1ª Divisão</div>
     <div style="width:100%;max-width:360px">
+      <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">O teu nome (treinador):</div>
+      <input id="mgrName" maxlength="28" placeholder="Ex: Rui Xavier" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;font-size:15px;margin-bottom:12px">
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Divisão:</div>
       <select id="divSel" style="margin-bottom:12px"><option value="0">Divisão de Honra</option><option value="1">1ª Divisão</option></select>
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Clube:</div>
@@ -350,7 +375,7 @@ function splashScreen(){
   const divSel=el.querySelector("#divSel"), clubSel=el.querySelector("#clubSel");
   function fillClubs(){clubSel.innerHTML=divDefs[+divSel.value].clubs.map((c,i)=>`<option value="${i}">${c.n}</option>`).join("");}
   fillClubs(); divSel.onchange=fillClubs;
-  el.querySelector("#startBtn").onclick=()=>{newGame(+divSel.value,+clubSel.value);el.remove();TAB="home";render();};
+  el.querySelector("#startBtn").onclick=()=>{const nm=(el.querySelector("#mgrName").value||"").trim()||"Treinador";newGame(+divSel.value,+clubSel.value,nm);el.remove();TAB="home";render();};
 }
 function boot(){
   document.getElementById("splash")?.remove();

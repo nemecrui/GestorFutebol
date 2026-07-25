@@ -166,15 +166,19 @@ function makeDivision(name,defs,upSlots,downSlots){
   const clubs=defs.map((d,i)=>clubFromDef(d,i));
   return {name, clubs, fixtures:buildFixtures(clubs.length), results:[], week:0, upSlots, downSlots};
 }
-function newGame(divIdx,clubIdx){
+function newGame(divIdx,clubIdx,managerName){
   PID=1;
   const d0=makeDivision("Divisão de Honra",CLUBS,0,3);
   const d1=makeDivision("1ª Divisão",DIV1,3,0);
   G={version:5, divisions:[d0,d1], myDiv:divIdx, myId:clubIdx,
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
-     lineup:[], news:[], seasonDone:false};
+     lineup:[], news:[], seasonDone:false,
+     manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0},
+     contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null};
   G.lineup=autoPickLineup(me(),G.formation);
-  addNews("Início da carreira no "+me().name+" ("+myDivObj().name+").");
+  setObjectives();
+  addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
+  addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
   save();
 }
@@ -325,6 +329,7 @@ function simRound(d,preMy,hasUser){
 function playWeek(preMy){
   const myD=myDivObj(); if(myD.week>=myD.fixtures.length)return;
   simRound(myD,preMy,true);
+  boardAfterUserMatch();
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
   G.week=myD.week; advanceMonth();
   if(myD.week>=myD.fixtures.length){
@@ -340,6 +345,7 @@ function endSeason(){
   addNews("Fim da época "+G.season+" ("+d.name+"). Campeão: "+champ.name+". Ficaste em "+meRank+"º.");
   const prize=Math.max(0.03,(d.clubs.length-meRank+1)*0.02);
   me().budget=Math.round((me().budget+prize)*100)/100;
+  evaluateBoard(meRank);
 }
 function newSeason(){
   const d0=G.divisions[0], d1=G.divisions[1];
@@ -365,6 +371,7 @@ function newSeason(){
   for(let di=0;di<G.divisions.length;di++){ const idx=G.divisions[di].clubs.findIndex(c=>c.short===mineShort); if(idx>=0){G.myDiv=di;G.myId=idx;break;} }
   G.season++; G.week=0; G.seasonDone=false; G.date="Set";
   G.lineup=autoPickLineup(me(),G.formation);
+  G.manager.seasons=(G.manager.seasons||0)+1; setObjectives();
   if(promo.some(c=>c.short===mineShort))addNews("Subiste à Divisão de Honra!");
   else if(releg.some(c=>c.short===mineShort))addNews("Desceste à 1ª Divisão.");
   addNews("Nova época "+G.season+". Sobem: "+promo.map(c=>c.short).join(", ")+". Descem: "+releg.map(c=>c.short).join(", ")+".");
@@ -407,11 +414,83 @@ function load(){ if(typeof localStorage==="undefined")return false;
   try{ const s=localStorage.getItem("gestorafb"); if(s){ const m=migrate(JSON.parse(s)); if(m){G=m;return true;} } }catch(e){} return false; }
 function wipe(){ if(typeof localStorage!=="undefined")localStorage.removeItem("gestorafb"); G=null; }
 
+/* ---------- Fase 2: treinador, direção, objetivos ---------- */
+function squadRating(club){
+  const line=autoPickLineup(club,"4-4-2"), slots=FORMATIONS["4-4-2"].slots; let s=0,n=0;
+  line.forEach((id,i)=>{const p=club.squad.find(x=>x.id===id); if(p){s+=effAt(p,slots[i].pos);n++;}});
+  return n?s/n:55;
+}
+function objectiveFor(di,rankExp,n){
+  if(di===0){
+    if(rankExp<=2)return{type:"title",label:"Lutar pelo título",target:3,baseConf:55};
+    if(rankExp<=6)return{type:"top",label:"Primeira metade da tabela",target:Math.ceil(n/2),baseConf:58};
+    if(rankExp<=n-4)return{type:"mid",label:"Meio da tabela, tranquilo",target:n-3,baseConf:60};
+    return{type:"survive",label:"Manter a categoria (evitar descida)",target:n-3,baseConf:62};
+  } else {
+    if(rankExp<=3)return{type:"promo",label:"Subir de divisão",target:3,baseConf:55};
+    if(rankExp<=7)return{type:"top",label:"Lutar pela subida",target:6,baseConf:58};
+    return{type:"mid",label:"Primeira metade da tabela",target:Math.ceil(n/2),baseConf:60};
+  }
+}
+function setObjectives(){
+  G.divisions.forEach((d,di)=>{
+    const ranked=d.clubs.map(c=>({c,r:squadRating(c)})).sort((a,b)=>b.r-a.r);
+    ranked.forEach((o,idx)=>{ o.c.objective=objectiveFor(di,idx+1,d.clubs.length); });
+  });
+  const o=me().objective; if(!G.board)G.board={}; G.board.confidence=o?o.baseConf:60;
+}
+function boardAfterUserMatch(){
+  if(!G.board)return;
+  const d=myDivObj(), res=d.results[d.results.length-1]; if(!res)return;
+  const my=res.find(x=>x.h===G.myId||x.a===G.myId); if(!my)return;
+  const isHome=my.h===G.myId, gf=isHome?my.hg:my.ag, ga=isHome?my.ag:my.hg;
+  let delta=gf>ga?6:gf===ga?1:-5;
+  const rank=sortedTable(d).findIndex(c=>c.id===G.myId)+1, target=me().objective?me().objective.target:d.clubs.length;
+  if(rank<=target)delta+=2; else delta-=Math.min(6,(rank-target)*0.8);
+  G.board.confidence=clamp(Math.round(G.board.confidence+delta),0,100);
+}
+function evaluateBoard(meRank){
+  const obj=me().objective||{target:myDivObj().clubs.length,label:"—"};
+  const met=meRank<=obj.target;
+  G.contract.seasonsLeft--;
+  if(met){
+    G.manager.reputation=clamp(G.manager.reputation+(meRank<=Math.ceil(obj.target/2)?8:4),0,100);
+    G.board.confidence=clamp(G.board.confidence+15,0,100);
+    if(G.contract.seasonsLeft<=0){G.contract.seasonsLeft=2;addNews("Objetivo cumprido! A direção renovou o teu contrato por +2 épocas.");}
+    else addNews("Objetivo cumprido ("+obj.label+"). A direção está satisfeita.");
+    G.fired=false;
+  } else {
+    const miss=meRank-obj.target;
+    G.manager.reputation=clamp(G.manager.reputation-6,0,100);
+    G.board.confidence=clamp(G.board.confidence-25,0,100);
+    if(G.board.confidence<=10||miss>=3||G.contract.seasonsLeft<=0) fireManager();
+    else { addNews("Objetivo falhado ("+obj.label+"). A direção deu-te mais uma época para corrigir."); G.fired=false; }
+  }
+}
+function fireManager(){ G.fired=true; addNews("A direção do "+me().name+" decidiu dispensar-te."); G.offers=makeJobOffers(); }
+function makeJobOffers(){
+  const all=[];
+  G.divisions.forEach((d,di)=>d.clubs.forEach(c=>{ if(!(di===G.myDiv&&c.id===G.myId))all.push({divIdx:di,short:c.short,name:c.name,rating:squadRating(c)}); }));
+  all.sort((a,b)=>a.rating-b.rating);
+  const top=Math.max(3,Math.floor(all.length*(0.2+G.manager.reputation/220)));
+  const pool=all.slice(0,top);
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  return pool.slice(0,3);
+}
+function takeNewJob(i){
+  const off=G.offers&&G.offers[i]; if(!off)return false;
+  const ci=G.divisions[off.divIdx].clubs.findIndex(c=>c.short===off.short); if(ci<0)return false;
+  G.myDiv=off.divIdx; G.myId=ci; G.contract={seasonsLeft:2}; G.fired=false; G.offers=null;
+  addNews("Assumiste o comando do "+me().name+".");
+  newSeason();
+  return true;
+}
 /* ---------- exports (para node/testes; ignorado no browser) ---------- */
 if(typeof module!=="undefined"&&module.exports){
   module.exports={ POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
     rnd,ri,pick,clamp,money,roleRating,ability,effAt,fam,makePlayer,makeSquad,clubFromDef,
     buildFixtures,autoPickLineup,availableLineup,teamStrength,simulate,applyResult,pickGoal,pickFoul,
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
+    setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
