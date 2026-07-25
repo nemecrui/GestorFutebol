@@ -97,16 +97,19 @@ function viewHome(){
     if(!cup.active&&cup.winner){ const wc=clubByShort(cup.winner);
       h+=`<div class="card center"><h2>🏆 Taça</h2><div class="muted">Vencedor: <b>${wc?wc.name:cup.winner}</b></div></div>`;
     } else if(cup.active){
-      const ut=cupUserTie();
+      const ut=cupUserTie(), avail=cupAvailable();
       h+=`<div class="card"><h2>🏆 Taça · ${cupRoundName()}</h2>`;
       if(cup.userAlive&&ut&&ut.b){
         const opp=(ut.a===ms?ut.b:ut.a), oc=clubByShort(opp);
-        h+=`<div class="fx"><div class="t">${clubTagFull(c)}</div><div class="sc">vs</div><div class="t a">${oc?clubTagFull(oc):opp}</div></div>
-          <button class="btn" id="btnCup" style="margin-top:4px">▶ Jogar eliminatória da Taça</button>`;
+        h+=`<div class="fx"><div class="t">${clubTagFull(c)}</div><div class="sc">vs</div><div class="t a">${oc?clubTagFull(oc):opp}</div></div>`;
+        h+= avail ? `<button class="btn" id="btnCup" style="margin-top:4px">▶ Jogar eliminatória da Taça</button>`
+                  : `<div class="center muted" style="font-size:12px;margin-top:6px">Disponível a partir da jornada ${cupRoundDue()} do campeonato.</div>`;
       } else if(cup.userAlive&&ut&&!ut.b){
-        h+=`<div class="center muted" style="margin-bottom:8px">Passas por folga (bye) nesta eliminatória.</div><button class="btn" id="btnCup">▶ Avançar na Taça</button>`;
+        h+=`<div class="center muted" style="margin-bottom:8px">Passas por folga (bye) nesta eliminatória.</div>`;
+        h+= avail ? `<button class="btn" id="btnCup">▶ Avançar na Taça</button>` : `<div class="center muted" style="font-size:12px">Disponível na jornada ${cupRoundDue()}.</div>`;
       } else {
-        h+=`<div class="center muted" style="margin-bottom:8px">Foste eliminado da Taça (${cup.remaining.length} equipas em prova).</div><button class="btn sec" id="btnCup">⏩ Simular eliminatória</button>`;
+        h+=`<div class="center muted" style="margin-bottom:8px">Foste eliminado da Taça (${cup.remaining.length} equipas em prova).</div>`;
+        h+= avail ? `<button class="btn sec" id="btnCup">⏩ Simular eliminatória</button>` : `<div class="center muted" style="font-size:12px">Próxima eliminatória na jornada ${cupRoundDue()}.</div>`;
       }
       h+=`</div>`;
     }
@@ -346,16 +349,8 @@ function viewTable(){
   return h;
 }
 
-/* ---------- jogo animado ---------- */
-function playMatchAnimated(){
-  const next=nextFixture(); if(!next){playWeek();render();return;}
-  const c=me(), opp=myClubs()[next.opp];
-  const home=next.home?c:opp, away=next.home?opp:c;
-  const myLine=availableLineup(c,G.lineup,G.formation), oppLine=autoPickLineup(opp,"4-4-2",opp.susp);
-  const hLine=next.home?myLine:oppLine, aLine=next.home?oppLine:myLine;
-  const eMy=energyFactor(c,myLine), eOpp=1;
-  const r=simulate(home,away,hLine,aLine,next.home?eMy:eOpp,next.home?eOpp:eMy);
-  r.userLine=myLine;
+/* ---------- jogo animado (partilhado por campeonato e Taça) ---------- */
+function animateMatch(home, away, r, onFinish, userClub, userLine){
   const mo=document.createElement("div");mo.className="modal";
   mo.innerHTML=`<div class="box"><div id="goalBanner">⚽ GOLO!</div>
     <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}</h2></div>
@@ -372,10 +367,12 @@ function playMatchAnimated(){
   function gtypeSuffix(t){return t==="penalty"?" (g.p.)":t==="freekick"?" (livre)":t==="header"?" (cabeça)":"";}
   function addEvLine(side,icon,txt){const club=side==="H"?home.short:away.short;const d=document.createElement("div");d.className="ev ev-"+(side==="H"?"h":"a");d.innerHTML=`<b>${txt.m}'</b> ${icon} ${club} — ${txt.name}`;evBox.prepend(d);}
   function goalFlash(){goalBanner.classList.remove("show");void goalBanner.offsetWidth;goalBanner.classList.add("show");if(scoreEl.animate)scoreEl.animate([{transform:"scale(1)"},{transform:"scale(1.35)"},{transform:"scale(1)"}],{duration:450});}
-  function finish(){clearInterval(timer);scoreEl.textContent=r.hg+" - "+r.ag;minEl.textContent="Final";playWeek(r);
-    const cc=me(), rc=v=>v>=7?"#16a34a":v>=5?"#d9a400":"#e5484d";
-    const rl=myLine.map(id=>cc.squad.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>(b.lastRating||0)-(a.lastRating||0));
-    mo.querySelector("#liveRatings").innerHTML=`<h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">Notas dos teus jogadores</h2>`+rl.map(p=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:4px 2px;font-size:13px"><span>${p.name} <span class="pill ${posClass(p.pos)}" style="font-size:9px">${p.pos}</span></span><b style="color:${rc(p.lastRating||6)}">${p.lastRating!=null?p.lastRating:"—"}</b></div>`).join("");
+  function finish(){clearInterval(timer);scoreEl.textContent=r.hg+" - "+r.ag;minEl.textContent="Final";
+    if(onFinish)onFinish();
+    if(userClub&&userLine){ const rc=v=>v>=7?"#16a34a":v>=5?"#d9a400":"#e5484d";
+      const rl=userLine.map(id=>userClub.squad.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>(b.lastRating||0)-(a.lastRating||0));
+      mo.querySelector("#liveRatings").innerHTML=`<h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">Notas dos teus jogadores</h2>`+rl.map(p=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:4px 2px;font-size:13px"><span>${p.name} <span class="pill ${posClass(p.pos)}" style="font-size:9px">${p.pos}</span></span><b style="color:${rc(p.lastRating||6)}">${p.lastRating!=null?p.lastRating:"—"}</b></div>`).join("");
+    }
     const done=mo.querySelector("#liveDone");done.style.display="block";mo.querySelector("#liveSkip").style.display="none";done.onclick=()=>{mo.remove();render();};}
   mo.querySelector("#liveSkip").onclick=finish;
   timer=setInterval(()=>{
@@ -390,14 +387,40 @@ function playMatchAnimated(){
     if(minute>=90)finish();
   },220);
 }
+function playMatchAnimated(){
+  const next=nextFixture(); if(!next){playWeek();render();return;}
+  const c=me(), opp=myClubs()[next.opp];
+  const home=next.home?c:opp, away=next.home?opp:c;
+  const myLine=availableLineup(c,G.lineup,G.formation), oppLine=autoPickLineup(opp,"4-4-2",opp.susp);
+  const hLine=next.home?myLine:oppLine, aLine=next.home?oppLine:myLine;
+  const eMy=energyFactor(c,myLine);
+  const r=simulate(home,away,hLine,aLine,next.home?eMy:1,next.home?1:eMy);
+  r.userLine=myLine;
+  animateMatch(home,away,r,()=>playWeek(r),c,myLine);
+}
 
 /* ---------- Taça ---------- */
 function playCupTie(){
   const cup=G.cup; if(!cup||!cup.active)return;
-  const ut=cupUserTie();
-  if(cup.userAlive&&ut&&ut.b&&!ensureValidXI())return;
-  const userTie=cupAdvanceRound();
-  showCupResult(userTie);
+  if(!cupAvailable()){ toast("A próxima eliminatória é na jornada "+cupRoundDue()+" do campeonato"); return; }
+  const ms=me().short, ut=cupUserTie();
+  if(!cup.userAlive||!ut){ cupAdvanceRound(); render(); toast("Eliminatória simulada"); return; }
+  if(!ut.b){ cupAdvanceRound(); render(); toast("Passaste por folga (bye)"); return; }
+  if(!ensureValidXI())return;
+  const c=me(), aShort=ut.a, bShort=ut.b, ca=clubByShort(aShort), cb=clubByShort(bShort), userIsA=(aShort===ms);
+  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
+  const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
+  const eA=userIsA?energyFactor(c,aLine):1, eB=userIsA?1:energyFactor(c,bLine);
+  const r=simulate(ca,cb,aLine,bLine,eA,eB);
+  const userLine=userIsA?aLine:bLine;
+  animateMatch(ca,cb,r,()=>{
+    let w,pens=false;
+    if(r.hg>r.ag)w=aShort; else if(r.ag>r.hg)w=bShort;
+    else { pens=true; const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; w=(Math.random()<0.5+(sa-sb)/200)?aShort:bShort; }
+    processEnergyInjuries(c,userLine); rateUserMatch(c,userLine,r,userIsA);
+    cupAdvanceRound({sa:r.hg,sb:r.ag,w,pens});
+    toast(w===ms?("Passaste"+(pens?" nos penáltis":"")+"!"):("Eliminado da Taça"+(pens?" nos penáltis":"")));
+  }, c, userLine);
 }
 function showCupResult(userTie){
   const cup=G.cup, ms=me().short;

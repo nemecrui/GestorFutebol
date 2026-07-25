@@ -400,6 +400,7 @@ function endSeason(){
   const prize=Math.max(0.03,(d.clubs.length-meRank+1)*0.02);
   me().budget=Math.round((me().budget+prize)*100)/100;
   evaluateBoard(meRank);
+  while(G.cup&&G.cup.active)cupAdvanceRound();
 }
 function newSeason(){
   const mineShort=me().short;
@@ -678,7 +679,16 @@ function renewContract(pid){
 function allClubShorts(){ const a=[]; G.divisions.forEach(d=>d.clubs.forEach(c=>a.push(c.short))); return a; }
 function clubByShort(sh){ for(const d of G.divisions){ const c=d.clubs.find(x=>x.short===sh); if(c)return c; } return null; }
 function cupRoundName(){ const t=G.cup?G.cup.remaining.length:0; if(t<=2)return "Final"; if(t<=4)return "Meias-finais"; if(t<=8)return "Quartos-de-final"; if(t<=16)return "Oitavos-de-final"; return (G.cup.round+1)+"ª eliminatória"; }
-function cupCreate(){ const rem=shuffleArr(allClubShorts()); G.cup={active:true,round:0,remaining:rem,ties:[],history:[],winner:null,userAlive:true}; cupDraw(); }
+function cupCreate(){
+  const rem=shuffleArr(allClubShorts());
+  G.cup={active:true,round:0,remaining:rem,ties:[],history:[],winner:null,userAlive:true,schedule:[]};
+  cupDraw();
+  let n=rem.length, rounds=0; while(n>1){ n=Math.ceil(n/2); rounds++; }
+  const L=myDivObj().fixtures.length;
+  for(let i=0;i<rounds;i++) G.cup.schedule.push(Math.max(1,Math.round((i+1)/(rounds+1)*L)));
+}
+function cupRoundDue(){ return (G.cup&&G.cup.schedule&&G.cup.round<G.cup.schedule.length)?G.cup.schedule[G.cup.round]:999; }
+function cupAvailable(){ return !!(G.cup&&G.cup.active&&myDivObj().week>=cupRoundDue()); }
 function cupDraw(){ const rem=G.cup.remaining.slice(), ties=[]; while(rem.length>=2){ ties.push({a:rem.shift(),b:rem.shift(),sa:null,sb:null,w:null}); } if(rem.length===1)ties.push({a:rem.shift(),b:null,sa:null,sb:null,w:null}); G.cup.ties=ties; }
 function cupUserTie(){ if(!G.cup||!G.cup.active)return null; const ms=me().short; return G.cup.ties.find(t=>t.a===ms||t.b===ms)||null; }
 function cupResolveTie(t){
@@ -694,11 +704,11 @@ function cupResolveTie(t){
   else { const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; t.w=(Math.random()<0.5+(sa-sb)/200)?t.a:t.b; t.pens=true; }
   if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); }
 }
-function cupAdvanceRound(){
+function cupAdvanceRound(preUser){
   if(!G.cup||!G.cup.active)return null;
   const ms=me().short;
   const userTie=G.cup.ties.find(t=>t.a===ms||t.b===ms)||null;
-  G.cup.ties.forEach(cupResolveTie);
+  G.cup.ties.forEach(t=>{ if(t===userTie&&preUser){ t.sa=preUser.sa;t.sb=preUser.sb;t.w=preUser.w;t.pens=!!preUser.pens; } else cupResolveTie(t); });
   if(userTie && userTie.b && userTie.w!==ms)G.cup.userAlive=false;
   G.cup.history.push({name:cupRoundName(), ties:G.cup.ties.map(t=>({a:t.a,b:t.b,sa:t.sa,sb:t.sb,w:t.w,pens:!!t.pens}))});
   const winners=G.cup.ties.map(t=>t.w);
@@ -717,6 +727,6 @@ if(typeof module!=="undefined"&&module.exports){
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
-    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,PRONAC,DIV2,
+    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
