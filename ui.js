@@ -126,6 +126,18 @@ function viewHome(){
       return `<div class="fx" style="${mine?'border-color:var(--accent)':''}"><div class="t">${clubTagFull(H)}</div><div class="sc">${r.hg} - ${r.ag}</div><div class="t a">${clubTagFull(A)}</div></div>`;}).join("")+`</div>`;
   }
   h+=`<div class="card"><h2>Notícias</h2>${(G.news||[]).slice(0,5).map(n=>`<div class="ev">${n.t}</div>`).join("")||'<div class="muted">Sem notícias.</div>'}</div>`;
+  if(G.manager){
+    const st=G.manager.stats||{P:0,W:0,D:0,L:0,GF:0,GA:0}, tr=G.manager.trophies||[];
+    h+=`<div class="card"><h2>🏅 Palmarés · ${G.manager.name}</h2>
+      <div class="grid2" style="margin-bottom:8px">
+        <div class="stat"><div class="v">${st.W}-${st.D}-${st.L}</div><div class="l">V-E-D (carreira)</div></div>
+        <div class="stat"><div class="v">${st.P}</div><div class="l">Jogos</div></div>
+        <div class="stat"><div class="v">${st.GF}</div><div class="l">Golos marcados</div></div>
+        <div class="stat"><div class="v">${st.GA}</div><div class="l">Golos sofridos</div></div></div>
+      <div class="muted" style="font-size:12px;margin-bottom:4px">Troféus (${tr.length})</div>
+      ${tr.length? tr.slice().reverse().map(t=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:5px 2px;font-size:13px"><span>${t.type==="cup"?"🏆":t.type==="league"?"🥇":"⬆️"} ${t.name}</span><span class="muted" style="font-size:12px">época ${t.season}</span></div>`).join("") : `<div class="muted" style="font-size:13px">Ainda sem troféus — vai à luta!</div>`}
+    </div>`;
+  }
   h+=`<div class="card"><button class="btn warn small" id="btnReset" style="width:100%">↺ Novo jogo (apaga progresso)</button></div>`;
   return h;
 }
