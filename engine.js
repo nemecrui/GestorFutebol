@@ -222,6 +222,7 @@ function newGame(divIdx,clubIdx,managerName){
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
   setObjectives();
+  cupCreate();
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
@@ -436,6 +437,7 @@ function newSeason(){
   else if(myMove==="down")addNews("Desceste de divisão.");
   addNews("Nova época "+G.season+" ("+myDivObj().name+").");
   transferWindow();
+  cupCreate();
   save();
 }
 function sortedTable(d){
@@ -672,6 +674,40 @@ function renewContract(pid){
   addNews("Renovaste com "+p.name+" ("+p.contractYears+" anos, custo "+money(cost)+").");
   save(); return {ok:true,msg:"Renovado: "+p.name};
 }
+/* ---------- Taça (eliminação direta, todas as equipas) ---------- */
+function allClubShorts(){ const a=[]; G.divisions.forEach(d=>d.clubs.forEach(c=>a.push(c.short))); return a; }
+function clubByShort(sh){ for(const d of G.divisions){ const c=d.clubs.find(x=>x.short===sh); if(c)return c; } return null; }
+function cupRoundName(){ const t=G.cup?G.cup.remaining.length:0; if(t<=2)return "Final"; if(t<=4)return "Meias-finais"; if(t<=8)return "Quartos-de-final"; if(t<=16)return "Oitavos-de-final"; return (G.cup.round+1)+"ª eliminatória"; }
+function cupCreate(){ const rem=shuffleArr(allClubShorts()); G.cup={active:true,round:0,remaining:rem,ties:[],history:[],winner:null,userAlive:true}; cupDraw(); }
+function cupDraw(){ const rem=G.cup.remaining.slice(), ties=[]; while(rem.length>=2){ ties.push({a:rem.shift(),b:rem.shift(),sa:null,sb:null,w:null}); } if(rem.length===1)ties.push({a:rem.shift(),b:null,sa:null,sb:null,w:null}); G.cup.ties=ties; }
+function cupUserTie(){ if(!G.cup||!G.cup.active)return null; const ms=me().short; return G.cup.ties.find(t=>t.a===ms||t.b===ms)||null; }
+function cupResolveTie(t){
+  if(!t.b){ t.w=t.a; return; }
+  const ms=me().short, involvesUser=(t.a===ms||t.b===ms);
+  const ca=clubByShort(t.a), cb=clubByShort(t.b);
+  const aLine=(involvesUser&&t.a===ms)?availableLineup(ca,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
+  const bLine=(involvesUser&&t.b===ms)?availableLineup(cb,G.lineup,G.formation):autoPickLineup(cb,"4-4-2",cb.susp);
+  const eA=(involvesUser&&t.a===ms)?energyFactor(ca,aLine):1, eB=(involvesUser&&t.b===ms)?energyFactor(cb,bLine):1;
+  const r=simulate(ca,cb,aLine,bLine,eA,eB);
+  t.sa=r.hg; t.sb=r.ag;
+  if(r.hg>r.ag)t.w=t.a; else if(r.ag>r.hg)t.w=t.b;
+  else { const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; t.w=(Math.random()<0.5+(sa-sb)/200)?t.a:t.b; t.pens=true; }
+  if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); }
+}
+function cupAdvanceRound(){
+  if(!G.cup||!G.cup.active)return null;
+  const ms=me().short;
+  const userTie=G.cup.ties.find(t=>t.a===ms||t.b===ms)||null;
+  G.cup.ties.forEach(cupResolveTie);
+  if(userTie && userTie.b && userTie.w!==ms)G.cup.userAlive=false;
+  G.cup.history.push({name:cupRoundName(), ties:G.cup.ties.map(t=>({a:t.a,b:t.b,sa:t.sa,sb:t.sb,w:t.w,pens:!!t.pens}))});
+  const winners=G.cup.ties.map(t=>t.w);
+  G.cup.remaining=winners; G.cup.round++;
+  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByShort(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); }
+  else cupDraw();
+  save();
+  return userTie;
+}
 /* ---------- exports (para node/testes; ignorado no browser) ---------- */
 if(typeof module!=="undefined"&&module.exports){
   module.exports={ POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
@@ -680,6 +716,7 @@ if(typeof module!=="undefined"&&module.exports){
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
-    unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,PRONAC,DIV2,
+    unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
+    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }

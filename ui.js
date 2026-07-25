@@ -92,6 +92,25 @@ function viewHome(){
         <button class="btn small sec" data-counter="${i}">Pedir +20%</button>
         <button class="btn small warn" data-reject="${i}">Recusar</button></div>`).join("")+`</div>`;
   }
+  if(G.cup){
+    const cup=G.cup, ms=c.short;
+    if(!cup.active&&cup.winner){ const wc=clubByShort(cup.winner);
+      h+=`<div class="card center"><h2>🏆 Taça</h2><div class="muted">Vencedor: <b>${wc?wc.name:cup.winner}</b></div></div>`;
+    } else if(cup.active){
+      const ut=cupUserTie();
+      h+=`<div class="card"><h2>🏆 Taça · ${cupRoundName()}</h2>`;
+      if(cup.userAlive&&ut&&ut.b){
+        const opp=(ut.a===ms?ut.b:ut.a), oc=clubByShort(opp);
+        h+=`<div class="fx"><div class="t">${clubTagFull(c)}</div><div class="sc">vs</div><div class="t a">${oc?clubTagFull(oc):opp}</div></div>
+          <button class="btn" id="btnCup" style="margin-top:4px">▶ Jogar eliminatória da Taça</button>`;
+      } else if(cup.userAlive&&ut&&!ut.b){
+        h+=`<div class="center muted" style="margin-bottom:8px">Passas por folga (bye) nesta eliminatória.</div><button class="btn" id="btnCup">▶ Avançar na Taça</button>`;
+      } else {
+        h+=`<div class="center muted" style="margin-bottom:8px">Foste eliminado da Taça (${cup.remaining.length} equipas em prova).</div><button class="btn sec" id="btnCup">⏩ Simular eliminatória</button>`;
+      }
+      h+=`</div>`;
+    }
+  }
   h+=`<div class="card"><h2>Situação · ${d.name}</h2><div class="grid2">
       <div class="stat"><div class="v">${rank}º</div><div class="l">Classificação</div></div>
       <div class="stat"><div class="v">${c.Pts}</div><div class="l">Pontos</div></div>
@@ -285,7 +304,8 @@ function viewTable(){
   h+=`<div class="seg" id="segLeague">
     <button data-t="table" class="${tableTab==='table'?'active':''}">Classificação</button>
     <button data-t="scorers" class="${tableTab==='scorers'?'active':''}">Marcadores</button>
-    <button data-t="fixtures" class="${tableTab==='fixtures'?'active':''}">Jornada</button></div>`;
+    <button data-t="fixtures" class="${tableTab==='fixtures'?'active':''}">Jornada</button>
+    <button data-t="cup" class="${tableTab==='cup'?'active':''}">Taça</button></div>`;
   if(tableTab==="table"){
     const t=sortedTable(d), n=t.length;
     h+=`<div class="card" style="padding:6px"><table><thead><tr><th>#</th><th class="name">Clube</th><th>J</th><th>V</th><th>E</th><th>D</th><th>DG</th><th>P</th></tr></thead><tbody>`;
@@ -303,6 +323,20 @@ function viewTable(){
     all.slice(0,20).forEach((x,i)=>{h+=`<tr class="${(mineHere&&x.c.id===G.myId)?'me':''}"><td>${i+1}</td><td class="name">${x.p.name} <span class="pill ${posClass(x.p.pos)}" style="font-size:9px">${x.p.pos}</span></td><td class="name">${swatch(x.c,true)} ${x.c.short}</td><td><b>${x.p.goals}</b></td></tr>`;});
     if(!all.length)h+=`<tr><td colspan="4" class="muted">Ainda sem golos.</td></tr>`;
     h+=`</tbody></table></div>`;
+  } else if(tableTab==="cup"){
+    const cup=G.cup, ms=me().short;
+    if(!cup){ h+=`<div class="card muted">Sem Taça.</div>`; }
+    else {
+      if(cup.active){
+        const ut=cup.ties.find(t=>t.a===ms||t.b===ms);
+        h+=`<div class="card"><h2>🏆 ${cupRoundName()}</h2>`;
+        if(ut){const a=clubByShort(ut.a),b=ut.b?clubByShort(ut.b):null;h+=`<div class="fx" style="border-color:var(--accent)"><div class="t">${a?clubTag(a):ut.a}</div><div class="sc">${ut.b?"vs":"bye"}</div><div class="t a">${b?clubTag(b):""}</div></div>`;}
+        h+=`<div class="center muted" style="font-size:12px">${cup.ties.length} jogos · ${cup.remaining.length} equipas em prova</div></div>`;
+      }
+      const path=[]; cup.history.forEach(hr=>{const t=hr.ties.find(x=>x.a===ms||x.b===ms); if(t)path.push({name:hr.name,t});});
+      if(path.length){ h+=`<div class="card"><h2>O teu percurso</h2>`+path.slice().reverse().map(o=>{const a=clubByShort(o.t.a),b=o.t.b?clubByShort(o.t.b):null,won=o.t.w===ms;return `<div class="fx"><div class="t">${a?clubTag(a):o.t.a}</div><div class="sc">${o.t.b?(o.t.sa+"-"+o.t.sb):"bye"}</div><div class="t a">${b?clubTag(b):""}</div></div><div class="muted" style="font-size:11px;margin:-2px 0 6px">${o.name}${o.t.pens?" (penáltis)":""} — ${won?"passou":"eliminado"}</div>`;}).join("")+`</div>`; }
+      if(cup.winner){const wc=clubByShort(cup.winner);h+=`<div class="card center"><h2>🏆 Vencedor da Taça</h2><div class="big">${wc?wc.name:cup.winner}</div></div>`;}
+    }
   } else {
     const wk=Math.min(d.week,d.fixtures.length-1), round=d.fixtures[wk]||[], res=d.results[wk];
     h+=`<div class="card"><h2>${d.name} · Jornada ${wk+1}${d.week>=d.fixtures.length?' (final)':''}</h2>`+
@@ -357,9 +391,36 @@ function playMatchAnimated(){
   },220);
 }
 
+/* ---------- Taça ---------- */
+function playCupTie(){
+  const cup=G.cup; if(!cup||!cup.active)return;
+  const ut=cupUserTie();
+  if(cup.userAlive&&ut&&ut.b&&!ensureValidXI())return;
+  const userTie=cupAdvanceRound();
+  showCupResult(userTie);
+}
+function showCupResult(userTie){
+  const cup=G.cup, ms=me().short;
+  const mo=document.createElement("div");mo.className="modal";
+  let inner=`<div class="box"><div class="center"><h2 style="justify-content:center">🏆 Taça</h2></div>`;
+  if(userTie&&userTie.b){
+    const a=clubByShort(userTie.a), b=clubByShort(userTie.b), adv=userTie.w===ms;
+    inner+=`<div class="fx"><div class="t">${a?clubTag(a):userTie.a}</div><div class="sc">${userTie.sa} - ${userTie.sb}</div><div class="t a">${b?clubTag(b):userTie.b}</div></div>`;
+    if(userTie.pens)inner+=`<div class="center muted" style="font-size:12px">decidido nos penáltis</div>`;
+    inner+=`<div class="center" style="margin:10px 0;font-weight:800;color:${adv?'var(--green2)':'var(--red)'}">${adv?"Passaste à eliminatória seguinte!":"Foste eliminado da Taça."}</div>`;
+  } else if(userTie&&!userTie.b){ inner+=`<div class="center" style="margin:10px 0">Passaste por folga (bye).</div>`; }
+  else { inner+=`<div class="center muted" style="margin:10px 0">Eliminatória simulada.</div>`; }
+  if(!cup.active&&cup.winner){ const wc=clubByShort(cup.winner); inner+=`<div class="center" style="margin:10px 0"><b>🏆 ${wc?wc.name:cup.winner}</b> venceu a Taça.</div>`; }
+  else if(cup.active){ inner+=`<div class="center muted" style="font-size:12px;margin-bottom:8px">Segue para: ${cupRoundName()} (${cup.remaining.length} equipas)</div>`; }
+  inner+=`<button class="btn" id="cupDone">Continuar</button></div>`;
+  mo.innerHTML=inner; document.body.appendChild(mo);
+  mo.querySelector("#cupDone").onclick=()=>{mo.remove();render();};
+}
+
 /* ---------- eventos ---------- */
 function bindView(){
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(!ensureValidXI())return;playMatchAnimated();};
+  const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>playCupTie();
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length)playWeek();toast("Época simulada");render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();TAB="home";render();};
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
