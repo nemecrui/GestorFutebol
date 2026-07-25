@@ -372,7 +372,7 @@ function simRound(d,preMy,hasUser){
     }
     applyResult(home,away,r.hg,r.ag,r.events);
     home.susp=r.expelledH||[]; away.susp=r.expelledA||[];
-    if(userMatch){ processEnergyInjuries((h===G.myId)?home:away, userLine); }
+    if(userMatch){ const uc=(h===G.myId)?home:away; processEnergyInjuries(uc,userLine); rateUserMatch(uc,userLine,r,(h===G.myId)); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -415,7 +415,7 @@ function newSeason(){
   G.divisions.forEach(d=>{
     d.clubs.forEach((c,i)=>c.id=i);
     d.clubs.forEach(c=>{c.P=c.W=c.D=c.L=c.GF=c.GA=c.Pts=0; c.susp=[];
-      c.squad.forEach(p=>{p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.energy=100;p.injuredWeeks=0;
+      c.squad.forEach(p=>{p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.energy=100;p.injuredWeeks=0;p.ratings=[];p.lastRating=null;
         p.contractYears=(p.contractYears||2)-1;if(p.contractYears<=0)p.contractYears=ri(2,4);
         if(p.age<24){ // jovens evoluem para o seu potencial
           ATTR_KEYS.forEach(k=>{ if((PROFILES[p.pos]||{})[k]&&roleRatingAttrs(p.attrs,p.pos)<p.potential&&Math.random()<0.5)p.attrs[k]=clamp(p.attrs[k]+1,1,20); });
@@ -605,19 +605,39 @@ function rejectOffer(i){
 /* ---------- Fase 4: energia/forma, lesões, renovação, negociação ---------- */
 function unavailable(club){ const set=new Set(club.susp||[]); club.squad.forEach(p=>{ if((p.injuredWeeks||0)>0)set.add(p.id); }); return set; }
 function recovery(age){ return clamp(Math.round(22-(age-20)*0.7),6,22); }
-function energyFactor(club,line){ const ps=line.map(id=>club.squad.find(x=>x.id===id)).filter(Boolean); const avg=ps.reduce((s,p)=>s+(p.energy==null?100:p.energy),0)/Math.max(1,ps.length); return 0.85+0.15*(avg/100); }
+function energyFactor(club,line){ const ps=line.map(id=>club.squad.find(x=>x.id===id)).filter(Boolean); const avg=ps.reduce((s,p)=>s+(p.energy==null?100:p.energy),0)/Math.max(1,ps.length); return 0.8+0.2*(avg/100); }
 function processEnergyInjuries(club,playedIds){
   const played=new Set(playedIds||[]);
   club.squad.forEach(p=>{
     if(p.energy==null)p.energy=100; if(p.injuredWeeks==null)p.injuredWeeks=0;
-    if(p.injuredWeeks>0){ p.injuredWeeks--; p.energy=clamp(p.energy+Math.round(recovery(p.age)*0.7),0,100); return; }
+    if(p.injuredWeeks>0){ p.injuredWeeks--; p.energy=clamp(p.energy+Math.round(recovery(p.age)*0.6),0,100); return; }
     if(played.has(p.id)){
-      p.energy=clamp(p.energy-ri(22,38)+Math.round(recovery(p.age)*0.3),0,100);
-      const risk=0.03+(p.energy<40?0.03:0)+Math.max(0,(p.age-30))*0.004;
+      p.energy=clamp(p.energy-ri(8,18)-Math.max(0,p.age-30),0,100);            // titular: perde pouco (mais com idade)
+      const risk=0.02+(100-p.energy)/100*0.05+Math.max(0,(p.age-30))*0.004;    // pouca energia => mais lesões
       if(Math.random()<risk){ p.injuredWeeks=ri(1,5); addNews(p.name+" lesionou-se — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); }
-    } else { p.energy=clamp(p.energy+recovery(p.age),0,100); }
+    } else { p.energy=clamp(p.energy+Math.round(recovery(p.age)*2.5),0,100); } // suplente: recupera muito (menos com idade)
   });
 }
+function rateUserMatch(club,playedIds,r,isHome){
+  if(!playedIds)return;
+  const gf=isHome?r.hg:r.ag, ga=isHome?r.ag:r.hg, won=gf>ga, draw=gf===ga, side=isHome?"H":"A";
+  const gp={}, cp={};
+  (r.events||[]).forEach(e=>{ if(e.side!==side)return;
+    if(e.type==="goal"&&e.scorer)gp[e.scorer]=(gp[e.scorer]||0)+1;
+    else if(e.type==="yellow")cp[e.pid]=(cp[e.pid]||0)-0.3;
+    else if(e.type==="red")cp[e.pid]=(cp[e.pid]||0)-1.5; });
+  playedIds.forEach(id=>{ const p=club.squad.find(x=>x.id===id); if(!p)return;
+    let rt=6.0+(won?0.5:draw?0:-0.5);
+    rt+=(gp[id]||0)*1.2; rt+=(cp[id]||0);
+    const grp=GROUP[p.pos];
+    if(grp==="GK")rt+= ga===0?1.4 : ga>=3?-1.2 : -0.35*ga;
+    else if(grp==="DEF")rt+= ga===0?0.6 : ga>=3?-0.6:0;
+    rt+=rnd(-0.5,0.5);
+    rt=clamp(Math.round(rt*10)/10,1,10);
+    if(!p.ratings)p.ratings=[]; p.ratings.push(rt); if(p.ratings.length>10)p.ratings.shift(); p.lastRating=rt;
+  });
+}
+function avg5(p){ if(!p.ratings||!p.ratings.length)return null; const a=p.ratings.slice(-5); return Math.round(a.reduce((s,x)=>s+x,0)/a.length*10)/10; }
 function negotiateOffer(i,counterFee){
   const o=G.transferOffers&&G.transferOffers[i]; if(!o)return {status:"gone"};
   o.round=(o.round||0)+1;
@@ -641,6 +661,6 @@ if(typeof module!=="undefined"&&module.exports){
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
-    unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,PRONAC,DIV2,
+    unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }

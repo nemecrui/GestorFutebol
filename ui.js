@@ -19,6 +19,7 @@ function attrColor(v){return v>=15?"#16a34a":v>=11?"#d9a400":"#e5484d";}
 /* ---------- render ---------- */
 function header(){
   const c=me();
+  $("#hName").textContent=(G.manager&&G.manager.name)?G.manager.name:"Gestor";
   $("#hBadge").style.background=`linear-gradient(135deg,${c.c1} 0 55%,${c.c2} 55% 100%)`;
   $("#hSub").textContent=c.name+" · "+myDivObj().name;
   $("#hCash").textContent=money(c.budget);
@@ -122,7 +123,7 @@ function viewSquad(){
     return `<div class="pl" data-detail="${p.id}"><div class="num">${on?'<span style="color:var(--accent)">●</span>':'○'}</div>
       <div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
       <div class="info"><div class="nm">${p.name}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}</div>
-        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ⚡${p.energy==null?100:p.energy}% · ${money(p.value)} · ⚽${p.goals}</div></div>
+        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ⚡${p.energy==null?100:p.energy}% · ⭐${avg5(p)!=null?avg5(p):"—"} · ⚽${p.goals}</div></div>
       <button class="btn small ${on?'warn':'sec'}" data-sell="${p.id}">Vender</button></div>`;
   }).join("")+`</div>`;
   return h;
@@ -149,6 +150,7 @@ function openPlayer(pid){
     <div class="muted" style="font-size:11px;margin-bottom:2px">⚽ ${p.goals} golos · 🟨 ${p.yc||0} · 🟥 ${p.rc||0}</div>
     <div class="muted" style="font-size:11px;margin-bottom:2px">📄 Contrato: ${p.contractYears||"—"} ano(s) · valor de venda ~ ${money(transferFee(p))}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">⚡ Energia: ${p.energy==null?100:p.energy}%${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:6px">⭐ Última avaliação: ${p.lastRating!=null?p.lastRating:"—"} · Média (5 jogos): ${avg5(p)!=null?avg5(p):"—"}</div>
     <button class="btn sec small" id="pRenew" style="width:100%;margin-bottom:8px">📄 Renovar contrato (${money(Math.max(0.01,Math.round(p.value*0.08*100)/100))})</button>
     <h2 style="margin:10px 0 4px;color:var(--muted);font-size:12px">Atributos</h2>
     <div class="attrs">${attrRows}</div></div>`;
@@ -313,7 +315,9 @@ function playMatchAnimated(){
   const home=next.home?c:opp, away=next.home?opp:c;
   const myLine=availableLineup(c,G.lineup,G.formation), oppLine=autoPickLineup(opp,"4-4-2",opp.susp);
   const hLine=next.home?myLine:oppLine, aLine=next.home?oppLine:myLine;
-  const r=simulate(home,away,hLine,aLine);
+  const eMy=energyFactor(c,myLine), eOpp=1;
+  const r=simulate(home,away,hLine,aLine,next.home?eMy:eOpp,next.home?eOpp:eMy);
+  r.userLine=myLine;
   const mo=document.createElement("div");mo.className="modal";
   mo.innerHTML=`<div class="box"><div id="goalBanner">⚽ GOLO!</div>
     <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}</h2></div>
@@ -391,7 +395,16 @@ function splashScreen(){
   const divSel=el.querySelector("#divSel"), clubSel=el.querySelector("#clubSel");
   function fillClubs(){clubSel.innerHTML=divDefs[+divSel.value].clubs.map((c,i)=>`<option value="${i}">${c.n}</option>`).join("");}
   fillClubs(); divSel.onchange=fillClubs;
-  el.querySelector("#startBtn").onclick=()=>{const nm=(el.querySelector("#mgrName").value||"").trim()||"Treinador";newGame(+divSel.value,+clubSel.value,nm);el.remove();TAB="home";render();};
+  el.querySelector("#startBtn").onclick=()=>{
+    const nm=(el.querySelector("#mgrName").value||"").trim();
+    if(nm.length<4){
+      let e=el.querySelector("#nmErr");
+      if(!e){e=document.createElement("div");e.id="nmErr";e.style.cssText="color:var(--red);font-size:12px;margin-top:8px";el.querySelector("#startBtn").after(e);}
+      e.textContent="O nome do treinador precisa de pelo menos 4 caracteres.";
+      el.querySelector("#mgrName").focus(); return;
+    }
+    newGame(+divSel.value,+clubSel.value,nm);el.remove();TAB="home";render();
+  };
 }
 function boot(){
   document.getElementById("splash")?.remove();
