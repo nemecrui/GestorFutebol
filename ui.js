@@ -471,7 +471,7 @@ function bindView(){
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;playMatchAnimated();};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>playCupTie();
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length)playWeek();toast("Época simulada");render();};
-  const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();TAB="home";render();};
+  const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca");TAB="home";render();};
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
   document.querySelectorAll("[data-job]").forEach(b=>b.onclick=()=>{takeNewJob(+b.dataset.job);TAB="home";render();});
   const bjr=$("#btnJobRestart");if(bjr)bjr.onclick=()=>{if(confirm("Recomeçar carreira do zero?")){wipe();boot();}};
@@ -522,7 +522,7 @@ function splashScreen(){
       e.textContent="O nome do treinador precisa de pelo menos 4 caracteres.";
       el.querySelector("#mgrName").focus(); return;
     }
-    newGame(+divSel.value,+clubSel.value,nm);el.remove();TAB="home";render();
+    newGame(+divSel.value,+clubSel.value,nm);track("nova-carreira");el.remove();TAB="home";render();
   };
 }
 function boot(){
@@ -530,6 +530,19 @@ function boot(){
   if(load()&&G){TAB="home";render();}
   else{splashScreen();}
 }
+
+/* ---------- estatísticas de utilização (GoatCounter, opcional) ---------- */
+function initAnalytics(){
+  try{
+    const code=(typeof GAME_DATA!=="undefined"&&GAME_DATA&&GAME_DATA.goatcounter)||"";
+    if(!code)return;
+    const sc=document.createElement("script");
+    sc.async=true; sc.src="//gc.zgo.at/count.js";
+    sc.setAttribute("data-goatcounter","https://"+code+".goatcounter.com/count");
+    document.head.appendChild(sc);
+  }catch(e){}
+}
+function track(path){ try{ if(window.goatcounter&&window.goatcounter.count) window.goatcounter.count({path:path,title:path,event:true}); }catch(e){} }
 
 /* ---------- PWA ---------- */
 function initPWA(){
@@ -551,4 +564,5 @@ function iconDataURL(size){
   return c.toDataURL("image/png");
 }
 initPWA();
+initAnalytics();
 boot();

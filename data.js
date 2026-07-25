@@ -13,6 +13,13 @@
    ============================================================ */
 const GAME_DATA = {
 
+  /* ---- ESTATÍSTICAS DE UTILIZAÇÃO (opcional) ----
+     Para saberes quantas pessoas jogaram e quantas temporadas começam.
+     1) Cria uma conta gratuita em https://www.goatcounter.com (escolhe um "código", ex: "gestorfutebol")
+     2) Cola aqui esse código. Deixa "" para desligar (não conta nada).
+     Vês tudo no painel: CODIGO.goatcounter.com  (visitas + eventos "nova-carreira" e "nova-epoca"). */
+  goatcounter: "nemecrui",
+
   /* ---- ALTERAR clubes já existentes (por sigla) ----
      Muda nome (n), cores (c1/c2) ou força (str, ~35-85). */
   clubs: {
