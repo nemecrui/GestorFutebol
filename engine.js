@@ -204,7 +204,13 @@ function makePlayer(pos,level){
     value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
 }
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
-function makeSquadFromRoster(roster,level){ return roster.map(r=>{const p=makePlayer(r.p,level); p.name=r.n; return p;}); }
+function makeSquadFromRoster(roster,level){
+  const squad=roster.map(r=>{const p=makePlayer(r.p,level); p.name=r.n; return p;});
+  let gk=squad.filter(p=>p.pos==="GR").length; while(gk<2){ squad.push(makePlayer("GR",level)); gk++; }
+  const fillPos=["DC","LD","LE","DC","MC","MDC","MC","ME","MD","MO","PL","ED","EE","PL","DC","MC","PL","LE","LD"];
+  let fi=0; while(squad.length<20){ squad.push(makePlayer(fillPos[fi%fillPos.length],level)); fi++; }
+  return squad;
+}
 function clubFromDef(d,id){
   const level=clamp(Math.round(d.str/5),4,16);
   return {id, name:d.n, short:d.s, c1:d.c1, c2:d.c2, strength:d.str,

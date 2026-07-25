@@ -32,7 +32,7 @@ const GAME_DATA = {
       {n:"Agostinho Costa",p:"EE"},{n:"Narciso Batista",p:"PL"},{n:"José Pereira",p:"PL"},{n:"António Miranda",p:"PL"}
     ],
 	"TIB": [ {n: "António Xavier", p:"ED"}],
-	"PAD": [ {n: "André Correia", p:"ED"}],
+	"PAD": [ {n: "André Correia", p:"ED"}]
     // Exemplo para outro clube:
     // "SFT": [ {n:"Guarda-Redes X",p:"GR"}, {n:"Avançado Y",p:"PL"} ]
   },
