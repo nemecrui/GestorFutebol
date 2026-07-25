@@ -30,7 +30,9 @@ const GAME_DATA = {
       {n:"Domingos Barroso",p:"MC"},{n:"Ana Lopes",p:"MC"},{n:"Susana Feio",p:"MC"},{n:"Pedro Carvalho",p:"MD"},
       {n:"Luís Ferreira",p:"ME"},{n:"Duarte Pinto",p:"ME"},{n:"Pedro Gonçalves",p:"MO"},{n:"André Calçada",p:"ED"},
       {n:"Agostinho Costa",p:"EE"},{n:"Narciso Batista",p:"PL"},{n:"José Pereira",p:"PL"},{n:"António Miranda",p:"PL"}
-    ]
+    ],
+	"TIB": [ {n: "António Xavier", p:"ED"}],
+	"PAD": [ {n: "André Correia", p:"ED"}],
     // Exemplo para outro clube:
     // "SFT": [ {n:"Guarda-Redes X",p:"GR"}, {n:"Avançado Y",p:"PL"} ]
   },
@@ -51,5 +53,9 @@ const GAME_DATA = {
   /* ---- RAZÕES de despedimento (juntam-se às do jogo) ---- */
   firingReasons: [
     // "A tua razão personalizada aqui."
+	"O presidente descobriu que torces pelo rival.",
+	"Vetaste o bolo de aniversário do reoupeiro.",
+	"Apareceste bêbado no último treino.",
+	"O afilhado do presidente jogou menos do que esperava."
   ]
 };
