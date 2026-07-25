@@ -85,9 +85,10 @@ function viewHome(){
   }
   if(G.transferOffers&&G.transferOffers.length){
     h+=`<div class="card"><h2>Propostas recebidas</h2>`+G.transferOffers.map((o,i)=>
-      `<div class="pl" style="flex-wrap:wrap"><div class="info"><div class="nm">${o.playerName}</div>
+      `<div class="pl" style="flex-wrap:wrap"><div class="info" style="flex:1 1 100%;margin-bottom:6px"><div class="nm">${o.playerName}</div>
         <div class="sub">${o.clubName} oferece <b style="color:var(--accent)">${money(o.fee)}</b></div></div>
         <button class="btn small" data-accept="${i}">Aceitar</button>
+        <button class="btn small sec" data-counter="${i}">Pedir +20%</button>
         <button class="btn small warn" data-reject="${i}">Recusar</button></div>`).join("")+`</div>`;
   }
   h+=`<div class="card"><h2>Situação · ${d.name}</h2><div class="grid2">
@@ -117,11 +118,11 @@ function viewSquad(){
   h+=`<div class="seg" id="segPos">`+[["all","Todos"],["GK","GR"],["DEF","DEF"],["MID","MED"],["ATT","ATA"]].map(([k,l])=>
     `<button data-p="${k}" class="${squadFilter===k?'active':''}">${l}</button>`).join("")+`</div>`;
   h+=`<div class="plist">`+list.map(p=>{
-    const on=inXI.has(p.id), susp=(c.susp||[]).includes(p.id);
+    const on=inXI.has(p.id), susp=(c.susp||[]).includes(p.id), inj=(p.injuredWeeks||0)>0, tag=susp?'SUSP':inj?'LES':'';
     return `<div class="pl" data-detail="${p.id}"><div class="num">${on?'<span style="color:var(--accent)">●</span>':'○'}</div>
       <div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}${susp?' <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">SUSP</span>':''}</div>
-        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${money(p.value)} · ⚽${p.goals} · 🟨${p.yc||0} 🟥${p.rc||0}</div></div>
+      <div class="info"><div class="nm">${p.name}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}</div>
+        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ⚡${p.energy==null?100:p.energy}% · ${money(p.value)} · ⚽${p.goals}</div></div>
       <button class="btn small ${on?'warn':'sec'}" data-sell="${p.id}">Vender</button></div>`;
   }).join("")+`</div>`;
   return h;
@@ -147,25 +148,28 @@ function openPlayer(pid){
       <div class="stat"><div class="v">${money(p.value)}</div><div class="l">Valor</div></div></div>
     <div class="muted" style="font-size:11px;margin-bottom:2px">⚽ ${p.goals} golos · 🟨 ${p.yc||0} · 🟥 ${p.rc||0}</div>
     <div class="muted" style="font-size:11px;margin-bottom:2px">📄 Contrato: ${p.contractYears||"—"} ano(s) · valor de venda ~ ${money(transferFee(p))}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:6px">⚡ Energia: ${p.energy==null?100:p.energy}%${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
+    <button class="btn sec small" id="pRenew" style="width:100%;margin-bottom:8px">📄 Renovar contrato (${money(Math.max(0.01,Math.round(p.value*0.08*100)/100))})</button>
     <h2 style="margin:10px 0 4px;color:var(--muted);font-size:12px">Atributos</h2>
     <div class="attrs">${attrRows}</div></div>`;
   document.body.appendChild(mo);
   const close=()=>mo.remove();
   mo.querySelector("#pClose").onclick=close;
+  mo.querySelector("#pRenew").onclick=()=>{const r=renewContract(p.id);if(r.msg)toast(r.msg);close();render();};
   mo.onclick=e=>{if(e.target===mo)close();};
 }
 
 /* ---------- TÁTICA ---------- */
 function lineupIssues(club){
-  const susp=new Set(club.susp||[]); let vac=0,sus=0;
-  for(let i=0;i<11;i++){const id=G.lineup[i]; if(id==null)vac++; else if(susp.has(id))sus++;}
+  const susp=new Set(club.susp||[]); let vac=0,sus=0,inj=0;
+  for(let i=0;i<11;i++){const id=G.lineup[i]; if(id==null){vac++;continue;} if(susp.has(id))sus++; const p=club.squad.find(x=>x.id===id); if(p&&(p.injuredWeeks||0)>0)inj++;}
   const filled=G.lineup.filter(x=>x!=null).length;
-  return {vac,sus,filled,ok:vac===0&&sus===0&&filled===11};
+  return {vac,sus,inj,filled,ok:vac===0&&sus===0&&inj===0&&filled===11};
 }
 function ensureValidXI(){
   const iss=lineupIssues(me());
   if(iss.ok)return true;
-  toast(iss.sus?("Tens "+iss.sus+" suspenso(s) no onze — substitui na Tática"):"Onze incompleto — precisas de 11 jogadores em campo");
+  toast((iss.sus||iss.inj)?"Tens indisponíveis no onze (suspensos/lesionados) — substitui na Tática":"Onze incompleto — precisas de 11 jogadores em campo");
   TAB="tactics"; render(); return false;
 }
 function selLabel(cl){
@@ -207,9 +211,9 @@ function pitchHTML(cl){
     if(!p){
       spots+=`<div class="spot empty${isSel?' sel':''}" data-slot="${slot}" style="left:${s.x}%;top:${s.y}%"><div class="dot">+</div><div class="ppos">${s.pos}</div></div>`;
     } else {
-      const isSusp=susp.has(id);
-      spots+=`<div class="spot${isSel?' sel':''}${isSusp?' susp':''}" data-slot="${slot}" style="left:${s.x}%;top:${s.y}%">
-        ${isSusp?'<div class="susp-tag">SUSP</div>':''}
+      const isSusp=susp.has(id), isInj=(p.injuredWeeks||0)>0, bad=isSusp||isInj, tag=isSusp?'SUSP':isInj?'LES':'';
+      spots+=`<div class="spot${isSel?' sel':''}${bad?' susp':''}" data-slot="${slot}" style="left:${s.x}%;top:${s.y}%">
+        ${tag?`<div class="susp-tag">${tag}</div>`:''}
         <div class="dot" style="background:${cl.c1};color:${tc};border-color:${cl.c2}">${effAt(p,s.pos)}</div>
         <div class="lbl">${p.name.split(" ").slice(-1)[0]}</div><div class="ppos">${s.pos}</div></div>`;
     }
@@ -225,9 +229,10 @@ function benchHTML(cl){
   const subs=subsOf(cl), susp=new Set(cl.susp||[]);
   if(!subs.length)return `<div class="muted">Sem suplentes.</div>`;
   return `<div class="benchgrid" id="benchList">`+subs.map(p=>{
-    const isSusp=susp.has(p.id), isSel=tacSel&&tacSel.type==="bench"&&tacSel.pid===p.id;
-    return `<div class="benchpl${isSel?' sel':''}${isSusp?' susp':''}" data-pid="${p.id}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a${isSusp?' · <span class="tag">SUSP</span>':''}</div></div></div>`;
+    const isSusp=susp.has(p.id), isInj=(p.injuredWeeks||0)>0, isSel=tacSel&&tacSel.type==="bench"&&tacSel.pid===p.id;
+    const tag=isSusp?' · <span class="tag">SUSP</span>':isInj?' · <span class="tag">LES</span>':'';
+    return `<div class="benchpl${isSel?' sel':''}${(isSusp||isInj)?' susp':''}" data-pid="${p.id}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
+      <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ⚡${p.energy==null?100:p.energy}%${tag}</div></div></div>`;
   }).join("")+`</div>`;
 }
 function bar(l,v){const pct=clamp((v-40)/55*100,3,100);return `<div style="margin:7px 0"><div class="row between"><span>${l}</span><b>${Math.round(v)}</b></div><div class="barwrap"><div class="bar" style="width:${pct}%"></div></div></div>`;}
@@ -236,7 +241,7 @@ function tacTap(el){
   const cl=me();
   const isSlot=el.hasAttribute("data-slot");
   const slot=isSlot?+el.dataset.slot:null, pid=isSlot?null:+el.dataset.pid;
-  if(!isSlot&&(cl.susp||[]).includes(pid)){toast("Jogador suspenso — não pode ser convocado");return;}
+  if(!isSlot){const bp=cl.squad.find(x=>x.id===pid); if((cl.susp||[]).includes(pid)||(bp&&(bp.injuredWeeks||0)>0)){toast("Jogador indisponível (suspenso ou lesionado)");return;}}
   if(!tacSel){tacSel={type:isSlot?"slot":"bench",slot,pid};render();return;}
   const sameSlot=isSlot&&tacSel.type==="slot"&&tacSel.slot===slot;
   const sameBench=!isSlot&&tacSel.type==="bench"&&tacSel.pid===pid;
@@ -350,12 +355,13 @@ function bindView(){
   const bjr=$("#btnJobRestart");if(bjr)bjr.onclick=()=>{if(confirm("Recomeçar carreira do zero?")){wipe();boot();}};
   document.querySelectorAll("[data-accept]").forEach(b=>b.onclick=()=>{const r=acceptOffer(+b.dataset.accept);if(r.msg)toast(r.msg);render();});
   document.querySelectorAll("[data-reject]").forEach(b=>b.onclick=()=>{rejectOffer(+b.dataset.reject);render();});
+  document.querySelectorAll("[data-counter]").forEach(b=>b.onclick=()=>{const i=+b.dataset.counter;const o=G.transferOffers[i];if(!o)return;const r=negotiateOffer(i,Math.round(o.fee*1.2*100)/100);if(r.status==="accepted")toast((r.res&&r.res.msg)||"Vendido");else if(r.status==="counter")toast("Contraproposta do clube: "+money(r.fee));else if(r.status==="withdrawn")toast("O clube retirou-se da negociação");render();});
   const sp=$("#segPos");if(sp)sp.querySelectorAll("button").forEach(b=>b.onclick=()=>{squadFilter=b.dataset.p;render();});
   document.querySelectorAll("[data-sell]").forEach(b=>b.onclick=e=>{e.stopPropagation();if(confirm("Vender este jogador?")){const r=sellPlayer(+b.dataset.sell);toast(r.msg);render();}});
   document.querySelectorAll("[data-detail]").forEach(el=>el.onclick=()=>openPlayer(+el.dataset.detail));
-  const sf=$("#selForm");if(sf)sf.onchange=()=>{tacSel=null;G.formation=sf.value;G.lineup=autoPickLineup(me(),G.formation,me().susp);save();render();};
+  const sf=$("#selForm");if(sf)sf.onchange=()=>{tacSel=null;G.formation=sf.value;G.lineup=autoPickLineup(me(),G.formation,[...unavailable(me())]);save();render();};
   const sm=$("#selMent");if(sm)sm.onchange=()=>{G.mentality=sm.value;save();render();};
-  const ba=$("#btnAuto");if(ba)ba.onclick=()=>{tacSel=null;G.lineup=autoPickLineup(me(),G.formation,me().susp);save();toast("Onze otimizado");render();};
+  const ba=$("#btnAuto");if(ba)ba.onclick=()=>{tacSel=null;G.lineup=autoPickLineup(me(),G.formation,[...unavailable(me())]);save();toast("Onze otimizado");render();};
   const bva=$("#btnVacate");if(bva)bva.onclick=()=>{if(tacSel&&tacSel.type==="slot"){G.lineup[tacSel.slot]=null;tacSel=null;save();render();}};
   const bcs=$("#btnCancelSel");if(bcs)bcs.onclick=()=>{tacSel=null;render();};
   const smk=$("#segMkt");if(smk)smk.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketPos=b.dataset.p;render();});
@@ -368,15 +374,15 @@ function bindView(){
 /* ---------- ecrã inicial ---------- */
 function splashScreen(){
   const el=document.createElement("div");el.className="splash";el.id="splash";
-  const divDefs=[{name:"Divisão de Honra",clubs:CLUBS},{name:"1ª Divisão",clubs:DIV1}];
+  const divDefs=[{name:"Pró-Nacional",clubs:PRONAC},{name:"Divisão de Honra",clubs:CLUBS},{name:"1ª Divisão",clubs:DIV1},{name:"2ª Divisão",clubs:DIV2}];
   el.innerHTML=`<div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#16a34a 0 55%,#ffcc00 55% 100%)"></div>
     <h1 style="font-size:24px;margin:14px 0 2px">Gestor AF Braga</h1>
     <div class="muted" style="margin-bottom:20px">Divisão de Honra & 1ª Divisão</div>
     <div style="width:100%;max-width:360px">
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">O teu nome (treinador):</div>
-      <input id="mgrName" maxlength="28" placeholder="Ex: Rui Xavier" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;font-size:15px;margin-bottom:12px">
+      <input id="mgrName" maxlength="28" placeholder="Ex: Nemec Rui" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;font-size:15px;margin-bottom:12px">
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Divisão:</div>
-      <select id="divSel" style="margin-bottom:12px"><option value="0">Divisão de Honra</option><option value="1">1ª Divisão</option></select>
+      <select id="divSel" style="margin-bottom:12px">${divDefs.map((d,i)=>`<option value="${i}">${d.name}</option>`).join("")}</select>
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Clube:</div>
       <select id="clubSel" style="margin-bottom:14px"></select>
       <button class="btn" id="startBtn">▶ Começar carreira</button></div>

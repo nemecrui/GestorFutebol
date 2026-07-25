@@ -105,6 +105,42 @@ const DIV1=[
   {n:"Ruivanense FC",s:"RUI",str:48,c1:"#f2c200",c2:"#1d4ed8"},
   {n:"GD Carreira",s:"CAR",str:47,c1:"#111111",c2:"#ffffff"}
 ];
+// ---- Pró-Nacional AF Braga (topo distrital) — reais + plausíveis. Cores provisórias ----
+const PRONAC=[
+  {n:"Merelinense FC",s:"MER",str:80,c1:"#1d4ed8",c2:"#ffffff"},
+  {n:"Vieira SC",s:"VIE",str:79,c1:"#111111",c2:"#f2c200"},
+  {n:"AD Esposende",s:"ESP",str:78,c1:"#c1121f",c2:"#ffffff"},
+  {n:"Pevidém SC",s:"PEV",str:77,c1:"#1d4ed8",c2:"#c1121f"},
+  {n:"Berço SC",s:"BER",str:76,c1:"#15803d",c2:"#ffffff"},
+  {n:"Dumiense FC",s:"DUM",str:75,c1:"#c1121f",c2:"#111111"},
+  {n:"FC Marinhas",s:"MRH",str:74,c1:"#1d4ed8",c2:"#ffffff"},
+  {n:"AD Oliveirense",s:"OLI",str:74,c1:"#111111",c2:"#ffffff"},
+  {n:"GD Maria da Fonte",s:"MDF",str:73,c1:"#15803d",c2:"#f2c200"},
+  {n:"GD Prado",s:"PRD",str:73,c1:"#e07a1f",c2:"#111111"},
+  {n:"SC Amares",s:"AMA",str:72,c1:"#6b21a8",c2:"#ffffff"},
+  {n:"Palmeiras FC",s:"PAL",str:72,c1:"#15803d",c2:"#ffffff"},
+  {n:"AD Fão",s:"FAO",str:72,c1:"#2f9be0",c2:"#ffffff"},
+  {n:"GD Celoricense",s:"CEL",str:72,c1:"#c1121f",c2:"#1d4ed8"},
+  {n:"GD Ruilhe",s:"RUL",str:71,c1:"#14274e",c2:"#f2c200"},
+  {n:"AD Nogueiró",s:"NOG",str:71,c1:"#7b1e2b",c2:"#ffffff"}
+];
+// ---- 2ª Divisão AF Braga — inclui os clubes pedidos + plausíveis. Cores provisórias ----
+const DIV2=[
+  {n:"SC Cachapuz",s:"CAC",str:48,c1:"#1d4ed8",c2:"#f2c200"},
+  {n:"GDR Trandeiras",s:"TRA",str:47,c1:"#c1121f",c2:"#ffffff"},
+  {n:"GD Sete Fontes",s:"SFT",str:46,c1:"#15803d",c2:"#ffffff"},
+  {n:"ACDR Tibães",s:"TIB",str:46,c1:"#111111",c2:"#f2c200"},
+  {n:"GD Nogueira",s:"NGR",str:45,c1:"#1d4ed8",c2:"#ffffff"},
+  {n:"AD Padim da Graça",s:"PAD",str:44,c1:"#6b21a8",c2:"#ffffff"},
+  {n:"GDC Gualtar",s:"GUA",str:44,c1:"#e07a1f",c2:"#111111"},
+  {n:"SC Adaúfe",s:"ADA",str:43,c1:"#c1121f",c2:"#111111"},
+  {n:"GD Lamaçães",s:"LAM",str:42,c1:"#15803d",c2:"#111111"},
+  {n:"ARC Panóias",s:"PAN",str:42,c1:"#2f9be0",c2:"#ffffff"},
+  {n:"GD Ferreiros",s:"FER",str:41,c1:"#14274e",c2:"#ffffff"},
+  {n:"AD Palmeira",s:"PLM",str:40,c1:"#7b1e2b",c2:"#f2c200"},
+  {n:"GDR Semelhe",s:"SEM",str:39,c1:"#111111",c2:"#c1121f"},
+  {n:"GD Pousada",s:"POS",str:38,c1:"#f2c200",c2:"#1d4ed8"}
+];
 
 /* modelo do plantel: posições cobertas (23 jogadores) */
 const SQUAD_TEMPLATE=["GR","GR","LD","LD","LE","LE","DC","DC","DC","DC",
@@ -148,7 +184,7 @@ function makePlayer(pos,level){
   const potential=clamp(abil+(age<23?ri(3,14):ri(-2,4)),abil,99);
   const value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
   return {id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
-    value, contractYears:ri(1,4), form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
+    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
 }
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
 function clubFromDef(d,id){
@@ -168,11 +204,13 @@ function makeDivision(name,defs,upSlots,downSlots){
 }
 function newGame(divIdx,clubIdx,managerName){
   PID=1;
-  const d0=makeDivision("Divisão de Honra",CLUBS,0,3);
-  const d1=makeDivision("1ª Divisão",DIV1,3,0);
-  G={version:5, divisions:[d0,d1], myDiv:divIdx, myId:clubIdx,
+  const dPN=makeDivision("Pró-Nacional",PRONAC,0,3);
+  const dH =makeDivision("Divisão de Honra",CLUBS,3,3);
+  const dU =makeDivision("1ª Divisão",DIV1,3,3);
+  const dD =makeDivision("2ª Divisão",DIV2,3,0);
+  G={version:6, divisions:[dPN,dH,dU,dD], myDiv:divIdx, myId:clubIdx,
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
-     lineup:[], news:[], seasonDone:false,
+     lineup:[], news:[], seasonDone:false, midWindowDone:false,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -206,7 +244,7 @@ function autoPickLineup(club,formation,banned){
   return line;
 }
 function availableLineup(club,baseLineup,formation){
-  const slots=FORMATIONS[formation].slots, susp=new Set(club.susp||[]), used=new Set();
+  const slots=FORMATIONS[formation].slots, susp=unavailable(club), used=new Set();
   const line=baseLineup.map(id=>(id!=null&&!susp.has(id))?id:null);
   line.forEach(id=>{if(id!=null)used.add(id);});
   for(let i=0;i<slots.length;i++){ if(line[i]==null){ const p=bestForSlot(club,slots[i].pos,used,susp); if(p){line[i]=p.id;used.add(p.id);} } }
@@ -262,9 +300,11 @@ function pickFoul(club,lineup,gone){
 }
 
 /* ---------- motor de jogo ---------- */
-function simulate(home,away,hLine,aLine){
+function simulate(home,away,hLine,aLine,eHome,eAway){
+  eHome=eHome||1; eAway=eAway||1;
   const hS=teamStrength(home,hLine,G.formation,G.mentality);
   const aS=teamStrength(away,aLine,"4-4-2",pick(["Defensivo","Equilibrado","Equilibrado","Atacante"]));
+  hS.atk*=eHome;hS.mid*=eHome;hS.def*=eHome; aS.atk*=eAway;aS.mid*=eAway;aS.def*=eAway;
   const events=[]; let hg=0,ag=0,hRed=0,aRed=0;
   const yc={}, expelledH=[], expelledA=[];
   function offRate(){
@@ -312,16 +352,20 @@ function simRound(d,preMy,hasUser){
   if(d.week>=d.fixtures.length)return;
   const round=d.fixtures[d.week], weekRes=[];
   round.forEach(([h,a])=>{
-    const home=d.clubs[h], away=d.clubs[a]; let r;
+    const home=d.clubs[h], away=d.clubs[a]; let r, userLine=null;
     const userMatch=hasUser&&(h===G.myId||a===G.myId);
-    if(preMy&&userMatch){ r=preMy; }
+    if(preMy&&userMatch){ r=preMy; userLine=preMy.userLine; }
     else {
       const hLine=(hasUser&&h===G.myId)?availableLineup(home,G.lineup,G.formation):autoPickLineup(home,"4-4-2",home.susp);
       const aLine=(hasUser&&a===G.myId)?availableLineup(away,G.lineup,G.formation):autoPickLineup(away,"4-4-2",away.susp);
-      r=simulate(home,away,hLine,aLine);
+      let eH=1,eA=1;
+      if(hasUser&&h===G.myId){eH=energyFactor(home,hLine);userLine=hLine;}
+      if(hasUser&&a===G.myId){eA=energyFactor(away,aLine);userLine=aLine;}
+      r=simulate(home,away,hLine,aLine,eH,eA);
     }
     applyResult(home,away,r.hg,r.ag,r.events);
     home.susp=r.expelledH||[]; away.susp=r.expelledA||[];
+    if(userMatch){ processEnergyInjuries((h===G.myId)?home:away, userLine); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -330,6 +374,7 @@ function playWeek(preMy){
   const myD=myDivObj(); if(myD.week>=myD.fixtures.length)return;
   simRound(myD,preMy,true);
   boardAfterUserMatch();
+  if(!G.midWindowDone && myD.week===Math.floor(myD.fixtures.length/2)){ transferWindow(); G.midWindowDone=true; }
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
   G.week=myD.week; advanceMonth();
   if(myD.week>=myD.fixtures.length){
@@ -348,16 +393,23 @@ function endSeason(){
   evaluateBoard(meRank);
 }
 function newSeason(){
-  const d0=G.divisions[0], d1=G.divisions[1];
-  const t0=sortedTable(d0), t1=sortedTable(d1);
-  const releg=t0.slice(t0.length-d0.downSlots), promo=t1.slice(0,d1.upSlots);
   const mineShort=me().short;
-  d0.clubs=d0.clubs.filter(c=>!releg.includes(c)).concat(promo);
-  d1.clubs=d1.clubs.filter(c=>!promo.includes(c)).concat(releg);
+  const tables=G.divisions.map(d=>sortedTable(d));
+  const leaving=G.divisions.map(()=>new Set()), incoming=G.divisions.map(()=>[]);
+  let myMove=null;
+  for(let i=0;i<G.divisions.length-1;i++){
+    const up=G.divisions[i], down=G.divisions[i+1];
+    const releg=tables[i].slice(tables[i].length-up.downSlots);
+    const promo=tables[i+1].slice(0,down.upSlots);
+    releg.forEach(c=>{leaving[i].add(c); incoming[i+1].push(c); if(c.short===mineShort)myMove="down";});
+    promo.forEach(c=>{leaving[i+1].add(c); incoming[i].push(c); if(c.short===mineShort)myMove="up";});
+  }
+  G.divisions.forEach((d,i)=>{ d.clubs=d.clubs.filter(c=>!leaving[i].has(c)).concat(incoming[i]); });
   G.divisions.forEach(d=>{
     d.clubs.forEach((c,i)=>c.id=i);
     d.clubs.forEach(c=>{c.P=c.W=c.D=c.L=c.GF=c.GA=c.Pts=0; c.susp=[];
-      c.squad.forEach(p=>{p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.contractYears=(p.contractYears||2)-1;if(p.contractYears<=0)p.contractYears=ri(2,4);
+      c.squad.forEach(p=>{p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.energy=100;p.injuredWeeks=0;
+        p.contractYears=(p.contractYears||2)-1;if(p.contractYears<=0)p.contractYears=ri(2,4);
         if(p.age<24){ // jovens evoluem para o seu potencial
           ATTR_KEYS.forEach(k=>{ if((PROFILES[p.pos]||{})[k]&&roleRatingAttrs(p.attrs,p.pos)<p.potential&&Math.random()<0.5)p.attrs[k]=clamp(p.attrs[k]+1,1,20); });
         } else if(p.age>32){ // veteranos declinam
@@ -369,12 +421,12 @@ function newSeason(){
     d.fixtures=buildFixtures(d.clubs.length); d.results=[]; d.week=0;
   });
   for(let di=0;di<G.divisions.length;di++){ const idx=G.divisions[di].clubs.findIndex(c=>c.short===mineShort); if(idx>=0){G.myDiv=di;G.myId=idx;break;} }
-  G.season++; G.week=0; G.seasonDone=false; G.date="Set";
+  G.season++; G.week=0; G.seasonDone=false; G.date="Set"; G.midWindowDone=false;
   G.lineup=autoPickLineup(me(),G.formation);
   G.manager.seasons=(G.manager.seasons||0)+1; setObjectives();
-  if(promo.some(c=>c.short===mineShort))addNews("Subiste à Divisão de Honra!");
-  else if(releg.some(c=>c.short===mineShort))addNews("Desceste à 1ª Divisão.");
-  addNews("Nova época "+G.season+". Sobem: "+promo.map(c=>c.short).join(", ")+". Descem: "+releg.map(c=>c.short).join(", ")+".");
+  if(myMove==="up")addNews("Subiste de divisão!");
+  else if(myMove==="down")addNews("Desceste de divisão.");
+  addNews("Nova época "+G.season+" ("+myDivObj().name+").");
   transferWindow();
   save();
 }
@@ -410,7 +462,7 @@ function addNews(t){ if(!G.news)G.news=[]; G.news.unshift({t}); if(G.news.length
 
 /* ---------- persistência + migração ---------- */
 function save(){ if(typeof localStorage==="undefined")return; try{localStorage.setItem("gestorafb",JSON.stringify(G));}catch(e){} }
-function migrate(o){ if(!o)return null; if(o.version===5)return o; return null; /* versões antigas recomeçam; migrações futuras aqui */ }
+function migrate(o){ if(!o)return null; if(o.version===6)return o; return null; /* versões antigas recomeçam; migrações futuras aqui */ }
 function load(){ if(typeof localStorage==="undefined")return false;
   try{ const s=localStorage.getItem("gestorafb"); if(s){ const m=migrate(JSON.parse(s)); if(m){G=m;return true;} } }catch(e){} return false; }
 function wipe(){ if(typeof localStorage!=="undefined")localStorage.removeItem("gestorafb"); G=null; }
@@ -422,16 +474,11 @@ function squadRating(club){
   return n?s/n:55;
 }
 function objectiveFor(di,rankExp,n){
-  if(di===0){
-    if(rankExp<=2)return{type:"title",label:"Lutar pelo título",target:3,baseConf:55};
-    if(rankExp<=6)return{type:"top",label:"Primeira metade da tabela",target:Math.ceil(n/2),baseConf:58};
-    if(rankExp<=n-4)return{type:"mid",label:"Meio da tabela, tranquilo",target:n-3,baseConf:60};
-    return{type:"survive",label:"Manter a categoria (evitar descida)",target:n-3,baseConf:62};
-  } else {
-    if(rankExp<=3)return{type:"promo",label:"Subir de divisão",target:3,baseConf:55};
-    if(rankExp<=7)return{type:"top",label:"Lutar pela subida",target:6,baseConf:58};
-    return{type:"mid",label:"Primeira metade da tabela",target:Math.ceil(n/2),baseConf:60};
-  }
+  const d=G.divisions[di], canUp=d.upSlots>0, canDown=d.downSlots>0;
+  if(rankExp<=2) return canUp?{type:"promo",label:"Subir de divisão",target:d.upSlots,baseConf:55}:{type:"title",label:"Lutar pelo título",target:3,baseConf:55};
+  if(rankExp<=Math.ceil(n*0.4)) return {type:"top",label:canUp?"Lutar pela subida":"Primeira metade da tabela",target:Math.max(d.upSlots+2,Math.ceil(n/2)),baseConf:58};
+  if(canDown&&rankExp>n-4) return {type:"survive",label:"Manter a categoria (evitar descida)",target:n-d.downSlots,baseConf:62};
+  return {type:"mid",label:"Meio da tabela, tranquilo",target:canDown?n-d.downSlots:Math.ceil(n/2),baseConf:60};
 }
 function setObjectives(){
   G.divisions.forEach((d,di)=>{
@@ -519,8 +566,9 @@ function makePlayerOffers(){
     const avail=targets.filter(p=>!used.has(p.id)&&transferFee(p)*0.9<=club.budget);
     if(!avail.length)continue;
     const p=pick(avail); used.add(p.id);
-    const fee=Math.max(0.02,Math.round(transferFee(p)*rnd(0.85,1.3)*100)/100);
-    offers.push({clubShort:club.short,clubName:club.name,divIdx:di,playerId:p.id,playerName:p.name,fee});
+    const base=transferFee(p), maxFee=Math.round(base*rnd(1.1,1.6)*100)/100;
+    const fee=Math.max(0.02,Math.round(base*rnd(0.8,1.05)*100)/100);
+    offers.push({clubShort:club.short,clubName:club.name,divIdx:di,playerId:p.id,playerName:p.name,fee,maxFee,round:0});
   }
   return offers;
 }
@@ -547,6 +595,37 @@ function rejectOffer(i){
   addNews("Recusaste a proposta do "+o.clubName+" por "+o.playerName+".");
   G.transferOffers=G.transferOffers.filter((_,j)=>j!==i); save();
 }
+/* ---------- Fase 4: energia/forma, lesões, renovação, negociação ---------- */
+function unavailable(club){ const set=new Set(club.susp||[]); club.squad.forEach(p=>{ if((p.injuredWeeks||0)>0)set.add(p.id); }); return set; }
+function recovery(age){ return clamp(Math.round(22-(age-20)*0.7),6,22); }
+function energyFactor(club,line){ const ps=line.map(id=>club.squad.find(x=>x.id===id)).filter(Boolean); const avg=ps.reduce((s,p)=>s+(p.energy==null?100:p.energy),0)/Math.max(1,ps.length); return 0.85+0.15*(avg/100); }
+function processEnergyInjuries(club,playedIds){
+  const played=new Set(playedIds||[]);
+  club.squad.forEach(p=>{
+    if(p.energy==null)p.energy=100; if(p.injuredWeeks==null)p.injuredWeeks=0;
+    if(p.injuredWeeks>0){ p.injuredWeeks--; p.energy=clamp(p.energy+Math.round(recovery(p.age)*0.7),0,100); return; }
+    if(played.has(p.id)){
+      p.energy=clamp(p.energy-ri(22,38)+Math.round(recovery(p.age)*0.3),0,100);
+      const risk=0.03+(p.energy<40?0.03:0)+Math.max(0,(p.age-30))*0.004;
+      if(Math.random()<risk){ p.injuredWeeks=ri(1,5); addNews(p.name+" lesionou-se — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); }
+    } else { p.energy=clamp(p.energy+recovery(p.age),0,100); }
+  });
+}
+function negotiateOffer(i,counterFee){
+  const o=G.transferOffers&&G.transferOffers[i]; if(!o)return {status:"gone"};
+  o.round=(o.round||0)+1;
+  if(counterFee<=o.maxFee){ o.fee=counterFee; return {status:"accepted", res:acceptOffer(i)}; }
+  if(o.round<2 && counterFee<=o.maxFee*1.15){ o.fee=Math.round(((counterFee+o.maxFee)/2)*100)/100; addNews(o.clubName+" contrapôs "+money(o.fee)+" por "+o.playerName+"."); save(); return {status:"counter", fee:o.fee}; }
+  addNews(o.clubName+" retirou-se da negociação por "+o.playerName+"."); G.transferOffers=G.transferOffers.filter((_,j)=>j!==i); save(); return {status:"withdrawn"};
+}
+function renewContract(pid){
+  const c=me(), p=c.squad.find(x=>x.id===pid); if(!p)return {ok:false,msg:""};
+  const cost=Math.max(0.01,Math.round(p.value*0.08*100)/100);
+  if(c.budget<cost)return {ok:false,msg:"Verba insuficiente ("+money(cost)+")"};
+  c.budget=Math.round((c.budget-cost)*100)/100; p.contractYears=clamp((p.contractYears||1)+2,2,5);
+  addNews("Renovaste com "+p.name+" ("+p.contractYears+" anos, custo "+money(cost)+").");
+  save(); return {ok:true,msg:"Renovado: "+p.name};
+}
 /* ---------- exports (para node/testes; ignorado no browser) ---------- */
 if(typeof module!=="undefined"&&module.exports){
   module.exports={ POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
@@ -555,5 +634,6 @@ if(typeof module!=="undefined"&&module.exports){
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
+    unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
