@@ -148,7 +148,7 @@ function makePlayer(pos,level){
   const potential=clamp(abil+(age<23?ri(3,14):ri(-2,4)),abil,99);
   const value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
   return {id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
-    value, form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
+    value, contractYears:ri(1,4), form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
 }
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
 function clubFromDef(d,id){
@@ -174,7 +174,7 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0},
-     contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null};
+     contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
   setObjectives();
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
@@ -357,7 +357,7 @@ function newSeason(){
   G.divisions.forEach(d=>{
     d.clubs.forEach((c,i)=>c.id=i);
     d.clubs.forEach(c=>{c.P=c.W=c.D=c.L=c.GF=c.GA=c.Pts=0; c.susp=[];
-      c.squad.forEach(p=>{p.goals=0;p.apps=0;p.yc=0;p.rc=0;
+      c.squad.forEach(p=>{p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.contractYears=(p.contractYears||2)-1;if(p.contractYears<=0)p.contractYears=ri(2,4);
         if(p.age<24){ // jovens evoluem para o seu potencial
           ATTR_KEYS.forEach(k=>{ if((PROFILES[p.pos]||{})[k]&&roleRatingAttrs(p.attrs,p.pos)<p.potential&&Math.random()<0.5)p.attrs[k]=clamp(p.attrs[k]+1,1,20); });
         } else if(p.age>32){ // veteranos declinam
@@ -375,6 +375,7 @@ function newSeason(){
   if(promo.some(c=>c.short===mineShort))addNews("Subiste à Divisão de Honra!");
   else if(releg.some(c=>c.short===mineShort))addNews("Desceste à 1ª Divisão.");
   addNews("Nova época "+G.season+". Sobem: "+promo.map(c=>c.short).join(", ")+". Descem: "+releg.map(c=>c.short).join(", ")+".");
+  transferWindow();
   save();
 }
 function sortedTable(d){
@@ -485,6 +486,67 @@ function takeNewJob(i){
   newSeason();
   return true;
 }
+/* ---------- Fase 3: transferências ---------- */
+function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function transferFee(p){
+  const cy=p.contractYears||2, mod=cy<=1?0.55:cy===2?0.85:1.0;
+  return Math.max(0.02,Math.round(p.value*mod*100)/100);
+}
+function allClubsFlat(){ const o=[]; G.divisions.forEach((d,di)=>d.clubs.forEach(c=>o.push({c,di}))); return o; }
+function isMine(c,di){ return di===G.myDiv&&c.id===G.myId; }
+function aiTransfer(){
+  const clubs=allClubsFlat();
+  const buyers=clubs.filter(o=>!isMine(o.c,o.di)&&o.c.budget>0.06);
+  if(!buyers.length)return;
+  const b=pick(buyers);
+  const sellers=clubs.filter(o=>o.c!==b.c&&!isMine(o.c,o.di)&&o.c.squad.length>17);
+  if(!sellers.length)return;
+  const s=pick(sellers);
+  const cand=s.c.squad.filter(p=>transferFee(p)<=b.c.budget).sort((x,y)=>ability(y)-ability(x))[0];
+  if(!cand)return;
+  const fee=transferFee(cand);
+  b.c.budget=Math.round((b.c.budget-fee)*100)/100; s.c.budget=Math.round((s.c.budget+fee)*100)/100;
+  s.c.squad=s.c.squad.filter(p=>p.id!==cand.id); b.c.squad.push(cand);
+}
+function makePlayerOffers(){
+  const meC=me(); if(meC.squad.length<=14)return [];
+  const targets=meC.squad.slice().sort((a,b)=>ability(b)-ability(a)).slice(0,8);
+  const clubs=allClubsFlat().filter(o=>!isMine(o.c,o.di)&&o.c.budget>0.08);
+  shuffleArr(clubs);
+  const offers=[], used=new Set(), nBids=ri(0,3);
+  for(let i=0;i<nBids&&i<clubs.length;i++){
+    const club=clubs[i].c, di=clubs[i].di;
+    const avail=targets.filter(p=>!used.has(p.id)&&transferFee(p)*0.9<=club.budget);
+    if(!avail.length)continue;
+    const p=pick(avail); used.add(p.id);
+    const fee=Math.max(0.02,Math.round(transferFee(p)*rnd(0.85,1.3)*100)/100);
+    offers.push({clubShort:club.short,clubName:club.name,divIdx:di,playerId:p.id,playerName:p.name,fee});
+  }
+  return offers;
+}
+function transferWindow(){
+  G.divisions.forEach(()=>{const n=ri(2,5);for(let k=0;k<n;k++)aiTransfer();});
+  G.transferOffers=makePlayerOffers();
+  if(G.transferOffers.length)addNews(G.transferOffers.length+" proposta(s) recebida(s) por jogadores teus.");
+}
+function acceptOffer(i){
+  const o=G.transferOffers&&G.transferOffers[i]; if(!o)return {ok:false,msg:""};
+  const meC=me();
+  if(meC.squad.length<=14)return {ok:false,msg:"Plantel demasiado pequeno para vender"};
+  const p=meC.squad.find(x=>x.id===o.playerId); if(!p)return {ok:false,msg:"Jogador já não está no plantel"};
+  meC.budget=Math.round((meC.budget+o.fee)*100)/100;
+  meC.squad=meC.squad.filter(x=>x.id!==o.playerId);
+  const buyer=G.divisions[o.divIdx].clubs.find(c=>c.short===o.clubShort); if(buyer)buyer.squad.push(p);
+  addNews("Vendeste "+p.name+" ao "+o.clubName+" por "+money(o.fee)+".");
+  G.transferOffers=G.transferOffers.filter((_,j)=>j!==i);
+  G.lineup=autoPickLineup(meC,G.formation); save();
+  return {ok:true,msg:"Vendido: "+p.name+" ("+money(o.fee)+")"};
+}
+function rejectOffer(i){
+  const o=G.transferOffers&&G.transferOffers[i]; if(!o)return;
+  addNews("Recusaste a proposta do "+o.clubName+" por "+o.playerName+".");
+  G.transferOffers=G.transferOffers.filter((_,j)=>j!==i); save();
+}
 /* ---------- exports (para node/testes; ignorado no browser) ---------- */
 if(typeof module!=="undefined"&&module.exports){
   module.exports={ POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
@@ -492,5 +554,6 @@ if(typeof module!=="undefined"&&module.exports){
     buildFixtures,autoPickLineup,availableLineup,teamStrength,simulate,applyResult,pickGoal,pickFoul,
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
+    transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }

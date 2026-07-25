@@ -83,6 +83,13 @@ function viewHome(){
       <div class="row between" style="margin-top:8px"><span class="muted">Contrato</span><b>${G.contract?G.contract.seasonsLeft:"—"} época(s)</b></div>
       <div class="row between"><span class="muted">Reputação</span><b>${G.manager.reputation}</b></div></div>`;
   }
+  if(G.transferOffers&&G.transferOffers.length){
+    h+=`<div class="card"><h2>Propostas recebidas</h2>`+G.transferOffers.map((o,i)=>
+      `<div class="pl" style="flex-wrap:wrap"><div class="info"><div class="nm">${o.playerName}</div>
+        <div class="sub">${o.clubName} oferece <b style="color:var(--accent)">${money(o.fee)}</b></div></div>
+        <button class="btn small" data-accept="${i}">Aceitar</button>
+        <button class="btn small warn" data-reject="${i}">Recusar</button></div>`).join("")+`</div>`;
+  }
   h+=`<div class="card"><h2>Situação · ${d.name}</h2><div class="grid2">
       <div class="stat"><div class="v">${rank}º</div><div class="l">Classificação</div></div>
       <div class="stat"><div class="v">${c.Pts}</div><div class="l">Pontos</div></div>
@@ -139,6 +146,7 @@ function openPlayer(pid){
       <div class="stat"><div class="v">${p.potential}</div><div class="l">Potencial</div></div>
       <div class="stat"><div class="v">${money(p.value)}</div><div class="l">Valor</div></div></div>
     <div class="muted" style="font-size:11px;margin-bottom:2px">⚽ ${p.goals} golos · 🟨 ${p.yc||0} · 🟥 ${p.rc||0}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:2px">📄 Contrato: ${p.contractYears||"—"} ano(s) · valor de venda ~ ${money(transferFee(p))}</div>
     <h2 style="margin:10px 0 4px;color:var(--muted);font-size:12px">Atributos</h2>
     <div class="attrs">${attrRows}</div></div>`;
   document.body.appendChild(mo);
@@ -340,6 +348,8 @@ function bindView(){
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
   document.querySelectorAll("[data-job]").forEach(b=>b.onclick=()=>{takeNewJob(+b.dataset.job);TAB="home";render();});
   const bjr=$("#btnJobRestart");if(bjr)bjr.onclick=()=>{if(confirm("Recomeçar carreira do zero?")){wipe();boot();}};
+  document.querySelectorAll("[data-accept]").forEach(b=>b.onclick=()=>{const r=acceptOffer(+b.dataset.accept);if(r.msg)toast(r.msg);render();});
+  document.querySelectorAll("[data-reject]").forEach(b=>b.onclick=()=>{rejectOffer(+b.dataset.reject);render();});
   const sp=$("#segPos");if(sp)sp.querySelectorAll("button").forEach(b=>b.onclick=()=>{squadFilter=b.dataset.p;render();});
   document.querySelectorAll("[data-sell]").forEach(b=>b.onclick=e=>{e.stopPropagation();if(confirm("Vender este jogador?")){const r=sellPlayer(+b.dataset.sell);toast(r.msg);render();}});
   document.querySelectorAll("[data-detail]").forEach(el=>el.onclick=()=>openPlayer(+el.dataset.detail));
