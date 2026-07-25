@@ -53,7 +53,8 @@ function viewHome(){
   let h="";
   if(G.fired){
     let fh=`<div class="card center"><h2 style="color:var(--red);justify-content:center">Foste despedido</h2>
-      <div class="muted" style="margin:6px 0 12px">A direção do ${c.name} dispensou-te dos teus serviços.</div>`;
+      <div class="muted" style="margin:6px 0 4px">A direção do ${c.name} dispensou-te.</div>
+      <div style="margin:2px 0 12px;font-size:13px">${G.firedReason||"—"}</div>`;
     if((G.offers||[]).length){
       fh+=`<div class="muted" style="font-size:13px;margin-bottom:8px">Clubes interessados em ti:</div>`;
       G.offers.forEach((o,i)=>{fh+=`<button class="btn sec" data-job="${i}" style="margin-bottom:8px">Assumir ${o.name} · ${G.divisions[o.divIdx].name}</button>`;});
@@ -375,16 +376,20 @@ function animateMatch(home, away, r, onFinish, userClub, userLine){
     }
     const done=mo.querySelector("#liveDone");done.style.display="block";mo.querySelector("#liveSkip").style.display="none";done.onclick=()=>{mo.remove();render();};}
   mo.querySelector("#liveSkip").onclick=finish;
+  const maxMin=r.maxMinute||90;
   timer=setInterval(()=>{
     if(Date.now()<pauseUntil)return;
-    minute+=3;if(minute>90)minute=90;minEl.textContent=minute+"'";
+    minute+=3;if(minute>maxMin)minute=maxMin;minEl.textContent=minute+"'"+(minute>90?" (prol.)":"");
     while(i<evs.length&&evs[i].m<=minute){const e=evs[i];i++;
       if(e.type==="goal"){if(e.side==="H")hg++;else ag++;scoreEl.textContent=hg+" - "+ag;goalFlash();
-        addEvLine(e.side,"⚽",{m:e.m,name:nameByPid(e.side,e.scorer)+gtypeSuffix(e.gtype)});pauseUntil=Date.now()+900;}
+        const nm=e.gtype==="own"?(nameByPid(e.ogSide,e.ogPid)+" (auto-golo)"):(nameByPid(e.side,e.scorer)+gtypeSuffix(e.gtype));
+        addEvLine(e.side,"⚽",{m:e.m,name:nm});pauseUntil=Date.now()+900;}
       else if(e.type==="yellow"){addEvLine(e.side,"🟨",{m:e.m,name:nameByPid(e.side,e.pid)});}
       else if(e.type==="red"){addEvLine(e.side,"🟥",{m:e.m,name:nameByPid(e.side,e.pid)+(e.second?" (2º amarelo)":"")});}
+      else if(e.type==="disallowed"){addEvLine(e.side,"🚫",{m:e.m,name:"golo anulado"});}
+      else if(e.type==="penmiss"){addEvLine(e.side,"❌",{m:e.m,name:nameByPid(e.side,e.pid)+" — penálti falhado"});}
     }
-    if(minute>=90)finish();
+    if(minute>=maxMin)finish();
   },220);
 }
 function playMatchAnimated(){
@@ -413,13 +418,15 @@ function playCupTie(){
   const eA=userIsA?energyFactor(c,aLine):1, eB=userIsA?1:energyFactor(c,bLine);
   const r=simulate(ca,cb,aLine,bLine,eA,eB);
   const userLine=userIsA?aLine:bLine;
+  if(r.hg===r.ag){ const et=simulateET(ca,cb,aLine,bLine,eA,eB,r.expelledH,r.expelledA); r.events=r.events.concat(et.events); r.hg+=et.hg; r.ag+=et.ag; r.maxMinute=120; r.hadET=true; }
   animateMatch(ca,cb,r,()=>{
     let w,pens=false;
     if(r.hg>r.ag)w=aShort; else if(r.ag>r.hg)w=bShort;
     else { pens=true; const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; w=(Math.random()<0.5+(sa-sb)/200)?aShort:bShort; }
     processEnergyInjuries(c,userLine); rateUserMatch(c,userLine,r,userIsA);
-    cupAdvanceRound({sa:r.hg,sb:r.ag,w,pens});
-    toast(w===ms?("Passaste"+(pens?" nos penáltis":"")+"!"):("Eliminado da Taça"+(pens?" nos penáltis":"")));
+    cupAdvanceRound({sa:r.hg,sb:r.ag,w,pens,et:r.hadET});
+    const how=pens?" nos penáltis":(r.hadET?" no prolongamento":"");
+    toast(w===ms?("Passaste"+how+"!"):("Eliminado da Taça"+how));
   }, c, userLine);
 }
 function showCupResult(userTie){
@@ -441,10 +448,17 @@ function showCupResult(userTie){
 }
 
 /* ---------- eventos ---------- */
+function cupBlocksLeague(){
+  if(!cupAvailable())return false;
+  const ut=cupUserTie();
+  if(G.cup.userAlive&&ut&&ut.b)return true;   // tens mesmo de jogar a tua eliminatória
+  cupAdvanceRound();                           // folga (bye) ou já eliminado — resolve sozinho
+  return false;
+}
 function bindView(){
-  const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(!ensureValidXI())return;playMatchAnimated();};
+  const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;playMatchAnimated();};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>playCupTie();
-  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length)playWeek();toast("Época simulada");render();};
+  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length)playWeek();toast("Época simulada");render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();TAB="home";render();};
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
   document.querySelectorAll("[data-job]").forEach(b=>b.onclick=()=>{takeNewJob(+b.dataset.job);TAB="home";render();});
@@ -482,7 +496,8 @@ function splashScreen(){
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Clube:</div>
       <select id="clubSel" style="margin-bottom:14px"></select>
       <button class="btn" id="startBtn">▶ Começar carreira</button></div>
-    <div class="muted" style="font-size:11px;margin-top:16px;max-width:340px">Clubes e nomes reais da AF Braga. Cores provisórias. Jogadores e atributos fictícios.</div>`;
+    <div class="muted" style="font-size:11px;margin-top:16px;max-width:340px">Clubes e nomes reais da AF Braga. Cores provisórias. Jogadores e atributos fictícios.</div>
+    <div class="muted" style="font-size:10px;margin-top:22px;opacity:.55">made by Rui Xavier - Nemec</div>`;
   document.body.appendChild(el);
   const divSel=el.querySelector("#divSel"), clubSel=el.querySelector("#clubSel");
   function fillClubs(){clubSel.innerHTML=divDefs[+divSel.value].clubs.map((c,i)=>`<option value="${i}">${c.n}</option>`).join("");}

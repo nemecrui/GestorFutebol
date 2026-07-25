@@ -153,6 +153,17 @@ const SQUAD_TEMPLATE=["GR","GR","LD","LD","LE","LE","DC","DC","DC","DC",
   "MDC","MDC","MC","MC","MD","ME","MO","MO","ED","EE","PL","PL","PL"];
 
 let G=null, PID=1;
+const CFG = (typeof GAME_DATA!=="undefined" && GAME_DATA) ? GAME_DATA : {};
+function divDefs(builtIn, idx){
+  let list = (CFG.divisions && CFG.divisions[idx]) ? CFG.divisions[idx].slice() : builtIn.slice();
+  if(CFG.addClubs && CFG.addClubs[idx]) list = list.concat(CFG.addClubs[idx]);
+  return list.map(d=>{ const x=Object.assign({},d);
+    if(CFG.clubs && CFG.clubs[x.s]) Object.assign(x, CFG.clubs[x.s]);
+    if(CFG.rosters && CFG.rosters[x.s]) x.roster = CFG.rosters[x.s];
+    return x; });
+}
+const FUNNY_FIRINGS=["O presidente sonhou que perdias a final e entrou em pânico.","Foste visto a torcer pelo rival num café.","A direção não gostou da tua escolha de fato-de-treino.","Divergências sobre a ementa do balneário.","O filho do presidente também quer ser treinador.","Discutiste com o roupeiro sobre a cor das meias.","O patrocinador exigiu um treinador 'com mais seguidores'.","Recusaste-te a fazer a dança da vitória com os adeptos.","Chegaste atrasado ao jantar de Natal do clube.","O presidente leu a tua sina e não gostou."];
+function firingReasons(){ return (CFG.firingReasons||[]).concat(FUNNY_FIRINGS); }
 
 /* ---------- utilidades ---------- */
 function rnd(a,b){return a+Math.random()*(b-a)}
@@ -211,10 +222,10 @@ function makeDivision(name,defs,upSlots,downSlots){
 }
 function newGame(divIdx,clubIdx,managerName){
   PID=1;
-  const dPN=makeDivision("Pró-Nacional",PRONAC,0,3);
-  const dH =makeDivision("Divisão de Honra",CLUBS,3,3);
-  const dU =makeDivision("1ª Divisão",DIV1,3,3);
-  const dD =makeDivision("2ª Divisão",DIV2,3,0);
+  const dPN=makeDivision("Pró-Nacional",divDefs(PRONAC,0),0,3);
+  const dH =makeDivision("Divisão de Honra",divDefs(CLUBS,1),3,3);
+  const dU =makeDivision("1ª Divisão",divDefs(DIV1,2),3,3);
+  const dD =makeDivision("2ª Divisão",divDefs(DIV2,3),3,0);
   G={version:6, divisions:[dPN,dH,dU,dD], myDiv:divIdx, myId:clubIdx,
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false,
@@ -307,6 +318,20 @@ function pickFoul(club,lineup,gone){
   return weightedObj(cands,w);
 }
 
+/* ---------- prolongamento (30 min) ---------- */
+function simulateET(home,away,hLine,aLine,eHome,eAway,goneH,goneA){
+  eHome=eHome||1;eAway=eAway||1;
+  const hS=teamStrength(home,hLine,G.formation,G.mentality), aS=teamStrength(away,aLine,"4-4-2","Equilibrado");
+  hS.atk*=eHome;hS.mid*=eHome;hS.def*=eHome;aS.atk*=eAway;aS.mid*=eAway;aS.def*=eAway;
+  const hAtt=(hS.atk*0.6+hS.mid*0.4)+3-aS.def*0.48, aAtt=(aS.atk*0.6+aS.mid*0.4)-hS.def*0.48;
+  const hx=clamp((hAtt-24)/9.5,0.12,4.2), ax=clamp((aAtt-26)/9.5,0.1,3.9);
+  const events=[]; let hg=0,ag=0; const gH=new Set(goneH||[]), gA=new Set(goneA||[]);
+  for(let m=91;m<=120;m++){
+    if(Math.random()<hx/90){ const g=pickGoal(home,hLine,G.formation,gH); events.push({m,side:"H",type:"goal",club:home,line:hLine,scorer:g?g.pid:null,gtype:g?g.gtype:"open"}); hg++; }
+    if(Math.random()<ax/90){ const g=pickGoal(away,aLine,"4-4-2",gA); events.push({m,side:"A",type:"goal",club:away,line:aLine,scorer:g?g.pid:null,gtype:g?g.gtype:"open"}); ag++; }
+  }
+  return {events,hg,ag};
+}
 /* ---------- motor de jogo ---------- */
 function simulate(home,away,hLine,aLine,eHome,eAway){
   eHome=eHome||1; eAway=eAway||1;
@@ -321,10 +346,19 @@ function simulate(home,away,hLine,aLine,eHome,eAway){
     const aAtt=((aS.atk*0.6+aS.mid*0.4)*aPen)-(hS.def*hPen)*0.48;
     return {hx:clamp((hAtt-24)/9.5,0.12,4.2), ax:clamp((aAtt-26)/9.5,0.1,3.9)};
   }
-  function goal(side,club,line,m){
+  function scoreFor(side,m){
+    const club=side==="H"?home:away, line=side==="H"?hLine:aLine;
+    const oppSide=side==="H"?"A":"H", oppClub=side==="H"?away:home, oppLine=side==="H"?aLine:hLine;
     const gone=new Set(side==="H"?expelledH:expelledA);
+    const roll=Math.random();
+    if(roll<0.02){ events.push({m,side,type:"disallowed"}); return false; }
+    if(roll<0.04){ const oppGone=new Set(side==="H"?expelledA:expelledH);
+      const defs=oppLine.map(id=>oppClub.squad.find(x=>x.id===id)).filter(p=>p&&!oppGone.has(p.id)&&GROUP[p.pos]!=="GK");
+      const og=defs.length?pick(defs):null;
+      events.push({m,side,type:"goal",club,line,scorer:null,gtype:"own",ogPid:og?og.id:null,ogSide:oppSide}); return true; }
     const g=pickGoal(club,line,side==="H"?G.formation:"4-4-2",gone);
-    events.push({m,side,type:"goal",club,line,scorer:g?g.pid:null,gtype:g?g.gtype:"open"});
+    if(g&&g.gtype==="penalty"&&Math.random()<0.22){ events.push({m,side,type:"penmiss",pid:g.pid}); return false; }
+    events.push({m,side,type:"goal",club,line,scorer:g?g.pid:null,gtype:g?g.gtype:"open"}); return true;
   }
   function sendOff(side,p,m,second){ events.push({m,side,type:"red",pid:p.id,second});
     if(side==="H"){hRed++;expelledH.push(p.id);}else{aRed++;expelledA.push(p.id);} }
@@ -337,10 +371,10 @@ function simulate(home,away,hLine,aLine,eHome,eAway){
   }
   for(let m=1;m<=90;m++){
     const rt=offRate();
-    if(Math.random()<rt.hx/90){hg++; goal("H",home,hLine,m);}
-    if(Math.random()<rt.ax/90){ag++; goal("A",away,aLine,m);}
-    if(Math.random()<0.024)disciplinary("H",home,hLine,m);
-    if(Math.random()<0.024)disciplinary("A",away,aLine,m);
+    if(Math.random()<rt.hx/90){ if(scoreFor("H",m))hg++; }
+    if(Math.random()<rt.ax/90){ if(scoreFor("A",m))ag++; }
+    if(Math.random()<0.018)disciplinary("H",home,hLine,m);
+    if(Math.random()<0.018)disciplinary("A",away,aLine,m);
   }
   return {hg,ag,events,expelledH,expelledA};
 }
@@ -522,11 +556,12 @@ function evaluateBoard(meRank){
     const miss=meRank-obj.target;
     G.manager.reputation=clamp(G.manager.reputation-6,0,100);
     G.board.confidence=clamp(G.board.confidence-25,0,100);
-    if(G.board.confidence<=10||miss>=3||G.contract.seasonsLeft<=0) fireManager();
+    if(G.board.confidence<=10||miss>=3||G.contract.seasonsLeft<=0) fireManager("Resultados abaixo do esperado — objetivo \""+obj.label+"\" falhado ("+meRank+"º).");
     else { addNews("Objetivo falhado ("+obj.label+"). A direção deu-te mais uma época para corrigir."); G.fired=false; }
   }
+  if(!G.fired && Math.random()<0.04) fireManager(pick(firingReasons()));
 }
-function fireManager(){ G.fired=true; addNews("A direção do "+me().name+" decidiu dispensar-te."); G.offers=makeJobOffers(); }
+function fireManager(reason){ G.fired=true; G.firedReason=reason||"Decisão da direção."; addNews("A direção do "+me().name+" dispensou-te: "+G.firedReason); G.offers=makeJobOffers(); }
 function makeJobOffers(){
   const all=[];
   G.divisions.forEach((d,di)=>d.clubs.forEach(c=>{ if(!(di===G.myDiv&&c.id===G.myId))all.push({divIdx:di,short:c.short,name:c.name,rating:squadRating(c)}); }));
@@ -699,8 +734,10 @@ function cupResolveTie(t){
   const bLine=(involvesUser&&t.b===ms)?availableLineup(cb,G.lineup,G.formation):autoPickLineup(cb,"4-4-2",cb.susp);
   const eA=(involvesUser&&t.a===ms)?energyFactor(ca,aLine):1, eB=(involvesUser&&t.b===ms)?energyFactor(cb,bLine):1;
   const r=simulate(ca,cb,aLine,bLine,eA,eB);
-  t.sa=r.hg; t.sb=r.ag;
-  if(r.hg>r.ag)t.w=t.a; else if(r.ag>r.hg)t.w=t.b;
+  let hg=r.hg, ag=r.ag;
+  if(hg===ag){ const et=simulateET(ca,cb,aLine,bLine,eA,eB,r.expelledH,r.expelledA); hg+=et.hg; ag+=et.ag; t.et=true; }
+  t.sa=hg; t.sb=ag;
+  if(hg>ag)t.w=t.a; else if(ag>hg)t.w=t.b;
   else { const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; t.w=(Math.random()<0.5+(sa-sb)/200)?t.a:t.b; t.pens=true; }
   if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); }
 }
@@ -708,7 +745,7 @@ function cupAdvanceRound(preUser){
   if(!G.cup||!G.cup.active)return null;
   const ms=me().short;
   const userTie=G.cup.ties.find(t=>t.a===ms||t.b===ms)||null;
-  G.cup.ties.forEach(t=>{ if(t===userTie&&preUser){ t.sa=preUser.sa;t.sb=preUser.sb;t.w=preUser.w;t.pens=!!preUser.pens; } else cupResolveTie(t); });
+  G.cup.ties.forEach(t=>{ if(t===userTie&&preUser){ t.sa=preUser.sa;t.sb=preUser.sb;t.w=preUser.w;t.pens=!!preUser.pens;t.et=!!preUser.et; } else cupResolveTie(t); });
   if(userTie && userTie.b && userTie.w!==ms)G.cup.userAlive=false;
   G.cup.history.push({name:cupRoundName(), ties:G.cup.ties.map(t=>({a:t.a,b:t.b,sa:t.sa,sb:t.sb,w:t.w,pens:!!t.pens}))});
   const winners=G.cup.ties.map(t=>t.w);
@@ -727,6 +764,6 @@ if(typeof module!=="undefined"&&module.exports){
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
-    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,PRONAC,DIV2,
+    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
