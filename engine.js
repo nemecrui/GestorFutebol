@@ -190,7 +190,7 @@ function makePlayer(pos,level){
   const potential=clamp(abil+(age<23?ri(3,14):ri(-2,4)),abil,99);
   const value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
   return {id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
-    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
+    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
 }
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
 function makeSquadFromRoster(roster,level){ return roster.map(r=>{const p=makePlayer(r.p,level); p.name=r.n; return p;}); }
@@ -565,13 +565,17 @@ function aiTransfer(){
 }
 function makePlayerOffers(){
   const meC=me(); if(meC.squad.length<=14)return [];
-  const targets=meC.squad.slice().sort((a,b)=>ability(b)-ability(a)).slice(0,8);
+  const listed=meC.squad.filter(p=>p.transferListed);
+  const best=meC.squad.slice().sort((a,b)=>ability(b)-ability(a)).slice(0,8);
+  const targets=listed.length?listed.concat(best):best;
   const clubs=allClubsFlat().filter(o=>!isMine(o.c,o.di)&&o.c.budget>0.08);
   shuffleArr(clubs);
-  const offers=[], used=new Set(), nBids=ri(0,3);
+  const offers=[], used=new Set(), nBids=listed.length?ri(3,6):ri(0,3);
   for(let i=0;i<nBids&&i<clubs.length;i++){
     const club=clubs[i].c, di=clubs[i].di;
-    const avail=targets.filter(p=>!used.has(p.id)&&transferFee(p)*0.9<=club.budget);
+    const pool=targets.filter(p=>!used.has(p.id)&&transferFee(p)*0.9<=club.budget);
+    const lp=pool.filter(p=>p.transferListed);
+    const avail=lp.length?lp:pool;
     if(!avail.length)continue;
     const p=pick(avail); used.add(p.id);
     const base=transferFee(p), maxFee=Math.round(base*rnd(1.1,1.6)*100)/100;
@@ -579,6 +583,20 @@ function makePlayerOffers(){
     offers.push({clubShort:club.short,clubName:club.name,divIdx:di,playerId:p.id,playerName:p.name,fee,maxFee,round:0});
   }
   return offers;
+}
+function releasePlayer(pid){
+  const c=me(); if(c.squad.length<=14)return {ok:false,msg:"Plantel demasiado pequeno"};
+  const p=c.squad.find(x=>x.id===pid); if(!p)return {ok:false,msg:""};
+  c.squad=c.squad.filter(x=>x.id!==pid);
+  addNews("Dispensaste "+p.name+" (sem receita).");
+  G.lineup=autoPickLineup(c,G.formation); save();
+  return {ok:true,msg:"Dispensado: "+p.name};
+}
+function toggleTransferList(pid){
+  const c=me(); const p=c.squad.find(x=>x.id===pid); if(!p)return false;
+  p.transferListed=!p.transferListed;
+  addNews(p.transferListed?("Colocaste "+p.name+" na lista de transferências."):("Retiraste "+p.name+" da lista de transferências."));
+  save(); return p.transferListed;
 }
 function transferWindow(){
   G.divisions.forEach(()=>{const n=ri(2,5);for(let k=0;k<n;k++)aiTransfer();});
@@ -662,6 +680,6 @@ if(typeof module!=="undefined"&&module.exports){
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
-    unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,PRONAC,DIV2,
+    unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
