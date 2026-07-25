@@ -126,17 +126,23 @@ const PRONAC=[
 ];
 // ---- 2ª Divisão AF Braga — inclui os clubes pedidos + plausíveis. Cores provisórias ----
 const DIV2=[
-  {n:"SC Cachapuz",s:"CAC",str:48,c1:"#1d4ed8",c2:"#f2c200"},
+  {n:"Cachapuz WLS",s:"CAC",str:48,c1:"#c1121f",c2:"#ffffff",roster:[
+    {n:"Tiago Pinto",p:"GR"},{n:"Henrique Pizzarro",p:"GR"},{n:"Rui Xavier",p:"LD"},{n:"Luís Pereira",p:"LD"},
+    {n:"Alvaro Araújo",p:"LE"},{n:"Vicente Pereira",p:"LE"},{n:"Gabriel Teixeira",p:"DC"},{n:"Gonçalo Martins",p:"DC"},
+    {n:"Leonardo Vitoria",p:"DC"},{n:"Tiago Veiga",p:"MDC"},{n:"Rui Francisco",p:"MDC"},{n:"João Lopes",p:"MC"},
+    {n:"Domingos Barroso",p:"MC"},{n:"Ana Lopes",p:"MC"},{n:"Susana Feio",p:"MC"},{n:"Pedro Carvalho",p:"MD"},
+    {n:"Luís Ferreira",p:"ME"},{n:"Duarte Pinto",p:"ME"},{n:"Pedro Gonçalves",p:"MO"},{n:"André Calçada",p:"ED"},
+    {n:"Agostinho Costa",p:"EE"},{n:"Narciso Batista",p:"PL"},{n:"José Pereira",p:"PL"},{n:"António Miranda",p:"PL"}]},
   {n:"GDR Trandeiras",s:"TRA",str:47,c1:"#c1121f",c2:"#ffffff"},
   {n:"GD Sete Fontes",s:"SFT",str:46,c1:"#15803d",c2:"#ffffff"},
-  {n:"ACDR Tibães",s:"TIB",str:46,c1:"#111111",c2:"#f2c200"},
+  {n:"ACDR Tibães",s:"TIB",str:46,c1:"#111111",c2:"#ffffff"},
   {n:"GD Nogueira",s:"NGR",str:45,c1:"#1d4ed8",c2:"#ffffff"},
   {n:"AD Padim da Graça",s:"PAD",str:44,c1:"#6b21a8",c2:"#ffffff"},
   {n:"GDC Gualtar",s:"GUA",str:44,c1:"#e07a1f",c2:"#111111"},
   {n:"SC Adaúfe",s:"ADA",str:43,c1:"#c1121f",c2:"#111111"},
   {n:"GD Lamaçães",s:"LAM",str:42,c1:"#15803d",c2:"#111111"},
   {n:"ARC Panóias",s:"PAN",str:42,c1:"#2f9be0",c2:"#ffffff"},
-  {n:"GD Ferreiros",s:"FER",str:41,c1:"#14274e",c2:"#ffffff"},
+  {n:"GD Ferreiros",s:"FER",str:41,c1:"#c1121f",c2:"#111111"},
   {n:"AD Palmeira",s:"PLM",str:40,c1:"#7b1e2b",c2:"#f2c200"},
   {n:"GDR Semelhe",s:"SEM",str:39,c1:"#111111",c2:"#c1121f"},
   {n:"GD Pousada",s:"POS",str:38,c1:"#f2c200",c2:"#1d4ed8"}
@@ -187,10 +193,11 @@ function makePlayer(pos,level){
     value, contractYears:ri(1,4), energy:100, injuredWeeks:0, form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
 }
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
+function makeSquadFromRoster(roster,level){ return roster.map(r=>{const p=makePlayer(r.p,level); p.name=r.n; return p;}); }
 function clubFromDef(d,id){
   const level=clamp(Math.round(d.str/5),4,16);
   return {id, name:d.n, short:d.s, c1:d.c1, c2:d.c2, strength:d.str,
-    budget:Math.round(rnd(0.06,0.28)*100)/100, squad:makeSquad(level),
+    budget:Math.round(rnd(0.06,0.28)*100)/100, squad:(d.roster?makeSquadFromRoster(d.roster,level):makeSquad(level)),
     susp:[], P:0,W:0,D:0,L:0,GF:0,GA:0,Pts:0};
 }
 

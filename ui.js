@@ -375,9 +375,9 @@ function bindView(){
 function splashScreen(){
   const el=document.createElement("div");el.className="splash";el.id="splash";
   const divDefs=[{name:"Pró-Nacional",clubs:PRONAC},{name:"Divisão de Honra",clubs:CLUBS},{name:"1ª Divisão",clubs:DIV1},{name:"2ª Divisão",clubs:DIV2}];
-  el.innerHTML=`<div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#16a34a 0 55%,#ffcc00 55% 100%)"></div>
-    <h1 style="font-size:24px;margin:14px 0 2px">Gestor AF Braga</h1>
-    <div class="muted" style="margin-bottom:20px">Divisão de Honra & 1ª Divisão</div>
+  el.innerHTML=`<div style="width:56px;height:56px;border-radius:14px;border:1px solid #ffffff55;background:linear-gradient(135deg,#1d4ed8 0 55%,#ffffff 55% 100%)"></div>
+    <h1 style="font-size:24px;margin:14px 0 2px">Gestor de Futebol</h1>
+    <div class="muted" style="margin-bottom:20px">Época 2025/26 · 4 divisões da AF Braga</div>
     <div style="width:100%;max-width:360px">
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">O teu nome (treinador):</div>
       <input id="mgrName" maxlength="28" placeholder="Ex: Nemec Rui" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;font-size:15px;margin-bottom:12px">
@@ -402,7 +402,7 @@ function boot(){
 /* ---------- PWA ---------- */
 function initPWA(){
   try{
-    const manifest={name:"Gestor AF Braga",short_name:"Gestor AFB",display:"standalone",background_color:"#0d1117",theme_color:"#0b7a3b",orientation:"portrait",start_url:".",
+    const manifest={name:"Gestor de Futebol",short_name:"Gestor",display:"standalone",background_color:"#0d1117",theme_color:"#0b7a3b",orientation:"portrait",start_url:".",
       icons:[{src:iconDataURL(192),sizes:"192x192",type:"image/png"},{src:iconDataURL(512),sizes:"512x512",type:"image/png"}]};
     const link=document.createElement("link");link.rel="manifest";link.href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:"application/json"}));document.head.appendChild(link);
     const ic=document.createElement("link");ic.rel="apple-touch-icon";ic.href=iconDataURL(192);document.head.appendChild(ic);
