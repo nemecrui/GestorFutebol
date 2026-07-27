@@ -32,6 +32,7 @@ function render(){
   else if(TAB==="tactics")m.innerHTML=viewTactics();
   else if(TAB==="market")m.innerHTML=viewMarket();
   else if(TAB==="table")m.innerHTML=viewTable();
+  m.classList.remove("vin");void m.offsetWidth;m.classList.add("vin");  // transição suave entre ecrãs
   bindView(); renderNav();
 }
 function renderNav(){
@@ -482,10 +483,10 @@ function viewTable(){
 /* ---------- jogo animado (partilhado por campeonato e Taça) ---------- */
 function animateMatch(home, away, r, onFinish, userClub, userLine){
   const mo=document.createElement("div");mo.className="modal";
-  mo.innerHTML=`<div class="box"><div id="goalBanner">⚽ GOLO!</div>
+  mo.innerHTML=`<div class="box live-box"><div id="goalBanner">⚽ GOLO!</div>
     <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}</h2></div>
-    <div class="fx"><div class="t">${clubTag(home)}</div><div class="sc" id="liveScore">0 - 0</div><div class="t a">${clubTag(away)}</div></div>
-    <div class="center muted" id="liveMin">0'</div><div class="live" id="liveEv"></div>
+    <div class="scorebug"><div class="t">${clubTag(home)}</div><div class="sc" id="liveScore">0 - 0</div><div class="t a">${clubTag(away)}</div></div>
+    <div class="center muted livemin" id="liveMin">0'</div><div class="live" id="liveEv"></div>
     <div id="liveRatings"></div>
     <button class="btn" id="liveDone" style="display:none">Continuar</button>
     <button class="btn sec small" id="liveSkip" style="width:100%;margin-top:8px">Saltar</button></div>`;
