@@ -301,6 +301,9 @@ function viewMarket(){
   if(marketPos!=="all")pool=pool.filter(x=>GROUP[x.p.pos]===marketPos);
   pool.sort((a,b)=>ability(b.p)-ability(a.p)); pool=pool.slice(0,40);
   let h=`<div class="card between row"><div>Verba · ${myDivObj().name}</div><div class="big" style="font-size:18px">${money(meC.budget)}</div></div>`;
+  const askDis=!!G.budgetAsked;
+  h+=`<div class="card" style="padding:8px"><button class="btn sec small" id="btnAskBudget" style="width:100%${askDis?';opacity:.45':''}"${askDis?' disabled':''}>🏦 ${askDis?'Reforço já pedido esta época':'Pedir reforço de verba à direção'}</button>
+    <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">A direção decide conforme a confiança atual — e conceder verba reduz essa folga.</div></div>`;
   h+=`<div class="seg" id="segMkt">`+[["all","Todos"],["GK","GR"],["DEF","DEF"],["MID","MED"],["ATT","ATA"]].map(([k,l])=>
     `<button data-p="${k}" class="${marketPos===k?'active':''}">${l}</button>`).join("")+`</div>`;
   h+=`<div class="plist">`+pool.map(x=>{
@@ -471,7 +474,7 @@ function bindView(){
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;playMatchAnimated();};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>playCupTie();
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length)playWeek();toast("Época simulada");render();};
-  const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca");TAB="home";render();};
+  const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
   document.querySelectorAll("[data-job]").forEach(b=>b.onclick=()=>{takeNewJob(+b.dataset.job);TAB="home";render();});
   const bjr=$("#btnJobRestart");if(bjr)bjr.onclick=()=>{if(confirm("Recomeçar carreira do zero?")){wipe();boot();}};
@@ -488,6 +491,7 @@ function bindView(){
   const bcs=$("#btnCancelSel");if(bcs)bcs.onclick=()=>{tacSel=null;render();};
   const smk=$("#segMkt");if(smk)smk.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketPos=b.dataset.p;render();});
   document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=e=>{e.stopPropagation();const r=buyPlayer(+b.dataset.from,+b.dataset.buy);toast(r.msg);render();});
+  const bab=$("#btnAskBudget");if(bab)bab.onclick=()=>{const r=requestBudget();toast(r.msg);render();};
   const sl=$("#segLeague");if(sl)sl.querySelectorAll("button").forEach(b=>b.onclick=()=>{tableTab=b.dataset.t;render();});
   const sdv=$("#segDiv");if(sdv)sdv.querySelectorAll("button").forEach(b=>b.onclick=()=>{leagueDiv=+b.dataset.d;render();});
   if(document.querySelector(".pitch"))initTacticsTap();
@@ -522,7 +526,7 @@ function splashScreen(){
       e.textContent="O nome do treinador precisa de pelo menos 4 caracteres.";
       el.querySelector("#mgrName").focus(); return;
     }
-    newGame(+divSel.value,+clubSel.value,nm);track("nova-carreira");el.remove();TAB="home";render();
+    newGame(+divSel.value,+clubSel.value,nm);track("nova-carreira/"+me().short, G.manager.name+" · "+me().name+" ("+myDivObj().name+")");el.remove();TAB="home";render();
   };
 }
 function boot(){
@@ -542,7 +546,7 @@ function initAnalytics(){
     document.head.appendChild(sc);
   }catch(e){}
 }
-function track(path){ try{ if(window.goatcounter&&window.goatcounter.count) window.goatcounter.count({path:path,title:path,event:true}); }catch(e){} }
+function track(path,title){ try{ if(window.goatcounter&&window.goatcounter.count) window.goatcounter.count({path:path,title:title||path,event:true}); }catch(e){} }
 
 /* ---------- PWA ---------- */
 function initPWA(){

@@ -234,7 +234,7 @@ function newGame(divIdx,clubIdx,managerName){
   const dD =makeDivision("2ª Divisão",divDefs(DIV2,3),3,0);
   G={version:6, divisions:[dPN,dH,dU,dD], myDiv:divIdx, myId:clubIdx,
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
-     lineup:[], news:[], seasonDone:false, midWindowDone:false,
+     lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -473,7 +473,7 @@ function newSeason(){
     d.fixtures=buildFixtures(d.clubs.length); d.results=[]; d.week=0;
   });
   for(let di=0;di<G.divisions.length;di++){ const idx=G.divisions[di].clubs.findIndex(c=>c.short===mineShort); if(idx>=0){G.myDiv=di;G.myId=idx;break;} }
-  G.season++; G.week=0; G.seasonDone=false; G.date="Set"; G.midWindowDone=false;
+  G.season++; G.week=0; G.seasonDone=false; G.date="Set"; G.midWindowDone=false; G.budgetAsked=false;
   G.lineup=autoPickLineup(me(),G.formation);
   G.manager.seasons=(G.manager.seasons||0)+1; setObjectives();
   if(myMove==="up")addNews("Subiste de divisão!");
@@ -764,6 +764,25 @@ function cupAdvanceRound(preUser){
   save();
   return userTie;
 }
+function requestBudget(){
+  if(!G.board||!G.manager)return {ok:false,msg:"—"};
+  if(G.budgetAsked)return {ok:false,msg:"Já pediste reforço esta época — espera pela próxima."};
+  G.budgetAsked=true;
+  const conf=G.board.confidence;
+  const chance=clamp((conf-30)/60,0.05,0.9); // quanto mais satisfeita a direção, mais provável aprovar
+  if(Math.random()<chance){
+    const amount=Math.round((0.05+conf/400)*100)/100; // ~0.05–0.30M
+    me().budget=Math.round((me().budget+amount)*100)/100;
+    G.board.confidence=clamp(conf-12,0,100); // conceder verba custa "folga" à direção
+    addNews("A direção reforçou a verba de transferências: +"+money(amount)+".");
+    save();
+    return {ok:true,amount,msg:"Aprovado! +"+money(amount)+" (a direção ficou menos folgada)"};
+  }
+  G.board.confidence=clamp(conf-5,0,100); // pedir e ser recusado também chateia um pouco
+  addNews("A direção recusou reforçar a verba de transferências.");
+  save();
+  return {ok:false,msg:"A direção recusou o pedido (a confiança baixou um pouco)."};
+}
 function recordManagerMatch(gf,ga){ const s=G.manager&&G.manager.stats; if(!s)return; s.P++; s.GF+=gf; s.GA+=ga; if(gf>ga)s.W++; else if(gf<ga)s.L++; else s.D++; }
 /* ---------- exports (para node/testes; ignorado no browser) ---------- */
 if(typeof module!=="undefined"&&module.exports){
@@ -774,6 +793,6 @@ if(typeof module!=="undefined"&&module.exports){
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
-    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,PRONAC,DIV2,
+    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
