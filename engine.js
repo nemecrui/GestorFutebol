@@ -538,6 +538,41 @@ function buyPlayer(fromClubId,playerId){
   G.lineup=autoPickLineup(meC,G.formation); save();
   return {ok:true,msg:"Contratado: "+p.name};
 }
+/* ---- negociação de compra: o clube decide vender / recusar / contrapropor ---- */
+function playerKeyRank(p,club){ return club.squad.filter(x=>ability(x)>ability(p)).length; } // 0 = melhor do plantel
+function buyAsk(p,club){
+  let ask=p.value*1.25;
+  const better=playerKeyRank(p,club);
+  ask*= better<3?1.35 : better<6?1.15 : 1.0;                 // peças importantes custam mais
+  if(p.transferListed)ask*=0.8;                              // listado: mais fácil/barato
+  ask*=(0.9+clamp(p.contractYears||1,0,5)*0.05);            // contrato longo => mais caro
+  return Math.max(0.02,Math.round(ask*100)/100);
+}
+function completeBuy(fromClubId,playerId,fee){
+  const meC=me(), from=myClubs()[fromClubId]; if(!from)return {ok:false,msg:""};
+  const p=from.squad.find(x=>x.id===playerId); if(!p)return {ok:false,msg:""};
+  fee=Math.round(fee*100)/100;
+  if(meC.budget<fee)return {ok:false,msg:"Verba insuficiente ("+money(fee)+")"};
+  meC.budget=Math.round((meC.budget-fee)*100)/100;
+  from.squad=from.squad.filter(x=>x.id!==playerId); from.budget=Math.round(((from.budget||0)+fee)*100)/100; meC.squad.push(p);
+  addNews("Contrataste "+p.name+" ("+ability(p)+") por "+money(fee)+".");
+  G.lineup=autoPickLineup(meC,G.formation); save();
+  return {ok:true,msg:"Contratado: "+p.name};
+}
+function makeBid(fromClubId,playerId,offerFee){
+  const meC=me(), from=myClubs()[fromClubId]; if(!from)return {status:"gone"};
+  const p=from.squad.find(x=>x.id===playerId); if(!p)return {status:"gone"};
+  offerFee=Math.round(offerFee*100)/100;
+  if(meC.budget<offerFee)return {status:"nofunds", msg:"Verba insuficiente ("+money(offerFee)+")."};
+  if(from.squad.length<=15 && !p.transferListed)return {status:"rejected", msg:from.short+" não quer enfraquecer o plantel."};
+  const ask=buyAsk(p,from), key=playerKeyRank(p,from)<3 && !p.transferListed;
+  if(offerFee>=ask){
+    if(key && Math.random()<0.5)return {status:"rejected", msg:from.short+" recusou: "+p.name+" não está à venda."};
+    return {status:"accepted", res:completeBuy(fromClubId,playerId,offerFee)};
+  }
+  if(offerFee>=ask*0.8 && !key)return {status:"counter", fee:ask, msg:from.short+" pede "+money(ask)+" por "+p.name+"."};
+  return {status:"rejected", msg:from.short+" recusou a proposta por "+p.name+"."};
+}
 function sellPlayer(playerId){
   const meC=me();
   if(meC.squad.length<=14)return {ok:false,msg:"Plantel demasiado pequeno"};
@@ -913,6 +948,7 @@ if(typeof module!=="undefined"&&module.exports){
     buildFixtures,autoPickLineup,availableLineup,teamStrength,simulate,applyResult,pickGoal,pickFoul,
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
+    buyAsk,makeBid,completeBuy,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
