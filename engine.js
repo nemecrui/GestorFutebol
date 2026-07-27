@@ -232,7 +232,7 @@ function makePlayer(pos,level){
   const potential=clamp(abil+(age<23?ri(3,14):ri(-2,4)),abil,99);
   const value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
   return {id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
-    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
+    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, morale:clamp(65+ri(-5,10),0,100), trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
 }
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
 function makeSquadFromRoster(roster,level){
@@ -266,7 +266,7 @@ function newGame(divIdx,clubIdx,managerName){
   G={version:6, divisions:[dPN,dH,dU,dD], myDiv:divIdx, myId:clubIdx,
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
-     chem:65, lastXI:[], trainFocus:"Equilibrado",
+     chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -448,7 +448,7 @@ function simRound(d,preMy,hasUser){
     }
     applyResult(home,away,r.hg,r.ag,r.events);
     home.susp=r.expelledH||[]; away.susp=r.expelledA||[];
-    if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId); recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg); processEnergyInjuries(uc,userLine); rateUserMatch(uc,userLine,r,isH); updateForm(uc,userLine); updateChem(userLine); trainTick(uc,userLine); }
+    if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId); recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg); processEnergyInjuries(uc,userLine); rateUserMatch(uc,userLine,r,isH); updateForm(uc,userLine); updateChem(userLine); trainTick(uc,userLine); updateMorale(uc,userLine,isH?r.hg:r.ag,isH?r.ag:r.hg); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -457,6 +457,8 @@ function playWeek(preMy){
   const myD=myDivObj(); if(myD.week>=myD.fixtures.length)return;
   simRound(myD,preMy,true);
   boardAfterUserMatch();
+  checkShortObjective();                    // período de prova acordado numa reunião
+  if(!G.fired)maybeBoardMeeting();           // maus resultados podem gerar nova reunião
   if(!G.midWindowDone && myD.week===Math.floor(myD.fixtures.length/2)){ transferWindow(); G.midWindowDone=true; }
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
   G.week=myD.week; advanceMonth();
@@ -845,6 +847,70 @@ function trainTick(club,playedIds){
     }
   });
 }
+/* ---------- moral dos jogadores (equipa do utilizador) ---------- */
+function updateMorale(club,playedIds,gf,ga){
+  const played=new Set(playedIds||[]);
+  const teamDelta=gf>ga?2:gf<ga?-2:0;
+  club.squad.forEach(p=>{
+    if(p.morale==null)p.morale=70;
+    let d=teamDelta;
+    if(played.has(p.id)){ d+=2; if(p.lastRating!=null)d+=(p.lastRating-6.3)*0.5; } // jogar e jogar bem sobe a moral
+    else d-=2;                                                                      // ficar de fora corrói (estável se a equipa vence)
+    if(p.promise&&p.promise.active&&G.week>=p.promise.until){                        // avaliar promessa de minutos
+      const got=(p.apps||0)-(p.promise.apps0||0);
+      if(got>=3){ d+=8; addNews(p.name+" está satisfeito: cumpriste a promessa de minutos."); }
+      else { d-=25; addNews(p.name+" sente-se enganado — prometeste minutos que não deste."); }
+      p.promise.active=false;
+    }
+    p.morale=clamp(Math.round(p.morale+d),0,100);
+  });
+  club.squad.forEach(p=>{                                                            // jogadores muito insatisfeitos agem
+    if(p.morale<=10 && !p.transferListed){ p.transferListed=true; p.wantsTalk=false; addNews(p.name+" pediu para ser colocado na lista de transferências (moral muito baixa)."); }
+    else if(p.morale<=22 && !p.wantsTalk && !p.transferListed){ p.wantsTalk=true; addNews(p.name+" pediu para reunir contigo — está descontente."); }
+  });
+}
+function playerMeetingResolve(pid,option){
+  const p=me().squad.find(x=>x.id===pid); if(!p)return {msg:""};
+  p.wantsTalk=false;
+  if(option==="minutos"){ p.morale=clamp((p.morale||70)+15,0,100); p.promise={active:true,from:G.week,until:G.week+5,apps0:p.apps||0}; save(); return {msg:"Prometeste mais minutos a "+p.name+" — cumpre nos próximos jogos."}; }
+  if(option==="paciencia"){ const ok=Math.random()<0.5; p.morale=clamp((p.morale||70)+(ok?8:3),0,100); save(); return {msg:ok?p.name+" aceitou lutar pelo lugar.":p.name+" ouviu-te, mas continua reticente."}; }
+  if(option==="listar"){ p.transferListed=true; p.morale=clamp((p.morale||70)+10,0,100); save(); return {msg:p.name+" foi colocado na lista de transferências."}; }
+  p.morale=clamp((p.morale||70)-8,0,100); save(); return {msg:"Ignoraste o desabafo de "+p.name+"."};
+}
+/* ---------- reunião com a direção após maus resultados ---------- */
+function userResultAt(weekIdx){ const d=myDivObj(); const wk=d.results[weekIdx]; if(!wk)return null; const m=wk.find(x=>x.h===G.myId||x.a===G.myId); if(!m)return null; const isH=m.h===G.myId, gf=isH?m.hg:m.ag, ga=isH?m.ag:m.hg; return {gf,ga,res:gf>ga?"W":gf<ga?"L":"D", opp:isH?m.a:m.h}; }
+function recentUserResults(n){ const d=myDivObj(); const out=[]; for(let i=d.results.length-1;i>=0&&out.length<n;i--){ const r=userResultAt(i); if(r)out.push(r); } return out; }
+function setShortObjective(pts,games){ G.shortObjective={active:true, need:pts, games, played:0, points:0, deadline:G.week+games, label:pts+" pontos em "+games+" jogos"}; }
+function maybeBoardMeeting(){
+  if(G.fired||(G.meeting&&G.meeting.active)||(G.shortObjective&&G.shortObjective.active))return;
+  const recent=recentUserResults(3); if(!recent.length)return;
+  const last=recent[0], oppClub=myClubs()[last.opp];
+  const heavy=last.res==="L" && (last.ga-last.gf)>=3;
+  const upset=last.res==="L" && oppClub && (squadRating(me())-squadRating(oppClub))>=8;
+  const streak=recent.length>=3 && recent.every(r=>r.res==="L");
+  const twoOfThree=recent.length>=3 && recent.filter(r=>r.res==="L").length>=2 && (G.board?G.board.confidence:60)<45;
+  let reason=null;
+  if(heavy)reason="a derrota pesada por "+last.ga+"-"+last.gf+(oppClub?" frente ao "+oppClub.name:"");
+  else if(upset)reason="a derrota frente a um adversário muito inferior"+(oppClub?" ("+oppClub.name+")":"");
+  else if(streak)reason="uma série de três derrotas seguidas";
+  else if(twoOfThree)reason="os maus resultados recentes";
+  if(reason){ G.meeting={active:true, reason, week:G.week}; addNews("A direção convocou-te para uma reunião: "+reason+"."); }
+}
+function resolveBoardMeeting(option){
+  if(!G.meeting||!G.meeting.active)return {msg:""};
+  const conf=G.board?G.board.confidence:60; G.meeting.active=false; G.meeting=null;
+  if(option==="assumir"){ G.board.confidence=clamp(conf+6,0,100); setShortObjective(4,4); save(); return {msg:"Assumiste a responsabilidade. Objetivo: 4 pontos nos próximos 4 jogos."}; }
+  if(option==="prometer"){ G.board.confidence=clamp(conf+2,0,100); setShortObjective(7,3); save(); return {msg:"Prometeste resultados imediatos. Objetivo: 7 pontos nos próximos 3 jogos."}; }
+  if(conf<35){ fireManager("Confrontaste a direção após maus resultados — e foste dispensado na hora."); return {msg:"A direção não gostou. Estás despedido."}; }
+  G.board.confidence=clamp(conf-8,0,100); save(); return {msg:"Discordaste da direção. Ficas sob forte pressão, sem margem para erro."};
+}
+function checkShortObjective(){
+  const so=G.shortObjective; if(!so||!so.active)return;
+  const last=userResultAt(myDivObj().results.length-1); if(!last)return;
+  so.played++; so.points+=last.res==="W"?3:last.res==="D"?1:0;
+  if(so.points>=so.need){ so.active=false; G.shortObjective=null; if(G.board)G.board.confidence=clamp(G.board.confidence+15,0,100); addNews("Cumpriste o objetivo de curto prazo da direção. Confiança recuperada."); }
+  else if(so.played>=so.games){ so.active=false; G.shortObjective=null; fireManager("Não cumpriste o objetivo de curto prazo ("+so.label+") acordado com a direção."); }
+}
 function negotiateOffer(i,counterFee){
   const o=G.transferOffers&&G.transferOffers[i]; if(!o)return {status:"gone"};
   o.round=(o.round||0)+1;
@@ -890,7 +956,7 @@ function cupResolveTie(t){
   t.sa=hg; t.sb=ag;
   if(hg>ag)t.w=t.a; else if(ag>hg)t.w=t.b;
   else { const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; t.w=(Math.random()<0.5+(sa-sb)/200)?t.a:t.b; t.pens=true; }
-  if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); updateForm(uc,uLine); updateChem(uLine); trainTick(uc,uLine); }
+  if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); updateForm(uc,uLine); updateChem(uLine); trainTick(uc,uLine); updateMorale(uc,uLine,(t.a===ms)?hg:ag,(t.a===ms)?ag:hg); }
 }
 function cupAdvanceRound(preUser){
   if(!G.cup||!G.cup.active)return null;
@@ -952,6 +1018,7 @@ if(typeof module!=="undefined"&&module.exports){
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
+    updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }

@@ -49,6 +49,24 @@ function formIcon(p){ const f=(p&&p.form)||0; if(f>=1.2)return '<span style="col
 function enColor(e){ e=(e==null?100:e); return e>=70?'#16a34a':e>=45?'#f2c200':'#e5484d'; }
 function enHtml(e){ e=(e==null?100:e); return '<span style="color:'+enColor(e)+';font-weight:800">⚡'+e+'</span>'; }
 function enBar(e){ e=(e==null?100:e); return '<div style="height:4px;width:100%;background:#0006;border-radius:2px;margin-top:2px;overflow:hidden"><i style="display:block;height:100%;width:'+e+'%;background:'+enColor(e)+'"></i></div>'; }
+function moraleTag(p){ const m=(p&&p.morale!=null)?p.morale:70; const c=m>=66?'#16a34a':m>=40?'#f2c200':'#e5484d'; const l=m>=66?'Alta':m>=40?'Média':'Baixa'; return '<span style="color:'+c+';font-weight:700">'+l+'</span>'; }
+function openTalk(p){
+  const mo=document.createElement("div");mo.className="modal";
+  const m=p.morale!=null?p.morale:70;
+  const mood=m<=22?"Está muito insatisfeito e quer falar sobre a sua situação.":m<45?"Anda descontente com a falta de protagonismo.":"Sente-se bem, mas ouve o que tens para dizer.";
+  mo.innerHTML=`<div class="box"><button class="close" id="tClose">✕</button>
+    <div style="font-weight:800;font-size:16px;margin-bottom:4px">Reunião com ${p.name}</div>
+    <div class="muted" style="font-size:12px;margin-bottom:10px">${mood} (Moral: ${moraleTag(p)})</div>
+    <button class="btn sec small" data-opt="minutos" style="width:100%;margin-bottom:6px">Prometer mais minutos</button>
+    <button class="btn sec small" data-opt="paciencia" style="width:100%;margin-bottom:6px">Pedir para lutar pelo lugar</button>
+    <button class="btn sec small" data-opt="listar" style="width:100%;margin-bottom:6px">Colocar na lista de transferências</button>
+    <button class="btn warn small" data-opt="ignorar" style="width:100%">Ignorar o desabafo</button></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#tClose").onclick=close;
+  mo.onclick=e=>{if(e.target===mo)close();};
+  mo.querySelectorAll("[data-opt]").forEach(b=>b.onclick=()=>{const r=playerMeetingResolve(p.id,b.dataset.opt);toast(r.msg);close();render();});
+}
 /* ---------- INÍCIO ---------- */
 function viewHome(){
   const c=me(), d=myDivObj(), table=sortedTable(d);
@@ -66,6 +84,19 @@ function viewHome(){
     fh+=`<button class="btn warn small" id="btnJobRestart" style="width:100%;margin-top:4px">↺ Recomeçar carreira do zero</button></div>`;
     fh+=`<div class="card"><h2>Notícias</h2>${(G.news||[]).slice(0,6).map(n=>`<div class="ev">${n.t}</div>`).join("")}</div>`;
     return fh;
+  }
+  if(G.meeting&&G.meeting.active){
+    h+=`<div class="card" style="border-color:var(--red)"><h2 style="color:var(--red)">Reunião com a direção</h2>
+      <div style="font-size:13px;margin-bottom:10px">A direção está preocupada com ${G.meeting.reason}. Que resposta lhes dás?</div>
+      <button class="btn sec small" data-meet="assumir" style="width:100%;margin-bottom:6px">Assumo a responsabilidade e corrijo já</button>
+      <button class="btn sec small" data-meet="prometer" style="width:100%;margin-bottom:6px">Prometo resultados imediatos</button>
+      <button class="btn warn small" data-meet="desafiar" style="width:100%">O plantel é fraco — a culpa não é minha</button>
+      <div class="muted" style="font-size:11px;margin-top:8px">Tens de responder antes do próximo jogo.</div></div>`;
+  }
+  if(G.shortObjective&&G.shortObjective.active){
+    const so=G.shortObjective;
+    h+=`<div class="card" style="border-color:var(--accent)"><h2 style="color:var(--accent)">Objetivo de curto prazo</h2>
+      <div style="font-size:13px">A direção exige <b>${so.label}</b>. Vais em <b>${so.points}</b> ponto(s) em ${so.played}/${so.games} jogos.${so.need-so.points>0?" Faltam "+(so.need-so.points)+".":" Já cumprido!"}</div></div>`;
   }
   if(!done&&next){
     const opp=myClubs()[next.opp], home=next.home?c:opp, away=next.home?opp:c;
@@ -171,7 +202,7 @@ function viewSquad(){
     const on=inXI.has(p.id), susp=(c.susp||[]).includes(p.id), inj=(p.injuredWeeks||0)>0, tag=susp?'SUSP':inj?'LES':'';
     return `<div class="pl" data-detail="${p.id}"><div class="num">${on?'<span style="color:var(--accent)">●</span>':'○'}</div>
       <div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
+      <div class="info"><div class="nm">${p.name}${p.wantsTalk?' 💬':''}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
         <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${enHtml(p.energy)} · ${formIcon(p)} · ⭐${avg5(p)!=null?avg5(p):"—"} · ⚽${p.goals}</div></div>
       <span class="muted" style="font-size:18px">›</span></div>`;
   }).join("")+`</div>`;
@@ -200,6 +231,8 @@ function openPlayer(pid){
     <div class="muted" style="font-size:11px;margin-bottom:2px">📄 Contrato: ${p.contractYears||"—"} ano(s) · valor de venda ~ ${money(transferFee(p))}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">Energia: ${enHtml(p.energy)}${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">⭐ Última avaliação: ${p.lastRating!=null?p.lastRating:"—"} · Média (5 jogos): ${avg5(p)!=null?avg5(p):"—"} · Forma: ${formIcon(p)} ${((p.form||0)>0?"+":"")+(Math.round((p.form||0)*10)/10)}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:6px">🙂 Moral: ${moraleTag(p)}${p.wantsTalk?' · <span style="color:var(--accent)">pediu para reunir</span>':''}</div>
+    <button class="btn sec small" id="pTalk" style="width:100%;margin-bottom:8px">💬 Reunir com o jogador</button>
     <div class="muted" style="font-size:11px;margin-bottom:3px">🎯 Foco de treino:</div>
     <select id="pTrain" style="margin-bottom:8px">${["Equilibrado","Ataque","Defesa","Físico"].map(f=>`<option${(p.trainFocus||"Equilibrado")===f?" selected":""}>${f}</option>`).join("")}</select>
     <button class="btn sec small" id="pRenew" style="width:100%;margin-bottom:8px">📄 Renovar contrato (${money(Math.max(0.01,Math.round(p.value*0.08*100)/100))})</button>
@@ -211,6 +244,7 @@ function openPlayer(pid){
   const close=()=>mo.remove();
   mo.querySelector("#pClose").onclick=close;
   const pt=mo.querySelector("#pTrain");if(pt)pt.onchange=()=>{p.trainFocus=pt.value;save();toast(p.name+": foco de treino "+pt.value);};
+  const ptk=mo.querySelector("#pTalk");if(ptk)ptk.onclick=()=>{close();openTalk(p);};
   mo.querySelector("#pRenew").onclick=()=>{const r=renewContract(p.id);if(r.msg)toast(r.msg);close();render();};
   mo.querySelector("#pList").onclick=()=>{const listed=toggleTransferList(p.id);toast(listed?"Colocado na lista de transferências":"Retirado da lista");close();render();};
   mo.querySelector("#pRelease").onclick=()=>{if(confirm("Dispensar "+p.name+"? Sai sem qualquer receita.")){const r=releasePlayer(p.id);if(r.msg)toast(r.msg);close();render();}};
@@ -518,7 +552,7 @@ function playCupTie(){
     let w,pens=false;
     if(r.hg>r.ag)w=aShort; else if(r.ag>r.hg)w=bShort;
     else { pens=true; const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; w=(Math.random()<0.5+(sa-sb)/200)?aShort:bShort; }
-    processEnergyInjuries(c,userLine); rateUserMatch(c,userLine,r,userIsA); updateForm(c,userLine); updateChem(userLine);
+    processEnergyInjuries(c,userLine); rateUserMatch(c,userLine,r,userIsA); updateForm(c,userLine); updateChem(userLine); trainTick(c,userLine); updateMorale(c,userLine,userIsA?r.hg:r.ag,userIsA?r.ag:r.hg);
     cupAdvanceRound({sa:r.hg,sb:r.ag,w,pens,et:r.hadET});
     const how=pens?" nos penáltis":(r.hadET?" no prolongamento":"");
     toast(w===ms?("Passaste"+how+"!"):("Eliminado da Taça"+how));
@@ -551,9 +585,11 @@ function cupBlocksLeague(){
   return false;
 }
 function bindView(){
-  const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;playMatchAnimated();};
-  const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>playCupTie();
-  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length)playWeek();toast("Época simulada");render();};
+  document.querySelectorAll("[data-meet]").forEach(b=>b.onclick=()=>{const r=resolveBoardMeeting(b.dataset.meet);toast(r.msg);TAB="home";render();});
+  const meetBlock=()=>{ if(G.meeting&&G.meeting.active){ toast("Responde primeiro à reunião com a direção.");TAB="home";render();return true; } return false; };
+  const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;playMatchAnimated();};
+  const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
+  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length){playWeek();if(G.meeting&&G.meeting.active)break;}toast("Época simulada");render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
   document.querySelectorAll("[data-job]").forEach(b=>b.onclick=()=>{takeNewJob(+b.dataset.job);TAB="home";render();});
