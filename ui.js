@@ -46,6 +46,9 @@ function nextFixture(){
 }
 
 function formIcon(p){ const f=(p&&p.form)||0; if(f>=1.2)return '<span style="color:var(--green2)" title="Em alta">▲</span>'; if(f<=-1.2)return '<span style="color:var(--red)" title="Em baixo">▼</span>'; return '<span class="muted" title="Estável">▬</span>'; }
+function enColor(e){ e=(e==null?100:e); return e>=70?'#16a34a':e>=45?'#f2c200':'#e5484d'; }
+function enHtml(e){ e=(e==null?100:e); return '<span style="color:'+enColor(e)+';font-weight:800">⚡'+e+'</span>'; }
+function enBar(e){ e=(e==null?100:e); return '<div style="height:4px;width:100%;background:#0006;border-radius:2px;margin-top:2px;overflow:hidden"><i style="display:block;height:100%;width:'+e+'%;background:'+enColor(e)+'"></i></div>'; }
 /* ---------- INÍCIO ---------- */
 function viewHome(){
   const c=me(), d=myDivObj(), table=sortedTable(d);
@@ -122,16 +125,14 @@ function viewHome(){
       <div class="stat"><div class="v">${c.W}-${c.D}-${c.L}</div><div class="l">V-E-D</div></div>
       <div class="stat"><div class="v">${c.GF}:${c.GA}</div><div class="l">Golos</div></div></div></div>`;
   {
-    const chem=G.chem!=null?G.chem:65, tf=teamForm(c), tfocus=G.trainFocus||"Equilibrado";
+    const chem=G.chem!=null?G.chem:65, tf=teamForm(c);
     const chemLbl=chem>=80?"Excelente":chem>=65?"Boa":chem>=50?"Razoável":"Fraca";
     const formLbl=tf>1.2?"Em alta":tf<-1.2?"Em baixo":"Estável";
     h+=`<div class="card"><h2>Treino & Balneário</h2>
       <div class="grid2" style="margin-bottom:8px">
         <div class="stat"><div class="v">${chem}<span style="font-size:11px">/100</span></div><div class="l">Química (${chemLbl})</div></div>
         <div class="stat"><div class="v">${tf>0?"+":""}${tf}</div><div class="l">Forma (${formLbl})</div></div></div>
-      <div class="muted" style="font-size:12px;margin-bottom:4px">Foco de treino:</div>
-      <select id="selTrain">${["Equilibrado","Ataque","Defesa","Físico"].map(f=>`<option${tfocus===f?" selected":""}>${f}</option>`).join("")}</select>
-      <div class="muted" style="font-size:11px;margin-top:6px">A química sobe quando mantens o mesmo onze e desce com muitas trocas. O foco acelera a evolução dos teus jovens no fim da época.</div></div>`;
+      <div class="muted" style="font-size:11px">A química sobe quando mantens o mesmo onze e desce com muitas trocas. Define o foco de treino de cada jogador na ficha dele — os jogadores evoluem a cada jornada (quem joga menos e os mais novos evoluem mais depressa).</div></div>`;
   }
   if(d.results.length){
     const last=d.results[d.results.length-1];
@@ -171,7 +172,7 @@ function viewSquad(){
     return `<div class="pl" data-detail="${p.id}"><div class="num">${on?'<span style="color:var(--accent)">●</span>':'○'}</div>
       <div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
       <div class="info"><div class="nm">${p.name}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
-        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ⚡${p.energy==null?100:p.energy}% · ${formIcon(p)} · ⭐${avg5(p)!=null?avg5(p):"—"} · ⚽${p.goals}</div></div>
+        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${enHtml(p.energy)} · ${formIcon(p)} · ⭐${avg5(p)!=null?avg5(p):"—"} · ⚽${p.goals}</div></div>
       <span class="muted" style="font-size:18px">›</span></div>`;
   }).join("")+`</div>`;
   return h;
@@ -197,8 +198,10 @@ function openPlayer(pid){
       <div class="stat"><div class="v">${money(p.value)}</div><div class="l">Valor</div></div></div>
     <div class="muted" style="font-size:11px;margin-bottom:2px">⚽ ${p.goals} golos · 🟨 ${p.yc||0} · 🟥 ${p.rc||0}</div>
     <div class="muted" style="font-size:11px;margin-bottom:2px">📄 Contrato: ${p.contractYears||"—"} ano(s) · valor de venda ~ ${money(transferFee(p))}</div>
-    <div class="muted" style="font-size:11px;margin-bottom:6px">⚡ Energia: ${p.energy==null?100:p.energy}%${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:6px">Energia: ${enHtml(p.energy)}${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">⭐ Última avaliação: ${p.lastRating!=null?p.lastRating:"—"} · Média (5 jogos): ${avg5(p)!=null?avg5(p):"—"} · Forma: ${formIcon(p)} ${((p.form||0)>0?"+":"")+(Math.round((p.form||0)*10)/10)}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:3px">🎯 Foco de treino:</div>
+    <select id="pTrain" style="margin-bottom:8px">${["Equilibrado","Ataque","Defesa","Físico"].map(f=>`<option${(p.trainFocus||"Equilibrado")===f?" selected":""}>${f}</option>`).join("")}</select>
     <button class="btn sec small" id="pRenew" style="width:100%;margin-bottom:8px">📄 Renovar contrato (${money(Math.max(0.01,Math.round(p.value*0.08*100)/100))})</button>
     <button class="btn sec small" id="pList" style="width:100%;margin-bottom:8px">${p.transferListed?"⭐ Retirar da lista de transferências":"📋 Colocar na lista de transferências"}</button>
     <button class="btn warn small" id="pRelease" style="width:100%;margin-bottom:8px">🚪 Dispensar (sem receita)</button>
@@ -207,6 +210,7 @@ function openPlayer(pid){
   document.body.appendChild(mo);
   const close=()=>mo.remove();
   mo.querySelector("#pClose").onclick=close;
+  const pt=mo.querySelector("#pTrain");if(pt)pt.onchange=()=>{p.trainFocus=pt.value;save();toast(p.name+": foco de treino "+pt.value);};
   mo.querySelector("#pRenew").onclick=()=>{const r=renewContract(p.id);if(r.msg)toast(r.msg);close();render();};
   mo.querySelector("#pList").onclick=()=>{const listed=toggleTransferList(p.id);toast(listed?"Colocado na lista de transferências":"Retirado da lista");close();render();};
   mo.querySelector("#pRelease").onclick=()=>{if(confirm("Dispensar "+p.name+"? Sai sem qualquer receita.")){const r=releasePlayer(p.id);if(r.msg)toast(r.msg);close();render();}};
@@ -269,7 +273,7 @@ function pitchHTML(cl){
       spots+=`<div class="spot${isSel?' sel':''}${bad?' susp':''}" data-slot="${slot}" style="left:${s.x}%;top:${s.y}%">
         ${tag?`<div class="susp-tag">${tag}</div>`:''}
         <div class="dot" style="background:${cl.c1};color:${tc};border-color:${cl.c2}">${effAt(p,s.pos)}</div>
-        <div class="lbl">${p.name.split(" ").slice(-1)[0]}</div><div class="ppos">${s.pos} · ⚡${p.energy==null?100:p.energy} · ⭐${avg5(p)!=null?avg5(p):"—"}</div></div>`;
+        <div class="lbl">${p.name.split(" ").slice(-1)[0]}</div><div class="ppos">${s.pos} · ${enHtml(p.energy)} · ⭐${avg5(p)!=null?avg5(p):"—"}</div>${enBar(p.energy)}</div>`;
     }
   }
   return `<div class="pitch"><div class="lines">
@@ -286,7 +290,7 @@ function benchHTML(cl){
     const isSusp=susp.has(p.id), isInj=(p.injuredWeeks||0)>0, isSel=tacSel&&tacSel.type==="bench"&&tacSel.pid===p.id;
     const tag=isSusp?' · <span class="tag">SUSP</span>':isInj?' · <span class="tag">LES</span>':'';
     return `<div class="benchpl${isSel?' sel':''}${(isSusp||isInj)?' susp':''}" data-pid="${p.id}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ⚡${p.energy==null?100:p.energy}% · ⭐${avg5(p)!=null?avg5(p):"—"}${tag}</div></div></div>`;
+      <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${enHtml(p.energy)} · ⭐${avg5(p)!=null?avg5(p):"—"}${tag}</div>${enBar(p.energy)}</div></div>`;
   }).join("")+`</div>`;
 }
 function bar(l,v){const pct=clamp((v-40)/55*100,3,100);return `<div style="margin:7px 0"><div class="row between"><span>${l}</span><b>${Math.round(v)}</b></div><div class="barwrap"><div class="bar" style="width:${pct}%"></div></div></div>`;}
@@ -505,7 +509,6 @@ function bindView(){
   const smk=$("#segMkt");if(smk)smk.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketPos=b.dataset.p;render();});
   document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=e=>{e.stopPropagation();const r=buyPlayer(+b.dataset.from,+b.dataset.buy);toast(r.msg);render();});
   const bab=$("#btnAskBudget");if(bab)bab.onclick=()=>{const r=requestBudget();toast(r.msg);render();};
-  const strn=$("#selTrain");if(strn)strn.onchange=()=>{G.trainFocus=strn.value;save();toast("Foco de treino: "+strn.value);};
   const sl=$("#segLeague");if(sl)sl.querySelectorAll("button").forEach(b=>b.onclick=()=>{tableTab=b.dataset.t;render();});
   const sdv=$("#segDiv");if(sdv)sdv.querySelectorAll("button").forEach(b=>b.onclick=()=>{leagueDiv=+b.dataset.d;render();});
   if(document.querySelector(".pitch"))initTacticsTap();

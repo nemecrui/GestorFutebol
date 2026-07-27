@@ -62,7 +62,34 @@ const FORMATIONS={
     {pos:"GR",x:50,y:90},
     {pos:"LD",x:88,y:64},{pos:"DC",x:66,y:72},{pos:"DC",x:50,y:74},{pos:"DC",x:34,y:72},{pos:"LE",x:12,y:64},
     {pos:"MC",x:66,y:46},{pos:"MDC",x:50,y:50},{pos:"MC",x:34,y:46},
-    {pos:"PL",x:60,y:20},{pos:"PL",x:40,y:20}]}
+    {pos:"PL",x:60,y:20},{pos:"PL",x:40,y:20}]},
+  "4-1-4-1":{slots:[
+    {pos:"GR",x:50,y:90},
+    {pos:"LD",x:83,y:68},{pos:"DC",x:60,y:71},{pos:"DC",x:40,y:71},{pos:"LE",x:17,y:68},
+    {pos:"MDC",x:50,y:58},
+    {pos:"MD",x:83,y:42},{pos:"MC",x:63,y:44},{pos:"MC",x:37,y:44},{pos:"ME",x:17,y:42},
+    {pos:"PL",x:50,y:18}]},
+  "4-5-1":{slots:[
+    {pos:"GR",x:50,y:90},
+    {pos:"LD",x:83,y:68},{pos:"DC",x:60,y:71},{pos:"DC",x:40,y:71},{pos:"LE",x:17,y:68},
+    {pos:"MD",x:85,y:45},{pos:"MC",x:63,y:47},{pos:"MDC",x:50,y:52},{pos:"MC",x:37,y:47},{pos:"ME",x:15,y:45},
+    {pos:"PL",x:50,y:18}]},
+  "4-4-1-1":{slots:[
+    {pos:"GR",x:50,y:90},
+    {pos:"LD",x:83,y:68},{pos:"DC",x:60,y:71},{pos:"DC",x:40,y:71},{pos:"LE",x:17,y:68},
+    {pos:"MD",x:83,y:46},{pos:"MC",x:60,y:48},{pos:"MC",x:40,y:48},{pos:"ME",x:17,y:46},
+    {pos:"MO",x:50,y:30},
+    {pos:"PL",x:50,y:16}]},
+  "3-4-3":{slots:[
+    {pos:"GR",x:50,y:90},
+    {pos:"DC",x:68,y:71},{pos:"DC",x:50,y:73},{pos:"DC",x:32,y:71},
+    {pos:"MD",x:83,y:48},{pos:"MC",x:60,y:50},{pos:"MC",x:40,y:50},{pos:"ME",x:17,y:48},
+    {pos:"ED",x:80,y:22},{pos:"PL",x:50,y:18},{pos:"EE",x:20,y:22}]},
+  "5-4-1":{slots:[
+    {pos:"GR",x:50,y:90},
+    {pos:"LD",x:88,y:64},{pos:"DC",x:66,y:72},{pos:"DC",x:50,y:74},{pos:"DC",x:34,y:72},{pos:"LE",x:12,y:64},
+    {pos:"MD",x:83,y:46},{pos:"MC",x:60,y:48},{pos:"MC",x:40,y:48},{pos:"ME",x:17,y:46},
+    {pos:"PL",x:50,y:18}]}
 };
 const MENTAL={"Defensivo":{atk:0.85,def:1.15},"Equilibrado":{atk:1.0,def:1.0},"Atacante":{atk:1.18,def:0.86}};
 
@@ -148,9 +175,11 @@ const DIV2=[
   {n:"GD Pousada",s:"POS",str:38,c1:"#f2c200",c2:"#1d4ed8"}
 ];
 
-/* modelo do plantel: posições cobertas (23 jogadores) */
-const SQUAD_TEMPLATE=["GR","GR","LD","LD","LE","LE","DC","DC","DC","DC",
-  "MDC","MDC","MC","MC","MD","ME","MO","MO","ED","EE","PL","PL","PL"];
+/* modelo do plantel: posições cobertas (27 jogadores, 3 GR) */
+const SQUAD_TEMPLATE=["GR","GR","GR",
+  "LD","LD","LE","LE","DC","DC","DC","DC","DC",
+  "MDC","MDC","MC","MC","MC","MD","MD","ME","ME","MO",
+  "ED","EE","PL","PL","PL"];
 
 let G=null, PID=1;
 const CFG = (typeof GAME_DATA!=="undefined" && GAME_DATA) ? GAME_DATA : {};
@@ -203,14 +232,14 @@ function makePlayer(pos,level){
   const potential=clamp(abil+(age<23?ri(3,14):ri(-2,4)),abil,99);
   const value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
   return {id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
-    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
+    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
 }
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
 function makeSquadFromRoster(roster,level){
   const squad=roster.map(r=>{const p=makePlayer(r.p,level); p.name=r.n; return p;});
-  let gk=squad.filter(p=>p.pos==="GR").length; while(gk<2){ squad.push(makePlayer("GR",level)); gk++; }
-  const fillPos=["DC","LD","LE","DC","MC","MDC","MC","ME","MD","MO","PL","ED","EE","PL","DC","MC","PL","LE","LD"];
-  let fi=0; while(squad.length<20){ squad.push(makePlayer(fillPos[fi%fillPos.length],level)); fi++; }
+  let gk=squad.filter(p=>p.pos==="GR").length; while(gk<3){ squad.push(makePlayer("GR",level)); gk++; }
+  const fillPos=["DC","LD","LE","DC","MC","MDC","MC","ME","MD","MO","PL","ED","EE","PL","DC","MC","PL","LE","LD","DC","MC","MO"];
+  let fi=0; while(squad.length<27){ squad.push(makePlayer(fillPos[fi%fillPos.length],level)); fi++; }
   return squad;
 }
 function clubFromDef(d,id){
@@ -418,7 +447,7 @@ function simRound(d,preMy,hasUser){
     }
     applyResult(home,away,r.hg,r.ag,r.events);
     home.susp=r.expelledH||[]; away.susp=r.expelledA||[];
-    if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId); recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg); processEnergyInjuries(uc,userLine); rateUserMatch(uc,userLine,r,isH); updateForm(uc,userLine); updateChem(userLine); }
+    if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId); recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg); processEnergyInjuries(uc,userLine); rateUserMatch(uc,userLine,r,isH); updateForm(uc,userLine); updateChem(userLine); trainTick(uc,userLine); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -469,7 +498,8 @@ function newSeason(){
         const played=p.apps||0;                                    // jogos desta época (antes de zerar)
         p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.energy=100;p.injuredWeeks=0;p.ratings=[];p.lastRating=null;p.form=0;
         p.contractYears=(p.contractYears||2)-1;if(p.contractYears<=0)p.contractYears=ri(2,4);
-        developPlayer(p,played,mine);                              // treino + desenvolvimento de jovens
+        if(mine){ if(p.age>32) ATTR_KEYS.forEach(k=>{ if(["vel","res","for","rea"].includes(k)&&Math.random()<0.4)p.attrs[k]=clamp(p.attrs[k]-1,1,20); }); } // tua equipa evolui por jornada; aqui só declínio
+        else developPlayer(p,played,false);                        // IA: desenvolvimento no fim da época
         p.age++;
       });
     });
@@ -673,15 +703,15 @@ function rejectOffer(i){
 /* ---------- Fase 4: energia/forma, lesões, renovação, negociação ---------- */
 function unavailable(club){ const set=new Set(club.susp||[]); club.squad.forEach(p=>{ if((p.injuredWeeks||0)>0)set.add(p.id); }); return set; }
 function recovery(age){ return clamp(Math.round(22-(age-20)*0.7),6,22); }
-function energyFactor(club,line){ const ps=line.map(id=>club.squad.find(x=>x.id===id)).filter(Boolean); const avg=ps.reduce((s,p)=>s+(p.energy==null?100:p.energy),0)/Math.max(1,ps.length); return 0.8+0.2*(avg/100); }
+function energyFactor(club,line){ const ps=line.map(id=>club.squad.find(x=>x.id===id)).filter(Boolean); const avg=ps.reduce((s,p)=>s+(p.energy==null?100:p.energy),0)/Math.max(1,ps.length); return 0.86+0.14*(avg/100); }
 function processEnergyInjuries(club,playedIds){
   const played=new Set(playedIds||[]);
   club.squad.forEach(p=>{
     if(p.energy==null)p.energy=100; if(p.injuredWeeks==null)p.injuredWeeks=0;
     if(p.injuredWeeks>0){ p.injuredWeeks--; p.energy=clamp(p.energy+Math.round(recovery(p.age)*0.6),0,100); return; }
     if(played.has(p.id)){
-      p.energy=clamp(p.energy-ri(8,18)-Math.max(0,p.age-30),0,100);            // titular: perde pouco (mais com idade)
-      const risk=0.02+(100-p.energy)/100*0.05+Math.max(0,(p.age-30))*0.004;    // pouca energia => mais lesões
+      p.energy=clamp(p.energy-ri(4,9)-Math.max(0,p.age-32),0,100);             // titular: desgaste menor (dura mais jogos)
+      const risk=0.015+(100-p.energy)/100*0.04+Math.max(0,(p.age-31))*0.003;   // pouca energia => mais lesões
       if(Math.random()<risk){ p.injuredWeeks=ri(1,5); addNews(p.name+" lesionou-se — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); }
     } else { p.energy=clamp(p.energy+Math.round(recovery(p.age)*2.5),0,100); } // suplente: recupera muito (menos com idade)
   });
@@ -751,6 +781,21 @@ function developPlayer(p,played,isMine){
     ATTR_KEYS.forEach(k=>{ if(["vel","res","for","rea"].includes(k)&&Math.random()<0.4)p.attrs[k]=clamp(p.attrs[k]-1,1,20); });
   }
 }
+/* evolução a CADA jornada (equipa do utilizador): quem não joga evolui mais; mais novos evoluem mais */
+function trainTick(club,playedIds){
+  if(!club||!club.squad)return;
+  const played=new Set(playedIds||[]);
+  club.squad.forEach(p=>{
+    if(roleRatingAttrs(p.attrs,p.pos)>=p.potential)return;                 // já atingiu o potencial
+    const ageF=p.age<=19?1.5:p.age<=23?1.15:p.age<=27?0.7:p.age<=31?0.4:0.15; // mais novo => maior incremento
+    const playF=played.has(p.id)?0.55:1.4;                                 // quem não joga evolui mais
+    if(Math.random()<0.11*ageF*playF){
+      const focus=p.trainFocus||"Equilibrado", foc=FOCUS_ATTRS[focus]||null, prof=PROFILES[p.pos]||{};
+      let pool=ATTR_KEYS.filter(k=>prof[k]&&(!foc||foc.includes(k))); if(!pool.length)pool=ATTR_KEYS.filter(k=>prof[k]);
+      if(pool.length){ const k=pick(pool); if(p.attrs[k]<20)p.attrs[k]=clamp(p.attrs[k]+1,1,20); }
+    }
+  });
+}
 function negotiateOffer(i,counterFee){
   const o=G.transferOffers&&G.transferOffers[i]; if(!o)return {status:"gone"};
   o.round=(o.round||0)+1;
@@ -795,7 +840,7 @@ function cupResolveTie(t){
   t.sa=hg; t.sb=ag;
   if(hg>ag)t.w=t.a; else if(ag>hg)t.w=t.b;
   else { const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; t.w=(Math.random()<0.5+(sa-sb)/200)?t.a:t.b; t.pens=true; }
-  if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); updateForm(uc,uLine); updateChem(uLine); }
+  if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); updateForm(uc,uLine); updateChem(uLine); trainTick(uc,uLine); }
 }
 function cupAdvanceRound(preUser){
   if(!G.cup||!G.cup.active)return null;
@@ -841,7 +886,7 @@ if(typeof module!=="undefined"&&module.exports){
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
-    formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,
+    formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
