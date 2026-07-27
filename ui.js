@@ -483,22 +483,45 @@ function viewTable(){
 /* ---------- jogo animado (partilhado por campeonato e Taça) ---------- */
 function animateMatch(home, away, r, onFinish, userClub, userLine){
   const mo=document.createElement("div");mo.className="modal";
-  mo.innerHTML=`<div class="box live-box"><div id="goalBanner">⚽ GOLO!</div>
+  mo.innerHTML=`<div class="box live-box"><div id="goalFlash"></div><div id="goalBanner">⚽ GOLO!</div>
     <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}</h2></div>
     <div class="scorebug"><div class="t">${clubTag(home)}</div><div class="sc" id="liveScore">0 - 0</div><div class="t a">${clubTag(away)}</div></div>
-    <div class="center muted livemin" id="liveMin">0'</div><div class="live" id="liveEv"></div>
+    <div class="center muted livemin" id="liveMin">0'</div>
+    <div id="liveTL"><i id="liveTLfill"></i></div>
+    <div id="liveMom"><i id="liveMomH"></i><i id="liveMomA"></i></div>
+    <div class="livecomment" id="liveComment">Apito inicial — rola a bola!</div>
+    <div class="livestats" id="liveStats">
+      <div class="statline"><b id="posH">50%</b><span class="lbl">Posse</span><b id="posA">50%</b></div>
+      <div class="statline"><b id="shH">0</b><span class="lbl">Remates</span><b id="shA">0</b></div>
+      <div class="statline"><b id="sotH">0</b><span class="lbl">À baliza</span><b id="sotA">0</b></div>
+      <div class="statline"><b id="corH">0</b><span class="lbl">Cantos</span><b id="corA">0</b></div></div>
+    <div class="live" id="liveEv"></div>
     <div id="liveRatings"></div>
     <button class="btn" id="liveDone" style="display:none">Continuar</button>
     <button class="btn sec small" id="liveSkip" style="width:100%;margin-top:8px">Saltar</button></div>`;
   document.body.appendChild(mo);
   const evBox=mo.querySelector("#liveEv"),scoreEl=mo.querySelector("#liveScore"),minEl=mo.querySelector("#liveMin"),goalBanner=mo.querySelector("#goalBanner");
-  let hg=0,ag=0,i=0,minute=0,timer,pauseUntil=0;
+  const tlFill=mo.querySelector("#liveTLfill"),tlEl=mo.querySelector("#liveTL"),momH=mo.querySelector("#liveMomH"),momA=mo.querySelector("#liveMomA"),commentEl=mo.querySelector("#liveComment");
+  const maxMin=r.maxMinute||90;
+  let hg=0,ag=0,i=0,minute=0,timer,pauseUntil=0,htDone=false,mom=50,momSumH=0,momSumA=0,commentHold=0;
+  const st={H:{sh:0,sot:0,cor:0},A:{sh:0,sot:0,cor:0}};
   const evs=r.events.slice().sort((a,b)=>a.m-b.m);
+  const setW=(el,pct)=>{el.style.width=pct+"%";};
+  momH.style.background=home.c1;momA.style.background=away.c1;setW(momH,50);setW(momA,50);
+  function shortOf(side){return side==="H"?home.short:away.short;}
   function nameByPid(side,pid){const club=side==="H"?home:away;const p=club.squad.find(x=>x.id===pid);return p?p.name:"jogador";}
   function gtypeSuffix(t){return t==="penalty"?" (g.p.)":t==="freekick"?" (livre)":t==="header"?" (cabeça)":"";}
-  function addEvLine(side,icon,txt){const club=side==="H"?home.short:away.short;const d=document.createElement("div");d.className="ev ev-"+(side==="H"?"h":"a");d.innerHTML=`<b>${txt.m}'</b> ${icon} ${club} — ${txt.name}`;evBox.prepend(d);}
-  function goalFlash(){goalBanner.classList.remove("show");void goalBanner.offsetWidth;goalBanner.classList.add("show");if(scoreEl.animate)scoreEl.animate([{transform:"scale(1)"},{transform:"scale(1.35)"},{transform:"scale(1)"}],{duration:450});}
-  function finish(){clearInterval(timer);scoreEl.textContent=r.hg+" - "+r.ag;minEl.textContent="Final";
+  function addEvLine(side,icon,txt){const d=document.createElement("div");d.className="ev ev-"+(side==="H"?"h":"a");d.innerHTML=`<b>${txt.m}'</b> ${icon} ${shortOf(side)} — ${txt.name}`;evBox.prepend(d);}
+  function tlDot(m,color){const s=document.createElement("span");s.className="tl-dot";s.style.left=clamp(m/maxMin*100,0,100)+"%";s.style.background=color;tlEl.appendChild(s);}
+  function updateStats(){const tot=momSumH+momSumA||1,pH=Math.round(momSumH/tot*100);mo.querySelector("#posH").textContent=pH+"%";mo.querySelector("#posA").textContent=(100-pH)+"%";mo.querySelector("#shH").textContent=st.H.sh;mo.querySelector("#shA").textContent=st.A.sh;mo.querySelector("#sotH").textContent=st.H.sot;mo.querySelector("#sotA").textContent=st.A.sot;mo.querySelector("#corH").textContent=st.H.cor;mo.querySelector("#corA").textContent=st.A.cor;}
+  function setComment(txt,hold){commentEl.style.opacity=0;setTimeout(()=>{commentEl.textContent=txt;commentEl.style.opacity=1;},110);commentHold=hold||0;}
+  function colorFlash(side){const cl=side==="H"?home:away,f=mo.querySelector("#goalFlash");f.style.background=`radial-gradient(circle at 50% 38%, ${cl.c1}, transparent 70%)`;f.classList.remove("show");void f.offsetWidth;f.classList.add("show");}
+  function goalCelebrate(side,nm){goalBanner.innerHTML=`⚽ GOLO!<div class="gb-sc">${nm}</div>`;goalBanner.classList.remove("show");void goalBanner.offsetWidth;goalBanner.classList.add("show");colorFlash(side);if(scoreEl.animate)scoreEl.animate([{transform:"scale(1)"},{transform:"scale(1.4)"},{transform:"scale(1)"}],{duration:500});if(navigator.vibrate){try{navigator.vibrate(60);}catch(e){}}}
+  const PRESS=["{T} carrega para a frente","grande pressão do {T}","{T} instala-se no meio-campo adversário","{T} procura o golo","{T} manda no jogo"];
+  const BAL=["jogo equilibrado","muita luta pela bola","as equipas estudam-se","ritmo mais partido agora"];
+  const CHANCE=["quase golo do {T}!","que defesa do guarda-redes!","por muito pouco!","travessão! esteve lá perto"];
+  function phrase(pool,side){return pick(pool).replace("{T}",shortOf(side));}
+  function finish(){clearInterval(timer);scoreEl.textContent=r.hg+" - "+r.ag;minEl.textContent="Final";setW(tlFill,100);setComment("Apito final. "+home.short+" "+r.hg+"–"+r.ag+" "+away.short,0);
     if(onFinish)onFinish();
     if(userClub&&userLine){ const rc=v=>v>=7?"#16a34a":v>=5?"#d9a400":"#e5484d";
       const rl=userLine.map(id=>userClub.squad.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>(b.lastRating||0)-(a.lastRating||0));
@@ -506,21 +529,31 @@ function animateMatch(home, away, r, onFinish, userClub, userLine){
     }
     const done=mo.querySelector("#liveDone");done.style.display="block";mo.querySelector("#liveSkip").style.display="none";done.onclick=()=>{mo.remove();render();};}
   mo.querySelector("#liveSkip").onclick=finish;
-  const maxMin=r.maxMinute||90;
   timer=setInterval(()=>{
     if(Date.now()<pauseUntil)return;
+    if(!htDone && maxMin>=90 && minute>=45){htDone=true;minEl.textContent="Intervalo";setComment("Intervalo — "+home.short+" "+hg+"–"+ag+" "+away.short,3);pauseUntil=Date.now()+1500;updateStats();return;}
     minute+=3;if(minute>maxMin)minute=maxMin;minEl.textContent=minute+"'"+(minute>90?" (prol.)":"");
-    while(i<evs.length&&evs[i].m<=minute){const e=evs[i];i++;
-      if(e.type==="goal"){if(e.side==="H")hg++;else ag++;scoreEl.textContent=hg+" - "+ag;goalFlash();
+    setW(tlFill,minute/maxMin*100);
+    mom=clamp(mom+ri(-9,9),12,88);momSumH+=mom;momSumA+=(100-mom);setW(momH,mom);setW(momA,100-mom);
+    const pres=mom>=55?"H":mom<=45?"A":null;
+    let hadEvent=false;
+    while(i<evs.length&&evs[i].m<=minute){const e=evs[i];i++;hadEvent=true;
+      if(e.type==="goal"){if(e.side==="H")hg++;else ag++;scoreEl.textContent=hg+" - "+ag;st[e.side].sh++;st[e.side].sot++;
         const nm=e.gtype==="own"?(nameByPid(e.ogSide,e.ogPid)+" (auto-golo)"):(nameByPid(e.side,e.scorer)+gtypeSuffix(e.gtype));
-        addEvLine(e.side,"⚽",{m:e.m,name:nm});pauseUntil=Date.now()+900;}
-      else if(e.type==="yellow"){addEvLine(e.side,"🟨",{m:e.m,name:nameByPid(e.side,e.pid)});}
-      else if(e.type==="red"){addEvLine(e.side,"🟥",{m:e.m,name:nameByPid(e.side,e.pid)+(e.second?" (2º amarelo)":"")});}
-      else if(e.type==="disallowed"){addEvLine(e.side,"🚫",{m:e.m,name:"golo anulado"});}
-      else if(e.type==="penmiss"){addEvLine(e.side,"❌",{m:e.m,name:nameByPid(e.side,e.pid)+" — penálti falhado"});}
+        goalCelebrate(e.side,nm);addEvLine(e.side,"⚽",{m:e.m,name:nm});tlDot(e.m,"#ffcf33");setComment("GOLO do "+shortOf(e.side)+"! "+nm,3);pauseUntil=Date.now()+1000;}
+      else if(e.type==="yellow"){addEvLine(e.side,"🟨",{m:e.m,name:nameByPid(e.side,e.pid)});tlDot(e.m,"#f2c200");}
+      else if(e.type==="red"){addEvLine(e.side,"🟥",{m:e.m,name:nameByPid(e.side,e.pid)+(e.second?" (2º amarelo)":"")});tlDot(e.m,"#ef4657");setComment("Vermelho para o "+shortOf(e.side)+"!",3);}
+      else if(e.type==="disallowed"){addEvLine(e.side,"🚫",{m:e.m,name:"golo anulado"});st[e.side].sot++;setComment("Golo anulado ao "+shortOf(e.side)+"!",2);}
+      else if(e.type==="penmiss"){addEvLine(e.side,"❌",{m:e.m,name:nameByPid(e.side,e.pid)+" — penálti falhado"});st[e.side].sh++;st[e.side].sot++;setComment("Penálti falhado pelo "+shortOf(e.side)+"!",2);}
     }
+    if(pres){if(Math.random()<0.5)st[pres].sh++;if(Math.random()<0.22)st[pres].sot++;if(Math.random()<0.14)st[pres].cor++;}
+    if(commentHold>0)commentHold--;
+    else if(!hadEvent){const roll=Math.random();
+      if(roll<0.12&&pres){setComment(phrase(CHANCE,pres),1);st[pres].sh++;if(Math.random()<0.5)st[pres].sot++;}
+      else if(roll<0.5)setComment(pres?phrase(PRESS,pres):pick(BAL),0);}
+    updateStats();
     if(minute>=maxMin)finish();
-  },220);
+  },230);
 }
 function playMatchAnimated(){
   const next=nextFixture(); if(!next){playWeek();render();return;}
