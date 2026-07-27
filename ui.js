@@ -486,6 +486,7 @@ function animateMatch(home, away, r, onFinish, userClub, userLine){
   mo.innerHTML=`<div class="box live-box"><div id="goalFlash"></div><div id="goalBanner">⚽ GOLO!</div>
     <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}</h2></div>
     <div class="scorebug"><div class="t">${clubTag(home)}</div><div class="sc" id="liveScore">0 - 0</div><div class="t a">${clubTag(away)}</div></div>
+    <div id="liveScorers"><div class="sc-col" id="scH">—</div><div class="sc-col a" id="scA">—</div></div>
     <div class="center muted livemin" id="liveMin">0'</div>
     <div id="liveTL"><i id="liveTLfill"></i></div>
     <div id="liveMom"><i id="liveMomH"></i><i id="liveMomA"></i></div>
@@ -496,7 +497,7 @@ function animateMatch(home, away, r, onFinish, userClub, userLine){
       <div class="statline"><b id="sotH">0</b><span class="lbl">À baliza</span><b id="sotA">0</b></div>
       <div class="statline"><b id="corH">0</b><span class="lbl">Cantos</span><b id="corA">0</b></div></div>
     <div class="live" id="liveEv"></div>
-    <div id="liveRatings"></div>
+    <div id="liveSquad" class="livesquad"></div>
     <button class="btn" id="liveDone" style="display:none">Continuar</button>
     <button class="btn sec small" id="liveSkip" style="width:100%;margin-top:8px">Saltar</button></div>`;
   document.body.appendChild(mo);
@@ -521,17 +522,29 @@ function animateMatch(home, away, r, onFinish, userClub, userLine){
   const BAL=["jogo equilibrado","muita luta pela bola","as equipas estudam-se","ritmo mais partido agora"];
   const CHANCE=["quase golo do {T}!","que defesa do guarda-redes!","por muito pouco!","travessão! esteve lá perto"];
   function phrase(pool,side){return pick(pool).replace("{T}",shortOf(side));}
+  const userSide=userClub?(userClub===home?"H":userClub===away?"A":null):null;
+  const scorers={H:[],A:[]}, liveR={}, mk={};
+  if(userSide)(userLine||[]).forEach(id=>{liveR[id]=6.0;mk[id]={g:0,yc:false,red:false};});
+  const lastName=n=>String(n).split(" ").slice(-1)[0];
+  function refreshScorers(){mo.querySelector("#scH").innerHTML=scorers.H.map(s=>s.n+" "+s.m+"'").join("<br>")||"—";mo.querySelector("#scA").innerHTML=scorers.A.map(s=>s.n+" "+s.m+"'").join("<br>")||"—";}
+  function bumpR(pid,d){if(liveR[pid]==null)return;liveR[pid]=clamp(liveR[pid]+d,1,10);}
+  function concedePenalty(){(userLine||[]).forEach(id=>{const p=userClub.squad.find(x=>x.id===id);if(!p)return;const g=GROUP[p.pos];bumpR(id,g==="GK"?-0.3:g==="DEF"?-0.14:-0.04);});}
+  function renderSquad(final){ if(!userSide)return; const rc=v=>v>=7?"#16a34a":v>=5?"#d9a400":"#e5484d";
+    const rows=(userLine||[]).map(id=>{const p=userClub.squad.find(x=>x.id===id);if(!p)return "";
+      const m=mk[id]||{}; let ic=""; for(let k=0;k<(m.g||0);k++)ic+="⚽"; if(m.yc)ic+="🟨"; if(m.red)ic+="🟥"; if(final&&(p.injuredWeeks||0)>0)ic+="🤕";
+      const rv=final?(p.lastRating!=null?p.lastRating:(liveR[id]||6)):(liveR[id]!=null?liveR[id]:6);
+      return `<div class="sq-row"><span class="sq-nm"><span class="pill ${posClass(p.pos)}" style="font-size:9px">${p.pos}</span> ${p.name} ${ic}</span><b style="color:${rc(rv)}">${(+rv).toFixed(1)}</b></div>`;
+    }).join("");
+    const el=mo.querySelector("#liveSquad"); if(el)el.innerHTML='<div class="sq-h">A tua equipa</div>'+rows; }
+  if(userSide)renderSquad(false);
   function finish(){clearInterval(timer);scoreEl.textContent=r.hg+" - "+r.ag;minEl.textContent="Final";setW(tlFill,100);setComment("Apito final. "+home.short+" "+r.hg+"–"+r.ag+" "+away.short,0);
     if(onFinish)onFinish();
-    if(userClub&&userLine){ const rc=v=>v>=7?"#16a34a":v>=5?"#d9a400":"#e5484d";
-      const rl=userLine.map(id=>userClub.squad.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>(b.lastRating||0)-(a.lastRating||0));
-      mo.querySelector("#liveRatings").innerHTML=`<h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">Notas dos teus jogadores</h2>`+rl.map(p=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:4px 2px;font-size:13px"><span>${p.name} <span class="pill ${posClass(p.pos)}" style="font-size:9px">${p.pos}</span></span><b style="color:${rc(p.lastRating||6)}">${p.lastRating!=null?p.lastRating:"—"}</b></div>`).join("");
-    }
+    if(userSide)renderSquad(true);
     const done=mo.querySelector("#liveDone");done.style.display="block";mo.querySelector("#liveSkip").style.display="none";done.onclick=()=>{mo.remove();render();};}
   mo.querySelector("#liveSkip").onclick=finish;
   timer=setInterval(()=>{
     if(Date.now()<pauseUntil)return;
-    if(!htDone && maxMin>=90 && minute>=45){htDone=true;minEl.textContent="Intervalo";setComment("Intervalo — "+home.short+" "+hg+"–"+ag+" "+away.short,3);pauseUntil=Date.now()+1500;updateStats();return;}
+    if(!htDone && maxMin>=90 && minute>=45){htDone=true;minEl.textContent="Intervalo";setComment("Intervalo — "+home.short+" "+hg+"–"+ag+" "+away.short,3);pauseUntil=Date.now()+2200;updateStats();return;}
     minute+=3;if(minute>maxMin)minute=maxMin;minEl.textContent=minute+"'"+(minute>90?" (prol.)":"");
     setW(tlFill,minute/maxMin*100);
     mom=clamp(mom+ri(-9,9),12,88);momSumH+=mom;momSumA+=(100-mom);setW(momH,mom);setW(momA,100-mom);
@@ -539,21 +552,26 @@ function animateMatch(home, away, r, onFinish, userClub, userLine){
     let hadEvent=false;
     while(i<evs.length&&evs[i].m<=minute){const e=evs[i];i++;hadEvent=true;
       if(e.type==="goal"){if(e.side==="H")hg++;else ag++;scoreEl.textContent=hg+" - "+ag;st[e.side].sh++;st[e.side].sot++;
-        const nm=e.gtype==="own"?(nameByPid(e.ogSide,e.ogPid)+" (auto-golo)"):(nameByPid(e.side,e.scorer)+gtypeSuffix(e.gtype));
-        goalCelebrate(e.side,nm);addEvLine(e.side,"⚽",{m:e.m,name:nm});tlDot(e.m,"#ffcf33");setComment("GOLO do "+shortOf(e.side)+"! "+nm,3);pauseUntil=Date.now()+1000;}
-      else if(e.type==="yellow"){addEvLine(e.side,"🟨",{m:e.m,name:nameByPid(e.side,e.pid)});tlDot(e.m,"#f2c200");}
-      else if(e.type==="red"){addEvLine(e.side,"🟥",{m:e.m,name:nameByPid(e.side,e.pid)+(e.second?" (2º amarelo)":"")});tlDot(e.m,"#ef4657");setComment("Vermelho para o "+shortOf(e.side)+"!",3);}
-      else if(e.type==="disallowed"){addEvLine(e.side,"🚫",{m:e.m,name:"golo anulado"});st[e.side].sot++;setComment("Golo anulado ao "+shortOf(e.side)+"!",2);}
-      else if(e.type==="penmiss"){addEvLine(e.side,"❌",{m:e.m,name:nameByPid(e.side,e.pid)+" — penálti falhado"});st[e.side].sh++;st[e.side].sot++;setComment("Penálti falhado pelo "+shortOf(e.side)+"!",2);}
+        const own=e.gtype==="own", realName=own?nameByPid(e.ogSide,e.ogPid):nameByPid(e.side,e.scorer), nm=own?(realName+" (auto-golo)"):(realName+gtypeSuffix(e.gtype));
+        goalCelebrate(e.side,nm);addEvLine(e.side,"⚽",{m:e.m,name:nm});tlDot(e.m,"#ffcf33");
+        scorers[e.side].push({n:lastName(realName)+(own?" (ag)":""),m:e.m});refreshScorers();
+        if(userSide){ if(!own&&e.side===userSide){bumpR(e.scorer,1.3);if(mk[e.scorer])mk[e.scorer].g++;} else if(own&&e.ogSide===userSide)bumpR(e.ogPid,-1.0); else if(e.side!==userSide)concedePenalty(); renderSquad(false); }
+        setComment("GOLO do "+shortOf(e.side)+"! "+nm,4);pauseUntil=Date.now()+2600;}
+      else if(e.type==="yellow"){addEvLine(e.side,"🟨",{m:e.m,name:nameByPid(e.side,e.pid)});tlDot(e.m,"#f2c200");if(userSide&&e.side===userSide){bumpR(e.pid,-0.3);if(mk[e.pid])mk[e.pid].yc=true;renderSquad(false);}setComment("Amarelo — "+shortOf(e.side)+" · "+nameByPid(e.side,e.pid),2);pauseUntil=Date.now()+1500;}
+      else if(e.type==="red"){addEvLine(e.side,"🟥",{m:e.m,name:nameByPid(e.side,e.pid)+(e.second?" (2º amarelo)":"")});tlDot(e.m,"#ef4657");if(userSide&&e.side===userSide){bumpR(e.pid,-1.3);if(mk[e.pid])mk[e.pid].red=true;renderSquad(false);}setComment("Vermelho para o "+shortOf(e.side)+"! "+nameByPid(e.side,e.pid),4);pauseUntil=Date.now()+2000;}
+      else if(e.type==="disallowed"){addEvLine(e.side,"🚫",{m:e.m,name:"golo anulado"});st[e.side].sot++;setComment("Golo anulado ao "+shortOf(e.side)+"!",3);pauseUntil=Date.now()+1700;}
+      else if(e.type==="penmiss"){addEvLine(e.side,"❌",{m:e.m,name:nameByPid(e.side,e.pid)+" — penálti falhado"});st[e.side].sh++;st[e.side].sot++;if(userSide&&e.side===userSide){bumpR(e.pid,-0.8);renderSquad(false);}setComment("Penálti falhado — "+shortOf(e.side)+" · "+nameByPid(e.side,e.pid),3);pauseUntil=Date.now()+1800;}
     }
-    if(pres){if(Math.random()<0.5)st[pres].sh++;if(Math.random()<0.22)st[pres].sot++;if(Math.random()<0.14)st[pres].cor++;}
+    if(pres){if(Math.random()<0.5)st[pres].sh++;if(Math.random()<0.22)st[pres].sot++;if(Math.random()<0.14)st[pres].cor++;
+      if(userSide&&pres===userSide){const ids=(userLine||[]).filter(id=>{const p=userClub.squad.find(x=>x.id===id);return p&&GROUP[p.pos]!=="GK";});if(ids.length)bumpR(pick(ids),0.05);}}
+    if(userSide)renderSquad(false);
     if(commentHold>0)commentHold--;
     else if(!hadEvent){const roll=Math.random();
-      if(roll<0.12&&pres){setComment(phrase(CHANCE,pres),1);st[pres].sh++;if(Math.random()<0.5)st[pres].sot++;}
-      else if(roll<0.5)setComment(pres?phrase(PRESS,pres):pick(BAL),0);}
+      if(roll<0.12&&pres){setComment(phrase(CHANCE,pres),1);st[pres].sh++;if(Math.random()<0.5)st[pres].sot++;pauseUntil=Date.now()+1000;}
+      else if(roll<0.5){setComment(pres?phrase(PRESS,pres):pick(BAL),0);pauseUntil=Date.now()+750;}}
     updateStats();
     if(minute>=maxMin)finish();
-  },230);
+  },240);
 }
 function playMatchAnimated(){
   const next=nextFixture(); if(!next){playWeek();render();return;}
