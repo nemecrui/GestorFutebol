@@ -150,8 +150,20 @@
   @keyframes evIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
   #goalBanner{position:absolute;left:0;right:0;top:34%;text-align:center;font-size:42px;font-weight:900;color:var(--accent);
     text-shadow:0 3px 20px #000,0 0 24px rgba(255,207,51,.6);opacity:0;pointer-events:none;z-index:5}
-  #goalBanner.show{animation:goalpop 1s ease-out}
-  @keyframes goalpop{0%{opacity:0;transform:scale(.3) rotate(-6deg)}18%{opacity:1;transform:scale(1.25) rotate(2deg)}40%{transform:scale(1) rotate(0)}72%{opacity:1;transform:scale(1.02)}100%{opacity:0;transform:scale(1)}}
+  #goalBanner.show{animation:goalpop 2.4s ease-out}
+  @keyframes goalpop{0%{opacity:0;transform:scale(.3) rotate(-6deg)}8%{opacity:1;transform:scale(1.25) rotate(2deg)}16%{transform:scale(1) rotate(0)}84%{opacity:1;transform:scale(1.03)}100%{opacity:0;transform:scale(1)}}
+  #phaseBanner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;color:#fff;letter-spacing:1.5px;
+    text-shadow:0 3px 18px #000;opacity:0;pointer-events:none;z-index:6;background:radial-gradient(circle at 50% 45%,rgba(0,0,0,.5),transparent 62%)}
+  #phaseBanner.show{animation:phasepop 1.8s ease-out}
+  @keyframes phasepop{0%{opacity:0;transform:scale(.6)}16%{opacity:1;transform:scale(1.12)}32%{transform:scale(1)}74%{opacity:1}100%{opacity:0;transform:scale(1)}}
+  .sndbtn{position:absolute;top:8px;right:10px;z-index:7;background:rgba(0,0,0,.4);border:1px solid var(--line);color:#fff;border-radius:8px;width:34px;height:30px;font-size:15px;cursor:pointer;line-height:1}
+  .pen-box{text-align:center}
+  .pen-row{display:flex;justify-content:center;gap:6px;margin:6px 0;flex-wrap:wrap}
+  .pen-mark{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted);background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:6px}
+  .pen-mark.pgoal{color:#fff;background:rgba(34,197,94,.28);border-color:var(--green2);animation:pmark .3s ease}
+  .pen-mark.pmiss{background:rgba(239,70,87,.22);border-color:var(--red);animation:pmark .3s ease}
+  @keyframes pmark{0%{transform:scale(.5)}60%{transform:scale(1.28)}100%{transform:scale(1)}}
+  .pen-status{min-height:22px;font-size:15px;font-weight:700;margin:10px 0 12px}
   .splash{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;
     align-items:center;justify-content:center;padding:24px;text-align:center;overflow:auto;
     background:

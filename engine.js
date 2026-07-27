@@ -943,6 +943,22 @@ function cupRoundDue(){ return (G.cup&&G.cup.schedule&&G.cup.round<G.cup.schedul
 function cupAvailable(){ return !!(G.cup&&G.cup.active&&myDivObj().week>=cupRoundDue()); }
 function cupDraw(){ const rem=G.cup.remaining.slice(), ties=[]; while(rem.length>=2){ ties.push({a:rem.shift(),b:rem.shift(),sa:null,sb:null,w:null}); } if(rem.length===1)ties.push({a:rem.shift(),b:null,sa:null,sb:null,w:null}); G.cup.ties=ties; }
 function cupUserTie(){ if(!G.cup||!G.cup.active)return null; const ms=me().short; return G.cup.ties.find(t=>t.a===ms||t.b===ms)||null; }
+/* desempate por penáltis: 5 para cada equipa (termina quando uma não pode empatar), depois séries de 1 */
+function penaltyShootout(saStr,sbStr){
+  const pA=clamp(0.72+((saStr||60)-(sbStr||60))/500,0.55,0.9), pB=clamp(0.72+((sbStr||60)-(saStr||60))/500,0.55,0.9);
+  let a=0,b=0,ka=0,kb=0; const kicks=[];
+  const decided=()=> (a> b+Math.max(0,5-kb)) || (b> a+Math.max(0,5-ka));
+  while(ka<5||kb<5){
+    if(ka<=kb && ka<5){ const sc=Math.random()<pA; if(sc)a++; kicks.push({team:"A",scored:sc,n:ka+1}); ka++; }
+    else if(kb<5){ const sc=Math.random()<pB; if(sc)b++; kicks.push({team:"B",scored:sc,n:kb+1}); kb++; }
+    else break;
+    if(decided())break;
+  }
+  if(a===b){ let n=5; while(a===b){ n++;
+    const sa=Math.random()<pA; if(sa)a++; kicks.push({team:"A",scored:sa,n});
+    const sb=Math.random()<pB; if(sb)b++; kicks.push({team:"B",scored:sb,n}); } }
+  return {kicks,a,b,winner:a>b?"A":"B"};
+}
 function cupResolveTie(t){
   if(!t.b){ t.w=t.a; return; }
   const ms=me().short, involvesUser=(t.a===ms||t.b===ms);
@@ -955,7 +971,7 @@ function cupResolveTie(t){
   if(hg===ag){ const et=simulateET(ca,cb,aLine,bLine,eA,eB,r.expelledH,r.expelledA); hg+=et.hg; ag+=et.ag; t.et=true; }
   t.sa=hg; t.sb=ag;
   if(hg>ag)t.w=t.a; else if(ag>hg)t.w=t.b;
-  else { const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; t.w=(Math.random()<0.5+(sa-sb)/200)?t.a:t.b; t.pens=true; }
+  else { const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; t.w=(penaltyShootout(sa,sb).winner==="A")?t.a:t.b; t.pens=true; }
   if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); updateForm(uc,uLine); updateChem(uLine); trainTick(uc,uLine); updateMorale(uc,uLine,(t.a===ms)?hg:ag,(t.a===ms)?ag:hg); }
 }
 function cupAdvanceRound(preUser){
@@ -1019,6 +1035,6 @@ if(typeof module!=="undefined"&&module.exports){
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
-    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,PRONAC,DIV2,
+    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
