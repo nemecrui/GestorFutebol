@@ -318,9 +318,9 @@ function viewMarket(){
   if(marketPos!=="all")pool=pool.filter(x=>GROUP[x.p.pos]===marketPos);
   pool.sort((a,b)=>ability(b.p)-ability(a.p)); pool=pool.slice(0,40);
   let h=`<div class="card between row"><div>Verba · ${myDivObj().name}</div><div class="big" style="font-size:18px">${money(meC.budget)}</div></div>`;
-  const askDis=!!G.budgetAsked;
-  h+=`<div class="card" style="padding:8px"><button class="btn sec small" id="btnAskBudget" style="width:100%${askDis?';opacity:.45':''}"${askDis?' disabled':''}>🏦 ${askDis?'Reforço já pedido esta época':'Pedir reforço de verba à direção'}</button>
-    <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">A direção decide conforme a confiança atual — e conceder verba reduz essa folga.</div></div>`;
+  const room=budgetCapRoom(), askDis=room<=0.005;
+  h+=`<div class="card" style="padding:8px"><button class="btn sec small" id="btnAskBudget" style="width:100%${askDis?';opacity:.45':''}"${askDis?' disabled':''}>🏦 ${askDis?'Teto de reforço atingido (30%)':'Pedir reforço de verba à direção'}</button>
+    <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">A direção decide conforme a confiança atual (e conceder reduz essa folga). Reforço disponível esta época: até ${money(room)}.</div></div>`;
   h+=`<div class="seg" id="segMkt">`+[["all","Todos"],["GK","GR"],["DEF","DEF"],["MID","MED"],["ATT","ATA"]].map(([k,l])=>
     `<button data-p="${k}" class="${marketPos===k?'active':''}">${l}</button>`).join("")+`</div>`;
   h+=`<div class="plist">`+pool.map(x=>{

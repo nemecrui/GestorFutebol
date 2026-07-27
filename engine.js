@@ -271,6 +271,7 @@ function newGame(divIdx,clubIdx,managerName){
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
   setObjectives();
+  me().budget=budgetForObjective(G.myDiv,me().objective); G.seasonStartBudget=me().budget; G.budgetGranted=0; G.pendingPrize=0;
   cupCreate();
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
@@ -470,10 +471,11 @@ function endSeason(){
   const d=myDivObj(), table=sortedTable(d);
   const champ=table[0], meRank=table.findIndex(c=>c.id===G.myId)+1;
   addNews("Fim da época "+G.season+" ("+d.name+"). Campeão: "+champ.name+". Ficaste em "+meRank+"º.");
-  const prize=Math.max(0.03,(d.clubs.length-meRank+1)*0.02);
+  let prize=Math.max(0.03,(d.clubs.length-meRank+1)*0.02);
+  if(meRank===1){ prize+=0.25; G.manager.trophies.push({type:"league",name:"Campeão · "+d.name,season:G.season}); addNews("🏆 Campeão da "+d.name+"! Prémio: +€250K."); }
+  else if(d.upSlots>0 && meRank<=d.upSlots){ prize+=0.15; G.manager.trophies.push({type:"promo",name:"Subida · "+d.name,season:G.season}); addNews("⬆️ Subida garantida! Prémio: +€150K."); }
   me().budget=Math.round((me().budget+prize)*100)/100;
-  if(meRank===1){ G.manager.trophies.push({type:"league",name:"Campeão · "+d.name,season:G.season}); addNews("🏆 Campeão da "+d.name+"!"); }
-  else if(d.upSlots>0 && meRank<=d.upSlots){ G.manager.trophies.push({type:"promo",name:"Subida · "+d.name,season:G.season}); }
+  addNews("Prémio de classificação: +"+money(prize)+".");
   evaluateBoard(meRank);
   while(G.cup&&G.cup.active)cupAdvanceRound();
 }
@@ -509,6 +511,10 @@ function newSeason(){
   G.season++; G.week=0; G.seasonDone=false; G.date="Set"; G.midWindowDone=false; G.budgetAsked=false;
   G.lineup=autoPickLineup(me(),G.formation);
   G.manager.seasons=(G.manager.seasons||0)+1; setObjectives();
+  const kitty=budgetForObjective(G.myDiv,me().objective);            // verba nova conforme aspiração desta época
+  me().budget=Math.round((me().budget+kitty)*100)/100;              // soma à que transitou (incl. prémios)
+  G.seasonStartBudget=me().budget; G.budgetGranted=0;
+  addNews("Verba de transferências para a época: "+money(me().budget)+" (aspiração: "+me().objective.label+").");
   if(myMove==="up")addNews("Subiste de divisão!");
   else if(myMove==="down")addNews("Desceste de divisão.");
   addNews("Nova época "+G.season+" ("+myDivObj().name+").");
@@ -559,6 +565,12 @@ function squadRating(club){
   line.forEach((id,i)=>{const p=club.squad.find(x=>x.id===id); if(p){s+=effAt(p,slots[i].pos);n++;}});
   return n?s/n:55;
 }
+function budgetForObjective(divIdx,obj){
+  const bases=[0.45,0.32,0.22,0.14];                                  // Pró-Nacional → 2ª Divisão
+  const divBase=bases[divIdx]!=null?bases[divIdx]:0.16;
+  const amb={title:1.6,promo:1.4,top:1.1,mid:0.9,survive:0.7}[obj&&obj.type]||1; // aspiração
+  return Math.round(divBase*amb*rnd(0.85,1.15)*100)/100;
+}
 function objectiveFor(di,rankExp,n){
   const d=G.divisions[di], canUp=d.upSlots>0, canDown=d.downSlots>0;
   if(rankExp<=2) return canUp?{type:"promo",label:"Subir de divisão",target:d.upSlots,baseConf:55}:{type:"title",label:"Lutar pelo título",target:3,baseConf:55};
@@ -571,6 +583,8 @@ function setObjectives(){
     const ranked=d.clubs.map(c=>({c,r:squadRating(c)})).sort((a,b)=>b.r-a.r);
     ranked.forEach((o,idx)=>{ o.c.objective=objectiveFor(di,idx+1,d.clubs.length); });
   });
+  // verba de cada clube conforme a sua aspiração (a do utilizador é gerida à parte)
+  G.divisions.forEach((d,di)=>d.clubs.forEach(c=>{ if(di===G.myDiv&&c.id===G.myId)return; c.budget=budgetForObjective(di,c.objective); }));
   const o=me().objective; if(!G.board)G.board={}; G.board.confidence=o?o.baseConf:60;
 }
 function boardAfterUserMatch(){
@@ -814,6 +828,7 @@ function renewContract(pid){
 /* ---------- Taça (eliminação direta, todas as equipas) ---------- */
 function allClubShorts(){ const a=[]; G.divisions.forEach(d=>d.clubs.forEach(c=>a.push(c.short))); return a; }
 function clubByShort(sh){ for(const d of G.divisions){ const c=d.clubs.find(x=>x.short===sh); if(c)return c; } return null; }
+function divOfShort(sh){ for(let i=0;i<G.divisions.length;i++){ if(G.divisions[i].clubs.some(x=>x.short===sh))return i; } return -1; }
 function cupRoundName(){ const t=G.cup?G.cup.remaining.length:0; if(t<=2)return "Final"; if(t<=4)return "Meias-finais"; if(t<=8)return "Quartos-de-final"; if(t<=16)return "Oitavos-de-final"; return (G.cup.round+1)+"ª eliminatória"; }
 function cupCreate(){
   const rem=shuffleArr(allClubShorts());
@@ -849,29 +864,43 @@ function cupAdvanceRound(preUser){
   G.cup.ties.forEach(t=>{ if(t===userTie&&preUser){ t.sa=preUser.sa;t.sb=preUser.sb;t.w=preUser.w;t.pens=!!preUser.pens;t.et=!!preUser.et; } else cupResolveTie(t); });
   if(userTie && userTie.b){ const ug=(userTie.a===ms)?userTie.sa:userTie.sb, ua=(userTie.a===ms)?userTie.sb:userTie.sa; recordManagerMatch(ug,ua); }
   if(userTie && userTie.b && userTie.w!==ms)G.cup.userAlive=false;
+  if(userTie && userTie.b && userTie.w===ms){                          // prémio pequeno por vencer clube superior/muito mais forte
+    const oppShort=(userTie.a===ms)?userTie.b:userTie.a, opp=clubByShort(oppShort);
+    if(opp){ const higher=(()=>{const oi=divOfShort(oppShort);return oi>=0&&oi<G.myDiv;})();
+      const stronger=squadRating(opp)-squadRating(me())>=8;
+      if(higher||stronger){ const bonus=higher?0.06:0.04; me().budget=Math.round((me().budget+bonus)*100)/100;
+        addNews("💪 Surpresa na Taça! Eliminaste o "+opp.name+" ("+(higher?"divisão superior":"muito mais forte")+"). Prémio: +"+money(bonus)+"."); } }
+  }
   G.cup.history.push({name:cupRoundName(), ties:G.cup.ties.map(t=>({a:t.a,b:t.b,sa:t.sa,sb:t.sb,w:t.w,pens:!!t.pens}))});
   const winners=G.cup.ties.map(t=>t.w);
   G.cup.remaining=winners; G.cup.round++;
-  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByShort(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().short)G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); }
+  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByShort(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().short){ G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); me().budget=Math.round((me().budget+0.30)*100)/100; addNews("🏆 Prémio de vencedor da Taça: +€300K."); } }
   else cupDraw();
   save();
   return userTie;
 }
+function budgetCapRoom(){
+  const start=G.seasonStartBudget||me().budget||0.1;
+  const capTotal=Math.round(start*0.30*100)/100;                     // reforço total ≤ 30% da verba inicial
+  return Math.max(0,Math.round((capTotal-(G.budgetGranted||0))*100)/100);
+}
 function requestBudget(){
   if(!G.board||!G.manager)return {ok:false,msg:"—"};
-  if(G.budgetAsked)return {ok:false,msg:"Já pediste reforço esta época — espera pela próxima."};
-  G.budgetAsked=true;
+  const room=budgetCapRoom();
+  if(room<=0.005)return {ok:false,msg:"A direção já reforçou o máximo desta época (30% da verba inicial)."};
   const conf=G.board.confidence;
-  const chance=clamp((conf-30)/60,0.05,0.9); // quanto mais satisfeita a direção, mais provável aprovar
+  const chance=clamp((conf-30)/60,0.05,0.9);                         // coerente com a satisfação da direção
   if(Math.random()<chance){
-    const amount=Math.round((0.05+conf/400)*100)/100; // ~0.05–0.30M
+    let amount=Math.round((0.04+conf/500)*100)/100;                  // pedaço do reforço
+    if(amount>room)amount=room;                                      // nunca ultrapassa o teto de 30%
     me().budget=Math.round((me().budget+amount)*100)/100;
-    G.board.confidence=clamp(conf-12,0,100); // conceder verba custa "folga" à direção
+    G.budgetGranted=Math.round(((G.budgetGranted||0)+amount)*100)/100;
+    G.board.confidence=clamp(conf-10,0,100);                         // conceder custa "folga" à direção
     addNews("A direção reforçou a verba de transferências: +"+money(amount)+".");
     save();
-    return {ok:true,amount,msg:"Aprovado! +"+money(amount)+" (a direção ficou menos folgada)"};
+    return {ok:true,amount,msg:"Aprovado! +"+money(amount)+" · ainda podes pedir até "+money(budgetCapRoom())};
   }
-  G.board.confidence=clamp(conf-5,0,100); // pedir e ser recusado também chateia um pouco
+  G.board.confidence=clamp(conf-4,0,100);
   addNews("A direção recusou reforçar a verba de transferências.");
   save();
   return {ok:false,msg:"A direção recusou o pedido (a confiança baixou um pouco)."};
@@ -887,6 +916,6 @@ if(typeof module!=="undefined"&&module.exports){
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
-    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,PRONAC,DIV2,
+    cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
