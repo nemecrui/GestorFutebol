@@ -45,6 +45,7 @@ function nextFixture(){
   return null;
 }
 
+function formIcon(p){ const f=(p&&p.form)||0; if(f>=1.2)return '<span style="color:var(--green2)" title="Em alta">▲</span>'; if(f<=-1.2)return '<span style="color:var(--red)" title="Em baixo">▼</span>'; return '<span class="muted" title="Estável">▬</span>'; }
 /* ---------- INÍCIO ---------- */
 function viewHome(){
   const c=me(), d=myDivObj(), table=sortedTable(d);
@@ -120,6 +121,18 @@ function viewHome(){
       <div class="stat"><div class="v">${c.Pts}</div><div class="l">Pontos</div></div>
       <div class="stat"><div class="v">${c.W}-${c.D}-${c.L}</div><div class="l">V-E-D</div></div>
       <div class="stat"><div class="v">${c.GF}:${c.GA}</div><div class="l">Golos</div></div></div></div>`;
+  {
+    const chem=G.chem!=null?G.chem:65, tf=teamForm(c), tfocus=G.trainFocus||"Equilibrado";
+    const chemLbl=chem>=80?"Excelente":chem>=65?"Boa":chem>=50?"Razoável":"Fraca";
+    const formLbl=tf>1.2?"Em alta":tf<-1.2?"Em baixo":"Estável";
+    h+=`<div class="card"><h2>Treino & Balneário</h2>
+      <div class="grid2" style="margin-bottom:8px">
+        <div class="stat"><div class="v">${chem}<span style="font-size:11px">/100</span></div><div class="l">Química (${chemLbl})</div></div>
+        <div class="stat"><div class="v">${tf>0?"+":""}${tf}</div><div class="l">Forma (${formLbl})</div></div></div>
+      <div class="muted" style="font-size:12px;margin-bottom:4px">Foco de treino:</div>
+      <select id="selTrain">${["Equilibrado","Ataque","Defesa","Físico"].map(f=>`<option${tfocus===f?" selected":""}>${f}</option>`).join("")}</select>
+      <div class="muted" style="font-size:11px;margin-top:6px">A química sobe quando mantens o mesmo onze e desce com muitas trocas. O foco acelera a evolução dos teus jovens no fim da época.</div></div>`;
+  }
   if(d.results.length){
     const last=d.results[d.results.length-1];
     h+=`<div class="card"><h2>Última jornada</h2>`+last.map(r=>{const H=myClubs()[r.h],A=myClubs()[r.a],mine=(r.h===G.myId||r.a===G.myId);
@@ -158,7 +171,7 @@ function viewSquad(){
     return `<div class="pl" data-detail="${p.id}"><div class="num">${on?'<span style="color:var(--accent)">●</span>':'○'}</div>
       <div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
       <div class="info"><div class="nm">${p.name}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
-        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ⚡${p.energy==null?100:p.energy}% · ⭐${avg5(p)!=null?avg5(p):"—"} · ⚽${p.goals}</div></div>
+        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ⚡${p.energy==null?100:p.energy}% · ${formIcon(p)} · ⭐${avg5(p)!=null?avg5(p):"—"} · ⚽${p.goals}</div></div>
       <span class="muted" style="font-size:18px">›</span></div>`;
   }).join("")+`</div>`;
   return h;
@@ -185,7 +198,7 @@ function openPlayer(pid){
     <div class="muted" style="font-size:11px;margin-bottom:2px">⚽ ${p.goals} golos · 🟨 ${p.yc||0} · 🟥 ${p.rc||0}</div>
     <div class="muted" style="font-size:11px;margin-bottom:2px">📄 Contrato: ${p.contractYears||"—"} ano(s) · valor de venda ~ ${money(transferFee(p))}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">⚡ Energia: ${p.energy==null?100:p.energy}%${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
-    <div class="muted" style="font-size:11px;margin-bottom:6px">⭐ Última avaliação: ${p.lastRating!=null?p.lastRating:"—"} · Média (5 jogos): ${avg5(p)!=null?avg5(p):"—"}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:6px">⭐ Última avaliação: ${p.lastRating!=null?p.lastRating:"—"} · Média (5 jogos): ${avg5(p)!=null?avg5(p):"—"} · Forma: ${formIcon(p)} ${((p.form||0)>0?"+":"")+(Math.round((p.form||0)*10)/10)}</div>
     <button class="btn sec small" id="pRenew" style="width:100%;margin-bottom:8px">📄 Renovar contrato (${money(Math.max(0.01,Math.round(p.value*0.08*100)/100))})</button>
     <button class="btn sec small" id="pList" style="width:100%;margin-bottom:8px">${p.transferListed?"⭐ Retirar da lista de transferências":"📋 Colocar na lista de transferências"}</button>
     <button class="btn warn small" id="pRelease" style="width:100%;margin-bottom:8px">🚪 Dispensar (sem receita)</button>
@@ -438,7 +451,7 @@ function playCupTie(){
     let w,pens=false;
     if(r.hg>r.ag)w=aShort; else if(r.ag>r.hg)w=bShort;
     else { pens=true; const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; w=(Math.random()<0.5+(sa-sb)/200)?aShort:bShort; }
-    processEnergyInjuries(c,userLine); rateUserMatch(c,userLine,r,userIsA);
+    processEnergyInjuries(c,userLine); rateUserMatch(c,userLine,r,userIsA); updateForm(c,userLine); updateChem(userLine);
     cupAdvanceRound({sa:r.hg,sb:r.ag,w,pens,et:r.hadET});
     const how=pens?" nos penáltis":(r.hadET?" no prolongamento":"");
     toast(w===ms?("Passaste"+how+"!"):("Eliminado da Taça"+how));
@@ -492,6 +505,7 @@ function bindView(){
   const smk=$("#segMkt");if(smk)smk.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketPos=b.dataset.p;render();});
   document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=e=>{e.stopPropagation();const r=buyPlayer(+b.dataset.from,+b.dataset.buy);toast(r.msg);render();});
   const bab=$("#btnAskBudget");if(bab)bab.onclick=()=>{const r=requestBudget();toast(r.msg);render();};
+  const strn=$("#selTrain");if(strn)strn.onchange=()=>{G.trainFocus=strn.value;save();toast("Foco de treino: "+strn.value);};
   const sl=$("#segLeague");if(sl)sl.querySelectorAll("button").forEach(b=>b.onclick=()=>{tableTab=b.dataset.t;render();});
   const sdv=$("#segDiv");if(sdv)sdv.querySelectorAll("button").forEach(b=>b.onclick=()=>{leagueDiv=+b.dataset.d;render();});
   if(document.querySelector(".pitch"))initTacticsTap();

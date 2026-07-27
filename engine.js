@@ -183,7 +183,9 @@ function roleRatingAttrs(a,pos){
 function roleRating(p,pos){return roleRatingAttrs(p.attrs,pos);}
 function ability(p){return roleRating(p,p.pos);}          // nota na posição natural
 function fam(a,b){ if(a===b)return 1; return GROUP[a]===GROUP[b]?0.9:0.75; }
-function effAt(p,pos){return Math.round(roleRating(p,pos)*fam(p.pos,pos));}  // nota efetiva num slot
+function formMult(p){ return 1+clamp((p&&p.form)||0,-6,6)*0.011; }               // forma individual: ±~6.6%
+function chemFactor(){ const c=(typeof G!=="undefined"&&G&&G.chem!=null)?G.chem:65; return 1+clamp(c-65,-35,35)/500; } // química da tua equipa: ±7%
+function effAt(p,pos){return Math.round(roleRating(p,pos)*fam(p.pos,pos)*formMult(p));}  // nota efetiva num slot (com forma)
 
 /* ---------- geração de jogadores ---------- */
 function makePlayer(pos,level){
@@ -235,6 +237,7 @@ function newGame(divIdx,clubIdx,managerName){
   G={version:6, divisions:[dPN,dH,dU,dD], myDiv:divIdx, myId:clubIdx,
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
+     chem:65, lastXI:[], trainFocus:"Equilibrado",
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -289,7 +292,8 @@ function teamStrength(club,lineup,formation,mentality){
   const def=defs.length?(avg(defs)*defs.length+gk*1.4)/(defs.length+1.4):(gk||55);
   const mid=avg(mids), atk=avg(atts);
   const men=MENTAL[mentality];
-  return {def:def*men.def, mid, atk:atk*men.atk, overall:(def+mid+atk)/3};
+  const cm=(typeof G!=="undefined"&&G&&G.myId!=null&&club===me())?chemFactor():1;  // química só afeta a tua equipa
+  return {def:def*men.def*cm, mid:mid*cm, atk:atk*men.atk*cm, overall:(def+mid+atk)/3*cm};
 }
 
 /* ---------- escolha de marcador / infrator ---------- */
@@ -414,7 +418,7 @@ function simRound(d,preMy,hasUser){
     }
     applyResult(home,away,r.hg,r.ag,r.events);
     home.susp=r.expelledH||[]; away.susp=r.expelledA||[];
-    if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId); recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg); processEnergyInjuries(uc,userLine); rateUserMatch(uc,userLine,r,isH); }
+    if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId); recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg); processEnergyInjuries(uc,userLine); rateUserMatch(uc,userLine,r,isH); updateForm(uc,userLine); updateChem(userLine); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -459,14 +463,13 @@ function newSeason(){
   G.divisions.forEach((d,i)=>{ d.clubs=d.clubs.filter(c=>!leaving[i].has(c)).concat(incoming[i]); });
   G.divisions.forEach(d=>{
     d.clubs.forEach((c,i)=>c.id=i);
-    d.clubs.forEach(c=>{c.P=c.W=c.D=c.L=c.GF=c.GA=c.Pts=0; c.susp=[];
-      c.squad.forEach(p=>{p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.energy=100;p.injuredWeeks=0;p.ratings=[];p.lastRating=null;
+    const isMineClub=c=>c.short===mineShort;
+    d.clubs.forEach(c=>{c.P=c.W=c.D=c.L=c.GF=c.GA=c.Pts=0; c.susp=[]; const mine=isMineClub(c);
+      c.squad.forEach(p=>{
+        const played=p.apps||0;                                    // jogos desta época (antes de zerar)
+        p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.energy=100;p.injuredWeeks=0;p.ratings=[];p.lastRating=null;p.form=0;
         p.contractYears=(p.contractYears||2)-1;if(p.contractYears<=0)p.contractYears=ri(2,4);
-        if(p.age<24){ // jovens evoluem para o seu potencial
-          ATTR_KEYS.forEach(k=>{ if((PROFILES[p.pos]||{})[k]&&roleRatingAttrs(p.attrs,p.pos)<p.potential&&Math.random()<0.5)p.attrs[k]=clamp(p.attrs[k]+1,1,20); });
-        } else if(p.age>32){ // veteranos declinam
-          ATTR_KEYS.forEach(k=>{ if(["vel","res","for","rea"].includes(k)&&Math.random()<0.4)p.attrs[k]=clamp(p.attrs[k]-1,1,20); });
-        }
+        developPlayer(p,played,mine);                              // treino + desenvolvimento de jovens
         p.age++;
       });
     });
@@ -703,6 +706,51 @@ function rateUserMatch(club,playedIds,r,isHome){
   });
 }
 function avg5(p){ if(!p.ratings||!p.ratings.length)return null; const a=p.ratings.slice(-5); return Math.round(a.reduce((s,x)=>s+x,0)/a.length*10)/10; }
+/* ---------- forma & moral (equipa do utilizador) ---------- */
+function updateForm(club,playedIds){
+  const played=new Set(playedIds||[]);
+  club.squad.forEach(p=>{
+    if(p.form==null)p.form=0;
+    if(played.has(p.id)){
+      const rt=(p.lastRating!=null)?p.lastRating:6.3;          // forma segue a nota do jogo (média com decaimento)
+      p.form=Math.round(clamp(p.form*0.7+(rt-6.3)*0.9,-6,6)*100)/100;
+    } else { p.form=Math.round(p.form*0.82*100)/100; }         // quem não joga vê a forma esbater-se
+  });
+}
+function teamForm(club){ const arr=(club.squad||[]).filter(p=>p.form).map(p=>p.form); return arr.length?Math.round(arr.reduce((s,x)=>s+x,0)/arr.length*10)/10:0; }
+/* ---------- química de equipa (entrosamento do onze) ---------- */
+function updateChem(startXI){
+  if(G.chem==null)G.chem=65;
+  const prev=G.lastXI||[], cur=(startXI||[]).filter(id=>id!=null);
+  if(prev.length){
+    let changes=0; cur.forEach(id=>{ if(prev.indexOf(id)<0)changes++; });
+    G.chem=changes===0?clamp(G.chem+5,30,100):clamp(G.chem-changes*2,30,100);
+  }
+  G.lastXI=cur;
+}
+/* ---------- treino & desenvolvimento (fim de época) ---------- */
+const FOCUS_ATTRS={ "Ataque":["rem","cab","dri","cri","pen","liv"], "Defesa":["des","mar","pos","cab","agr"], "Físico":["vel","res","for","rea"], "Equilibrado":null };
+function developPlayer(p,played,isMine){
+  const focus=(isMine&&G.trainFocus)?G.trainFocus:"Equilibrado";
+  const foc=FOCUS_ATTRS[focus]||null, prof=PROFILES[p.pos]||{};
+  const relevant=()=>{ let pool=ATTR_KEYS.filter(k=>prof[k]&&(!foc||foc.includes(k))); if(!pool.length)pool=ATTR_KEYS.filter(k=>prof[k]); return pool; };
+  if(p.age<24){
+    let ups=(played>=18?3:played>=8?2:1);                      // jovens: quanto mais jogam, mais evoluem
+    if(isMine&&focus!=="Equilibrado")ups++;                    // treino focado dá um extra ao teu plantel
+    let tries=0;
+    while(ups>0&&tries<40){ tries++;
+      const pool=relevant(); if(!pool.length)break; const k=pick(pool);
+      if(roleRatingAttrs(p.attrs,p.pos)<p.potential && p.attrs[k]<20 && Math.random()<0.6)p.attrs[k]=clamp(p.attrs[k]+1,1,20);
+      ups--;
+    }
+  } else if(p.age<31){
+    if(played>=14 && roleRatingAttrs(p.attrs,p.pos)<p.potential){ // pico: pequena evolução se jogou muito
+      const pool=relevant(); if(pool.length&&Math.random()<0.5){ const k=pick(pool); p.attrs[k]=clamp(p.attrs[k]+1,1,20); }
+    }
+  } else if(p.age>32){
+    ATTR_KEYS.forEach(k=>{ if(["vel","res","for","rea"].includes(k)&&Math.random()<0.4)p.attrs[k]=clamp(p.attrs[k]-1,1,20); });
+  }
+}
 function negotiateOffer(i,counterFee){
   const o=G.transferOffers&&G.transferOffers[i]; if(!o)return {status:"gone"};
   o.round=(o.round||0)+1;
@@ -747,7 +795,7 @@ function cupResolveTie(t){
   t.sa=hg; t.sb=ag;
   if(hg>ag)t.w=t.a; else if(ag>hg)t.w=t.b;
   else { const sa=teamStrength(ca,aLine,"4-4-2","Equilibrado").overall, sb=teamStrength(cb,bLine,"4-4-2","Equilibrado").overall; t.w=(Math.random()<0.5+(sa-sb)/200)?t.a:t.b; t.pens=true; }
-  if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); }
+  if(involvesUser){ const uc=me(), uLine=(t.a===ms)?aLine:bLine; processEnergyInjuries(uc,uLine); rateUserMatch(uc,uLine,r,(t.a===ms)); updateForm(uc,uLine); updateChem(uLine); }
 }
 function cupAdvanceRound(preUser){
   if(!G.cup||!G.cup.active)return null;
@@ -793,6 +841,7 @@ if(typeof module!=="undefined"&&module.exports){
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
+    formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,PRONAC,DIV2,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
