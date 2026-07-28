@@ -266,7 +266,7 @@ function newGame(divIdx,clubIdx,managerName){
   G={version:6, divisions:[dPN,dH,dU,dD], myDiv:divIdx, myId:clubIdx,
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
-     chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null,
+     chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -459,6 +459,7 @@ function playWeek(preMy){
   boardAfterUserMatch();
   checkShortObjective();                    // período de prova acordado numa reunião
   if(!G.fired)maybeBoardMeeting();           // maus resultados podem gerar nova reunião
+  if(G.grace>0)G.grace--;                    // margem após assumir um clube a meio da época
   if(!G.midWindowDone && myD.week===Math.floor(myD.fixtures.length/2)){ transferWindow(); G.midWindowDone=true; }
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
   G.week=myD.week; advanceMonth();
@@ -666,9 +667,22 @@ function makeJobOffers(){
 function takeNewJob(i){
   const off=G.offers&&G.offers[i]; if(!off)return false;
   const ci=G.divisions[off.divIdx].clubs.findIndex(c=>c.short===off.short); if(ci<0)return false;
-  G.myDiv=off.divIdx; G.myId=ci; G.contract={seasonsLeft:2}; G.fired=false; G.offers=null;
-  addNews("Assumiste o comando do "+me().name+".");
-  newSeason();
+  const midSeason = !G.seasonDone && G.divisions[off.divIdx].week < G.divisions[off.divIdx].fixtures.length;
+  G.myDiv=off.divIdx; G.myId=ci; G.contract={seasonsLeft:2}; G.fired=false; G.offers=null; G.firedReason=null;
+  G.meeting=null; G.shortObjective=null;
+  if(midSeason){
+    // continua a MESMA época a partir da jornada atual, com o novo clube
+    G.board={confidence:(me().objective?me().objective.baseConf:55)};
+    G.chem=65; G.lastXI=[]; G.grace=5;
+    G.seasonStartBudget=me().budget; G.budgetGranted=0;
+    G.lineup=autoPickLineup(me(),G.formation,[...unavailable(me())]);
+    const jornada=(myDivObj().week||0)+1;
+    addNews("Assumiste o comando do "+me().name+" a meio da época (jornada "+jornada+"). Tens algumas jornadas de margem com a nova direção.");
+    save();
+  } else {
+    addNews("Assumiste o comando do "+me().name+".");
+    newSeason();
+  }
   return true;
 }
 /* ---------- Fase 3: transferências ---------- */
@@ -882,7 +896,7 @@ function userResultAt(weekIdx){ const d=myDivObj(); const wk=d.results[weekIdx];
 function recentUserResults(n){ const d=myDivObj(); const out=[]; for(let i=d.results.length-1;i>=0&&out.length<n;i--){ const r=userResultAt(i); if(r)out.push(r); } return out; }
 function setShortObjective(pts,games){ G.shortObjective={active:true, need:pts, games, played:0, points:0, deadline:G.week+games, label:pts+" pontos em "+games+" jogos"}; }
 function maybeBoardMeeting(){
-  if(G.fired||(G.meeting&&G.meeting.active)||(G.shortObjective&&G.shortObjective.active))return;
+  if(G.fired||(G.grace>0)||(G.meeting&&G.meeting.active)||(G.shortObjective&&G.shortObjective.active))return;
   const recent=recentUserResults(3); if(!recent.length)return;
   const last=recent[0], oppClub=myClubs()[last.opp];
   const heavy=last.res==="L" && (last.ga-last.gf)>=3;
