@@ -729,7 +729,15 @@ function bindView(){
 function splashScreen(){
   const el=document.createElement("div");el.className="splash";el.id="splash";
   const divDefs=[{name:"Pró-Nacional",clubs:PRONAC},{name:"Divisão de Honra",clubs:CLUBS},{name:"1ª Divisão",clubs:DIV1},{name:"2ª Divisão",clubs:DIV2}];
-  el.innerHTML=`<div style="width:56px;height:56px;border-radius:14px;border:1px solid #ffffff55;background:linear-gradient(135deg,#1d4ed8 0 55%,#ffffff 55% 100%)"></div>
+  el.innerHTML=`<svg width="72" height="72" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 6px 16px rgba(0,0,0,.5))">
+      <defs><linearGradient id="lgSplash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22c55e"/><stop offset="1" stop-color="#0e5a2f"/></linearGradient></defs>
+      <rect x="6" y="6" width="108" height="108" rx="30" fill="url(#lgSplash)" stroke="#ffcf33" stroke-width="5"/>
+      <rect x="14" y="12" width="92" height="44" rx="24" fill="#ffffff" opacity="0.10"/>
+      <circle cx="60" cy="60" r="33" fill="#ffffff"/>
+      <path d="M60 47 L72.4 55.98 L67.64 70.52 L52.36 70.52 L47.64 55.98 Z" fill="#0e1a12"/>
+      <g stroke="#0e1a12" stroke-width="3" stroke-linecap="round">
+        <line x1="60" y1="47" x2="60" y2="31"/><line x1="72.4" y1="55.98" x2="88.5" y2="50.7"/><line x1="67.64" y1="70.52" x2="77.6" y2="84.3"/><line x1="52.36" y1="70.52" x2="42.4" y2="84.3"/><line x1="47.64" y1="55.98" x2="31.5" y2="50.7"/>
+      </g></svg>
     <h1 style="font-size:24px;margin:14px 0 2px">Gestor de Futebol</h1>
     <div class="muted" style="margin-bottom:20px">Época 2025/26 · 4 divisões da AF Braga</div>
     <div style="width:100%;max-width:360px">
@@ -791,8 +799,10 @@ function initPWA(){
 }
 function iconDataURL(size){
   const c=document.createElement("canvas");c.width=c.height=size;const x=c.getContext("2d");
-  x.fillStyle="#0b7a3b";x.fillRect(0,0,size,size);x.fillStyle="#ffcc00";x.beginPath();x.arc(size/2,size/2,size*0.28,0,7);x.fill();
-  x.fillStyle="#0b7a3b";x.font="bold "+Math.round(size*0.26)+"px sans-serif";x.textAlign="center";x.textBaseline="middle";x.fillText("AFB",size/2,size*0.54);
+  x.fillStyle="#0e5a2f";x.fillRect(0,0,size,size);
+  x.strokeStyle="#ffcf33";x.lineWidth=Math.max(2,size*0.05);x.strokeRect(x.lineWidth/2,x.lineWidth/2,size-x.lineWidth,size-x.lineWidth);
+  x.fillStyle="#ffffff";x.beginPath();x.arc(size/2,size/2,size*0.30,0,7);x.fill();
+  x.fillStyle="#0e1a12";x.beginPath();x.arc(size/2,size/2,size*0.11,0,7);x.fill();
   return c.toDataURL("image/png");
 }
 initPWA();
