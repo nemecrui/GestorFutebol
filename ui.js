@@ -197,7 +197,8 @@ function viewHome(){
       ${tr.length? tr.slice().reverse().map(t=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:5px 2px;font-size:13px"><span>${t.type==="cup"?"🏆":t.type==="league"?"🥇":"⬆️"} ${t.name}</span><span class="muted" style="font-size:12px">época ${t.season}</span></div>`).join("") : `<div class="muted" style="font-size:13px">Ainda sem troféus — vai à luta!</div>`}
     </div>`;
   }
-  h+=`<div class="card"><button class="btn warn small" id="btnReset" style="width:100%">↺ Novo jogo (apaga progresso)</button></div>`;
+  h+=`<div class="card"><button class="btn sec small" id="btnSaves" style="width:100%;margin-bottom:8px">💾 Gravações · exportar / importar / trocar</button>
+    <button class="btn warn small" id="btnReset" style="width:100%">↺ Novo jogo (apaga este slot)</button></div>`;
   return h;
 }
 
@@ -706,6 +707,7 @@ function bindView(){
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length){playWeek();if(G.meeting&&G.meeting.active)break;}toast("Época simulada");render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
+  const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
   document.querySelectorAll("[data-job]").forEach(b=>b.onclick=()=>{takeNewJob(+b.dataset.job);TAB="home";render();});
   const bjr=$("#btnJobRestart");if(bjr)bjr.onclick=()=>{if(confirm("Recomeçar carreira do zero?")){wipe();boot();}};
@@ -771,8 +773,76 @@ function splashScreen(){
 }
 function boot(){
   document.getElementById("splash")?.remove();
+  requestPersist();                          // pede ao browser para não despejar a gravação
   if(load()&&G){TAB="home";render();}
   else{splashScreen();}
+}
+function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }
+function openExport(){
+  const data=exportSave(); if(!data||data==="null"){ toast("Nada para exportar."); return; }
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><button class="close" id="exClose">✕</button>
+    <div style="font-weight:800;font-size:16px;margin-bottom:6px">Exportar gravação</div>
+    <div class="muted" style="font-size:12px;margin-bottom:10px">Guarda o ficheiro (recomendado) ou copia o código — serve de cópia de segurança e para levar o jogo para outro dispositivo.</div>
+    <button class="btn" id="exDl" style="margin-bottom:8px">💾 Descarregar ficheiro</button>
+    <button class="btn sec small" id="exCopy" style="width:100%;margin-bottom:8px">📋 Copiar código</button>
+    <textarea id="exTxt" readonly style="width:100%;height:110px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:11px"></textarea></div>`;
+  document.body.appendChild(mo);
+  mo.querySelector("#exTxt").value=data;
+  mo.querySelector("#exClose").onclick=()=>mo.remove();
+  mo.onclick=e=>{if(e.target===mo)mo.remove();};
+  mo.querySelector("#exDl").onclick=()=>downloadText("gestor-futebol-"+Date.now()+".json",data);
+  mo.querySelector("#exCopy").onclick=()=>{const t=mo.querySelector("#exTxt");t.select();try{document.execCommand("copy");}catch(e){} if(navigator.clipboard)navigator.clipboard.writeText(data).catch(()=>{}); toast("Código copiado");};
+}
+function openImport(onDone){
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><button class="close" id="imClose">✕</button>
+    <div style="font-weight:800;font-size:16px;margin-bottom:6px">Importar gravação</div>
+    <div class="muted" style="font-size:12px;margin-bottom:10px">Escolhe um ficheiro exportado ou cola o código. Substitui o jogo do slot atual.</div>
+    <button class="btn" id="imFile" style="margin-bottom:8px">📂 Escolher ficheiro</button>
+    <textarea id="imTxt" placeholder="…ou cola aqui o código" style="width:100%;height:96px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:11px;margin-bottom:8px"></textarea>
+    <button class="btn sec small" id="imGo" style="width:100%">Importar código colado</button></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#imClose").onclick=close;
+  mo.onclick=e=>{if(e.target===mo)close();};
+  const finish=(txt)=>{ const r=importSave(txt); if(r.ok){ toast("Gravação importada!"); close(); if(onDone)onDone(); } else toast(r.msg||"Falhou a importação"); };
+  mo.querySelector("#imGo").onclick=()=>{const t=mo.querySelector("#imTxt").value.trim(); if(!t){toast("Cola o código primeiro.");return;} finish(t);};
+  mo.querySelector("#imFile").onclick=()=>{ const inp=document.createElement("input");inp.type="file";inp.accept=".json,.txt,application/json";inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>finish(String(rd.result));rd.readAsText(f);};inp.click(); };
+}
+function openSaves(){
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><button class="close" id="svClose">✕</button>
+    <div style="font-weight:800;font-size:16px;margin-bottom:4px">Gravações</div>
+    <div class="muted" style="font-size:12px;margin-bottom:10px">3 espaços de jogo neste dispositivo. Exporta para teres cópia de segurança ou mudares de telemóvel.</div>
+    <div id="slotList"></div>
+    <div class="row" style="gap:8px;margin-top:4px">
+      <button class="btn sec small" id="svExport" style="flex:1">⬇️ Exportar</button>
+      <button class="btn sec small" id="svImport" style="flex:1">⬆️ Importar</button></div></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#svClose").onclick=close;
+  mo.onclick=e=>{if(e.target===mo)close();};
+  function renderSlots(){
+    const cur=curSlot(); let rows="";
+    for(let n=1;n<=3;n++){ const info=slotInfo(n), active=n===cur;
+      const desc=info.exists?(info.broken?"(gravação inválida)":(info.name+" · "+info.club+" · época "+info.season+(info.fired?" · despedido":""))):"vazio";
+      rows+=`<div class="card" style="padding:10px;margin-bottom:8px;${active?'border-color:var(--accent)':''}">
+        <div style="font-weight:700">Slot ${n}${active?' · <span style="color:var(--accent)">atual</span>':''}</div>
+        <div class="muted" style="font-size:12px;margin:4px 0 8px">${desc}</div>
+        <div class="row" style="gap:6px">
+          <button class="btn sec small" data-open="${n}" style="flex:1">${info.exists&&!info.broken?'Abrir':'Nova carreira'}</button>
+          ${info.exists?`<button class="btn warn small" data-del="${n}">Apagar</button>`:''}</div></div>`;
+    }
+    mo.querySelector("#slotList").innerHTML=rows;
+    mo.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{const n=+b.dataset.open, info=slotInfo(n);
+      if(info.exists&&!info.broken){ if(loadSlot(n)){ close(); TAB="home"; render(); } }
+      else { setSlot(n); close(); document.getElementById("splash")?.remove(); splashScreen(); } });
+    mo.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const n=+b.dataset.del; if(confirm("Apagar a gravação do slot "+n+"?")){ const wasCur=(n===curSlot()); wipeSlot(n); if(wasCur){ close(); boot(); } else renderSlots(); }});
+  }
+  mo.querySelector("#svExport").onclick=()=>openExport();
+  mo.querySelector("#svImport").onclick=()=>openImport(()=>{ close(); TAB="home"; render(); });
+  renderSlots();
 }
 
 /* ---------- estatísticas de utilização (GoatCounter, opcional) ---------- */

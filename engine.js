@@ -590,12 +590,24 @@ function sellPlayer(playerId){
 }
 function addNews(t){ if(!G.news)G.news=[]; G.news.unshift({t}); if(G.news.length>40)G.news.pop(); }
 
-/* ---------- persistência + migração ---------- */
-function save(){ if(typeof localStorage==="undefined")return; try{localStorage.setItem("gestorafb",JSON.stringify(G));}catch(e){} }
+/* ---------- persistência (com slots) + export/import + migração ---------- */
+const SAVE_PREFIX="gestorafb_";
+function slotKey(n){ return SAVE_PREFIX+(n||1); }
+function curSlot(){ try{ return parseInt(localStorage.getItem("gestorafb_slot"))||1; }catch(e){ return 1; } }
+function setSlot(n){ try{ localStorage.setItem("gestorafb_slot",String(n||1)); }catch(e){} }
 function migrate(o){ if(!o)return null; if(o.version===6)return o; return null; /* versões antigas recomeçam; migrações futuras aqui */ }
-function load(){ if(typeof localStorage==="undefined")return false;
-  try{ const s=localStorage.getItem("gestorafb"); if(s){ const m=migrate(JSON.parse(s)); if(m){G=m;return true;} } }catch(e){} return false; }
-function wipe(){ if(typeof localStorage!=="undefined")localStorage.removeItem("gestorafb"); G=null; }
+function migrateLegacy(){ try{ const legacy=localStorage.getItem("gestorafb"); if(legacy && !localStorage.getItem(slotKey(1))){ localStorage.setItem(slotKey(1),legacy); localStorage.removeItem("gestorafb"); } }catch(e){} }
+function save(){ if(typeof localStorage==="undefined")return; try{localStorage.setItem(slotKey(curSlot()),JSON.stringify(G));}catch(e){} }
+function loadSlot(n){ if(typeof localStorage==="undefined")return false; try{ const s=localStorage.getItem(slotKey(n)); if(s){ const m=migrate(JSON.parse(s)); if(m){G=m; setSlot(n); return true;} } }catch(e){} return false; }
+function load(){ if(typeof localStorage==="undefined")return false; migrateLegacy(); return loadSlot(curSlot()); }
+function wipeSlot(n){ try{ localStorage.removeItem(slotKey(n)); }catch(e){} if(n===curSlot())G=null; }
+function wipe(){ wipeSlot(curSlot()); }
+function slotInfo(n){ try{ const s=localStorage.getItem(slotKey(n)); if(!s)return {exists:false}; const o=JSON.parse(s); if(!o||o.version!==6)return {exists:true,broken:true};
+  const d=o.divisions&&o.divisions[o.myDiv], club=d&&d.clubs[o.myId];
+  return {exists:true, name:(o.manager&&o.manager.name)||"—", club:club?club.name:"—", division:d?d.name:"—", season:o.season||1, fired:!!o.fired}; }catch(e){ return {exists:true,broken:true}; } }
+function exportSave(){ try{ return JSON.stringify(G||JSON.parse(localStorage.getItem(slotKey(curSlot()))||"null")); }catch(e){ return ""; } }
+function importSave(str,n){ try{ const o=migrate(JSON.parse(str)); if(!o)return {ok:false,msg:"Ficheiro inválido ou de versão diferente."}; const slot=n||curSlot(); localStorage.setItem(slotKey(slot),JSON.stringify(o)); setSlot(slot); G=o; return {ok:true}; }catch(e){ return {ok:false,msg:"Não foi possível ler a gravação."}; } }
+function requestPersist(){ try{ if(navigator.storage&&navigator.storage.persist)navigator.storage.persist(); }catch(e){} }
 
 /* ---------- Fase 2: treinador, direção, objetivos ---------- */
 function squadRating(club){
@@ -1050,5 +1062,6 @@ if(typeof module!=="undefined"&&module.exports){
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
+    curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
 }
