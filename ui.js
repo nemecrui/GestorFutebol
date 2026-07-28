@@ -87,9 +87,13 @@ function viewHome(){
     let fh=`<div class="card center"><h2 style="color:var(--red);justify-content:center">Foste despedido</h2>
       <div class="muted" style="margin:6px 0 4px">A direção do ${c.name} dispensou-te.</div>
       <div style="margin:2px 0 12px;font-size:13px">${G.firedReason||"—"}</div>`;
+    const midFire = !G.seasonDone && myDivObj().week < myDivObj().fixtures.length;
     if((G.offers||[]).length){
+      fh+=`<div class="muted" style="font-size:12px;margin-bottom:8px;line-height:1.4">${midFire
+        ? "Assumindo agora, <b style=\"color:var(--accent)\">continuas esta época</b> a partir da jornada "+(myDivObj().week+1)+" (herdas a posição do clube), com algumas jornadas de margem."
+        : "Escolhendo um clube, <b style=\"color:var(--accent)\">começas uma época nova</b> nesse clube."}</div>`;
       fh+=`<div class="muted" style="font-size:13px;margin-bottom:8px">Clubes interessados em ti:</div>`;
-      G.offers.forEach((o,i)=>{fh+=`<button class="btn sec" data-job="${i}" style="margin-bottom:8px">Assumir ${o.name} · ${G.divisions[o.divIdx].name}</button>`;});
+      G.offers.forEach((o,i)=>{fh+=`<button class="btn sec" data-job="${i}" style="margin-bottom:8px">Assumir ${o.name} · ${G.divisions[o.divIdx].name} <span style="opacity:.7;font-weight:600">(${midFire?"continuar época":"nova época"})</span></button>`;});
     } else { fh+=`<div class="muted" style="margin-bottom:8px">Sem propostas de momento.</div>`; }
     fh+=`<button class="btn warn small" id="btnJobRestart" style="width:100%;margin-top:4px">↺ Recomeçar carreira do zero</button></div>`;
     fh+=`<div class="card"><h2>Notícias</h2>${(G.news||[]).slice(0,6).map(n=>`<div class="ev">${n.t}</div>`).join("")}</div>`;
