@@ -517,7 +517,10 @@ function animateMatch(home, away, r, onFinish, userClub, userLine, pensPlay){
   const st={H:{sh:0,sot:0,cor:0},A:{sh:0,sot:0,cor:0}};
   const evs=r.events.slice().sort((a,b)=>a.m-b.m);
   const setW=(el,pct)=>{el.style.width=pct+"%";};
-  momH.style.background=home.c1;momA.style.background=away.c1;setW(momH,50);setW(momA,50);
+  // posse/momento tendem para a equipa mais forte e para quem marcou mais (as estatísticas batem certo com o resultado)
+  const biasH=clamp(50+(((home.strength||60)-(away.strength||60))*0.4)+(((r.hg||0)-(r.ag||0))*7),32,68);
+  mom=biasH;
+  momH.style.background=home.c1;momA.style.background=away.c1;setW(momH,biasH);setW(momA,100-biasH);
   function shortOf(side){return side==="H"?home.short:away.short;}
   function nameOf(side){return side==="H"?home.name:away.name;}
   function showPhase(txt){const b=mo.querySelector("#phaseBanner");if(!b)return;b.textContent=txt;b.classList.remove("show");void b.offsetWidth;b.classList.add("show");}
@@ -562,7 +565,7 @@ function animateMatch(home, away, r, onFinish, userClub, userLine, pensPlay){
     if(!htDone && maxMin>=90 && minute>=45){htDone=true;minEl.textContent="Intervalo";showPhase("Intervalo");sndWhistle(2);vib([30,40,30]);setComment("Intervalo — "+home.name+" "+hg+"–"+ag+" "+away.name,3);pauseUntil=Date.now()+2200;updateStats();return;}
     minute+=3;if(minute>maxMin)minute=maxMin;minEl.textContent=minute+"'"+(minute>90?" (prol.)":"");
     setW(tlFill,minute/maxMin*100);
-    mom=clamp(mom+ri(-9,9),12,88);momSumH+=mom;momSumA+=(100-mom);setW(momH,mom);setW(momA,100-mom);
+    mom=clamp(Math.round(mom+ri(-6,6)+(biasH-mom)*0.18),8,92);momSumH+=mom;momSumA+=(100-mom);setW(momH,mom);setW(momA,100-mom);
     const pres=mom>=55?"H":mom<=45?"A":null;
     let hadEvent=false;
     while(i<evs.length&&evs[i].m<=minute){const e=evs[i];i++;hadEvent=true;

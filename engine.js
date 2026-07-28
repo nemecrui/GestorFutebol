@@ -364,7 +364,7 @@ function simulateET(home,away,hLine,aLine,eHome,eAway,goneH,goneA){
   const hS=teamStrength(home,hLine,G.formation,G.mentality), aS=teamStrength(away,aLine,"4-4-2","Equilibrado");
   hS.atk*=eHome;hS.mid*=eHome;hS.def*=eHome;aS.atk*=eAway;aS.mid*=eAway;aS.def*=eAway;
   const hAtt=(hS.atk*0.6+hS.mid*0.4)+3-aS.def*0.48, aAtt=(aS.atk*0.6+aS.mid*0.4)-hS.def*0.48;
-  const hx=clamp((hAtt-24)/9.5,0.12,4.2), ax=clamp((aAtt-26)/9.5,0.1,3.9);
+  const hx=clamp((hAtt-21)/8.6,0.16,4.6), ax=clamp((aAtt-23)/8.6,0.13,4.3);
   const events=[]; let hg=0,ag=0; const gH=new Set(goneH||[]), gA=new Set(goneA||[]);
   for(let m=91;m<=120;m++){
     if(Math.random()<hx/90){ const g=pickGoal(home,hLine,G.formation,gH); events.push({m,side:"H",type:"goal",club:home,line:hLine,scorer:g?g.pid:null,gtype:g?g.gtype:"open"}); hg++; }
@@ -384,7 +384,7 @@ function simulate(home,away,hLine,aLine,eHome,eAway){
     const hPen=1-hRed*0.18, aPen=1-aRed*0.18;
     const hAtt=((hS.atk*0.6+hS.mid*0.4)*hPen)+3-(aS.def*aPen)*0.48;
     const aAtt=((aS.atk*0.6+aS.mid*0.4)*aPen)-(hS.def*hPen)*0.48;
-    return {hx:clamp((hAtt-24)/9.5,0.12,4.2), ax:clamp((aAtt-26)/9.5,0.1,3.9)};
+    return {hx:clamp((hAtt-21)/8.6,0.16,4.6), ax:clamp((aAtt-23)/8.6,0.13,4.3)};
   }
   function scoreFor(side,m){
     const club=side==="H"?home:away, line=side==="H"?hLine:aLine;
