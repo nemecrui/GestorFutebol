@@ -35,8 +35,8 @@ const GAME_DATA = {
       {n:"Alvaro Araújo",p:"LE"},{n:"Vicente Pereira",p:"LE"},{n:"Gabriel Teixeira",p:"DC"},{n:"Gonçalo Martins",p:"DC"},
       {n:"Leonardo Vitoria",p:"DC"},{n:"Tiago Veiga",p:"MDC"},{n:"Rui Francisco",p:"MDC"},{n:"João Lopes",p:"MC"},
       {n:"Domingos Barroso",p:"MC"},{n:"Ana Lopes",p:"MC"},{n:"Susana Feio",p:"MC"},{n:"Pedro Carvalho",p:"MD"},
-      {n:"Luís Ferreira",p:"ME"},{n:"Duarte Pinto",p:"ME"},{n:"Pedro Gonçalves",p:"MO"},{n:"André Calçada",p:"ED"},
-      {n:"Agostinho Costa",p:"EE"},{n:"Narciso Batista",p:"PL"},{n:"José Pereira",p:"PL"},{n:"António Miranda",p:"PL"}
+      {n:"Luís Ferreira",p:"ME"},{n:"Duarte Pinto",p:"ME"}, {n:"Filipa Rebelo",p:"MO"}, {n:"Pedro Gonçalves",p:"MO"},{n:"André Calçada",p:"ED"},
+      {n:"Agostinho Costa",p:"EE"},{n:"Narciso Batista",p:"PL"},{n:"Sérgio Melo",p:"PL"},{n:"António Miranda",p:"PL"}
     ],
 	"TIB": [ {n: "António Xavier", p:"ED"}],
 	"PAD": [ {n: "André Correia", p:"ED"}]
