@@ -380,12 +380,7 @@ function simulate(home,away,hLine,aLine,eHome,eAway){
   hS.atk*=eHome;hS.mid*=eHome;hS.def*=eHome; aS.atk*=eAway;aS.mid*=eAway;aS.def*=eAway;
   const events=[]; let hg=0,ag=0,hRed=0,aRed=0;
   const yc={}, expelledH=[], expelledA=[];
-  function offRate(){
-    const hPen=1-hRed*0.18, aPen=1-aRed*0.18;
-    const hAtt=((hS.atk*0.6+hS.mid*0.4)*hPen)+3-(aS.def*aPen)*0.48;
-    const aAtt=((aS.atk*0.6+aS.mid*0.4)*aPen)-(hS.def*hPen)*0.48;
-    return {hx:clamp((hAtt-21)/8.6,0.16,4.6), ax:clamp((aAtt-23)/8.6,0.13,4.3)};
-  }
+  function offRate(){ return offRateFrom(hS,aS,hRed,aRed); }
   function scoreFor(side,m){
     const club=side==="H"?home:away, line=side==="H"?hLine:aLine;
     const oppSide=side==="H"?"A":"H", oppClub=side==="H"?away:home, oppLine=side==="H"?aLine:hLine;
@@ -428,6 +423,102 @@ function applyResult(home,away,hg,ag,events){
   });
 }
 
+/* ---------- taxa de golo (partilhada) ---------- */
+function offRateFrom(hS,aS,hRed,aRed){
+  const hPen=1-(hRed||0)*0.18, aPen=1-(aRed||0)*0.18;
+  const hAtt=((hS.atk*0.6+hS.mid*0.4)*hPen)+3-(aS.def*aPen)*0.48;
+  const aAtt=((aS.atk*0.6+aS.mid*0.4)*aPen)-(hS.def*hPen)*0.48;
+  return {hx:clamp((hAtt-21)/8.6,0.16,4.6), ax:clamp((aAtt-23)/8.6,0.13,4.3)};
+}
+/* ---------- simulação AO VIVO (jogo animado com substituições/tática) ---------- */
+function createLive(home,away,hLine,aLine,cfg){
+  cfg=cfg||{};
+  const st={ home,away, minute:0, maxMin:cfg.maxMin||90, hg:0, ag:0, events:[], userSide:cfg.userSide||null,
+    H:{line:hLine.slice(), form:cfg.hForm||"4-4-2", ment:cfg.hMent||"Equilibrado", subs:0, appeared:new Set(hLine), gone:[], off:new Set(), yc:{}},
+    A:{line:aLine.slice(), form:cfg.aForm||"4-4-2", ment:cfg.aMent||"Equilibrado", subs:0, appeared:new Set(aLine), gone:[], off:new Set(), yc:{}},
+    fit:{} };
+  const initFit=(club,line)=>line.forEach(id=>{const p=club.squad.find(x=>x.id===id); st.fit[id]=(p&&p.energy!=null)?p.energy:100;});
+  initFit(home,hLine); initFit(away,aLine);
+  return st;
+}
+function liveMaxSubs(st){ return st.maxMin>90?6:5; }
+function liveRate(st){
+  const hS=teamStrength(st.home,st.H.line,st.H.form,st.H.ment), aS=teamStrength(st.away,st.A.line,st.A.form,st.A.ment);
+  const ff=(S)=>{ if(!S.line.length)return 0.85; let s=0; S.line.forEach(id=>s+=(st.fit[id]==null?100:st.fit[id])); return 0.82+0.18*((s/S.line.length)/100); };
+  const fH=ff(st.H), fA=ff(st.A);
+  hS.atk*=fH;hS.mid*=fH;hS.def*=fH; aS.atk*=fA;aS.mid*=fA;aS.def*=fA;
+  return offRateFrom(hS,aS,st.H.gone.length,st.A.gone.length);
+}
+function liveGoal(st,side,m){
+  const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away, line=S.line;
+  const oppS=side==="H"?st.A:st.H, oppClub=side==="H"?st.away:st.home, oppLine=oppS.line;
+  const gone=new Set(S.gone), roll=Math.random();
+  if(roll<0.02)return {m,side,type:"disallowed"};
+  if(roll<0.04){ const oppGone=new Set(oppS.gone); const defs=oppLine.map(id=>oppClub.squad.find(x=>x.id===id)).filter(p=>p&&!oppGone.has(p.id)&&GROUP[p.pos]!=="GK"); const og=defs.length?pick(defs):null;
+    return {m,side,type:"goal",scorer:null,gtype:"own",ogPid:og?og.id:null,ogSide:(side==="H"?"A":"H")}; }
+  const g=pickGoal(club,line,S.form,gone);
+  if(g&&g.gtype==="penalty"&&Math.random()<0.22)return {m,side,type:"penmiss",pid:g.pid};
+  return {m,side,type:"goal",scorer:g?g.pid:null,gtype:g?g.gtype:"open"};
+}
+function liveFoul(st,side,m,out){
+  const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away, gone=new Set(S.gone);
+  const p=pickFoul(club,S.line,gone); if(!p)return;
+  if(Math.random()<0.03+p.attrs.agr/900){ out.push({m,side,type:"red",pid:p.id,second:false}); S.gone.push(p.id); S.line=S.line.filter(id=>id!==p.id); }
+  else { S.yc[p.id]=(S.yc[p.id]||0)+1; out.push({m,side,type:"yellow",pid:p.id});
+    if(S.yc[p.id]>=2){ out.push({m,side,type:"red",pid:p.id,second:true}); S.gone.push(p.id); S.line=S.line.filter(id=>id!==p.id); } }
+}
+function liveStep(st){
+  if(st.minute>=st.maxMin)return [];
+  st.minute++; const m=st.minute, out=[];
+  const decay=(club,S)=>S.line.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(!p)return; const d=0.42+Math.max(0,(p.age-29))*0.03; st.fit[id]=clamp((st.fit[id]==null?100:st.fit[id])-d,0,100);});
+  decay(st.home,st.H); decay(st.away,st.A);
+  const rt=liveRate(st);
+  if(Math.random()<rt.hx/90){ const e=liveGoal(st,"H",m); if(e){out.push(e); if(e.type==="goal")st.hg++;} }
+  if(Math.random()<rt.ax/90){ const e=liveGoal(st,"A",m); if(e){out.push(e); if(e.type==="goal")st.ag++;} }
+  if(Math.random()<0.0125)liveFoul(st,"H",m,out);
+  if(Math.random()<0.0125)liveFoul(st,"A",m,out);
+  st.events.push(...out);
+  return out;
+}
+function liveSub(st,side,outId,inId){
+  const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away;
+  if(S.subs>=liveMaxSubs(st))return {ok:false,msg:"Já usaste todas as substituições."};
+  const idx=S.line.indexOf(outId); if(idx<0)return {ok:false,msg:"Esse jogador não está em campo."};
+  if(S.line.includes(inId))return {ok:false,msg:"Esse jogador já está em campo."};
+  if(S.off&&S.off.has(inId))return {ok:false,msg:"Esse jogador já foi substituído e não pode voltar."};
+  const pin=club.squad.find(x=>x.id===inId); if(!pin)return {ok:false,msg:""};
+  S.line[idx]=inId; S.subs++; S.appeared.add(inId); if(S.off)S.off.add(outId);
+  st.fit[inId]=(pin.energy!=null?pin.energy:100);
+  st.events.push({m:st.minute,side,type:"sub",outId,inId});
+  return {ok:true,outId,inId};
+}
+function liveSetTactic(st,side,form,ment){ const S=side==="H"?st.H:st.A; if(form)S.form=form; if(ment)S.ment=ment; }
+function aiMaybeSub(st,side){
+  const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away;
+  if(S.subs>=liveMaxSubs(st))return null;
+  const gone=new Set(S.gone);
+  const onOut=S.line.map(id=>club.squad.find(x=>x.id===id)).filter(p=>p&&GROUP[p.pos]!=="GK");
+  onOut.sort((a,b)=>(st.fit[a.id]==null?100:st.fit[a.id])-(st.fit[b.id]==null?100:st.fit[b.id]));
+  const worst=onOut[0]; if(!worst||(st.fit[worst.id]==null?100:st.fit[worst.id])>62)return null;
+  const bench=club.squad.filter(p=>!S.line.includes(p.id)&&!gone.has(p.id)&&!(S.off&&S.off.has(p.id))&&(p.injuredWeeks||0)<=0&&GROUP[p.pos]!=="GK");
+  const cand=bench.filter(p=>GROUP[p.pos]===GROUP[worst.pos]).sort((a,b)=>ability(b)-ability(a))[0] || bench.sort((a,b)=>ability(b)-ability(a))[0];
+  if(!cand)return null;
+  const r=liveSub(st,side,worst.id,cand.id); return r.ok?r:null;
+}
+function liveBench(st,side){ const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away, gone=new Set(S.gone);
+  return club.squad.filter(p=>!S.line.includes(p.id)&&!gone.has(p.id)&&!(S.off&&S.off.has(p.id))&&(p.injuredWeeks||0)<=0); }
+function liveResult(st){ return {hg:st.hg, ag:st.ag, events:st.events, expelledH:st.H.gone.slice(), expelledA:st.A.gone.slice(), maxMinute:st.maxMin, hadET:st.maxMin>90, liveUser:true, userAppeared:[...(st.userSide==="H"?st.H.appeared:st.A.appeared)]}; }
+function liveApplyEnergy(st){
+  const proc=(club,S,full)=>{ club.squad.forEach(p=>{
+    if(S.appeared.has(p.id)){ p.apps=(p.apps||0)+1;
+      if(full){ p.energy=Math.round(st.fit[p.id]!=null?st.fit[p.id]:(p.energy==null?100:p.energy));
+        if((p.injuredWeeks||0)<=0 && p.energy<40 && Math.random()<0.02+(40-p.energy)/100*0.05){ p.injuredWeeks=ri(1,5); if(club===me())addNews(p.name+" lesionou-se — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } }
+    } else if(full){ if((p.injuredWeeks||0)>0){ p.injuredWeeks--; p.energy=clamp((p.energy==null?100:p.energy)+Math.round(recovery(p.age)*0.6),0,100); }
+      else { p.energy=clamp((p.energy==null?100:p.energy)+Math.round(recovery(p.age)*2.5),0,100); } }
+  }); };
+  proc(st.home,st.H,st.userSide==="H"); proc(st.away,st.A,st.userSide==="A");
+}
+
 /* ---------- época ---------- */
 const MONTHS=["Set","Out","Nov","Dez","Jan","Fev","Mar","Abr","Mai"];
 function advanceMonth(){ const d=myDivObj(); G.date=MONTHS[Math.min(MONTHS.length-1,Math.floor(d.week/(d.fixtures.length/MONTHS.length)))]; }
@@ -445,10 +536,14 @@ function simRound(d,preMy,hasUser){
       if(hasUser&&h===G.myId){eH=energyFactor(home,hLine);userLine=hLine;}
       if(hasUser&&a===G.myId){eA=energyFactor(away,aLine);userLine=aLine;}
       r=simulate(home,away,hLine,aLine,eH,eA);
+      [[home,hLine],[away,aLine]].forEach(([cl,ln])=>ln.forEach(id=>{const p=cl.squad.find(x=>x.id===id); if(p)p.apps=(p.apps||0)+1;})); // presenças (IA e simulados)
     }
     applyResult(home,away,r.hg,r.ag,r.events);
     home.susp=r.expelledH||[]; away.susp=r.expelledA||[];
-    if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId); recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg); processEnergyInjuries(uc,userLine); rateUserMatch(uc,userLine,r,isH); updateForm(uc,userLine); updateChem(userLine); trainTick(uc,userLine); updateMorale(uc,userLine,isH?r.hg:r.ag,isH?r.ag:r.hg); }
+    if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId), played=r.userAppeared||userLine;
+      recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg);
+      if(!r.liveUser)processEnergyInjuries(uc,userLine);   // no jogo ao vivo a energia já foi tratada
+      rateUserMatch(uc,played,r,isH); updateForm(uc,played); updateChem(userLine); trainTick(uc,played); updateMorale(uc,played,isH?r.hg:r.ag,isH?r.ag:r.hg); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -1057,6 +1152,7 @@ if(typeof module!=="undefined"&&module.exports){
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     buyAsk,makeBid,completeBuy,
+    offRateFrom,createLive,liveStep,liveSub,liveSetTactic,aiMaybeSub,liveBench,liveResult,liveApplyEnergy,liveMaxSubs,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
