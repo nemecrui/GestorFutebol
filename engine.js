@@ -231,9 +231,11 @@ function makePlayer(pos,level){
   const abil=roleRatingAttrs(a,pos);
   const potential=clamp(abil+(age<23?ri(3,14):ri(-2,4)),abil,99);
   const value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
-  return {id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
-    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, morale:clamp(65+ri(-5,10),0,100), trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, wage:Math.round(value*0.12*100)/100+0.01};
+  const p={id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
+    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, morale:clamp(65+ri(-5,10),0,100), trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, wage:0};
+  p.wage=wageFor(p); return p;
 }
+function wageFor(p){ return Math.max(0.005, Math.round(Math.pow(ability(p)/55,2.6)*0.042*100)/100); }
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
 function makeSquadFromRoster(roster,level){
   const squad=roster.map(r=>{const p=makePlayer(r.p,level); p.name=r.n; return p;});
@@ -267,7 +269,7 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
-     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0,
+     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageCap:0, freeAgents:[],
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -275,6 +277,7 @@ function newGame(divIdx,clubIdx,managerName){
   me().budget=budgetForObjective(G.myDiv,me().objective); G.seasonStartBudget=me().budget; G.budgetGranted=0; G.pendingPrize=0;
   cupCreate();
   academyIntake();
+  seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageCap=wageCapFor();
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
@@ -608,11 +611,18 @@ function newSeason(){
       c.squad.forEach(p=>{
         const played=p.apps||0;                                    // jogos desta época (antes de zerar)
         p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.energy=100;p.injuredWeeks=0;p.ratings=[];p.lastRating=null;p.form=0;
-        p.contractYears=(p.contractYears||2)-1;if(p.contractYears<=0)p.contractYears=ri(2,4);
+        p.contractYears=(p.contractYears||2)-1; if(!mine && p.contractYears<=0)p.contractYears=ri(2,4);  // IA auto-renova; a tua equipa pode expirar
         if(mine){ if(p.age>32) ATTR_KEYS.forEach(k=>{ if(["vel","res","for","rea"].includes(k)&&Math.random()<0.4)p.attrs[k]=clamp(p.attrs[k]-1,1,20); }); } // tua equipa evolui por jornada; aqui só declínio
         else developPlayer(p,played,false);                        // IA: desenvolvimento no fim da época
         p.age++;
       });
+      if(mine){ // fim de contrato: jogadores saem livres (mantendo um mínimo de 18)
+        let exp=c.squad.filter(p=>p.contractYears<=0).sort((a,b)=>ability(a)-ability(b));
+        while(c.squad.length-exp.length<18 && exp.length){ const k=exp.pop(); k.contractYears=ri(2,3); }
+        if(exp.length){ ensureFreeAgents(); c.squad=c.squad.filter(p=>exp.indexOf(p)<0);
+          exp.forEach(p=>{ p.contractYears=0; p.transferListed=false; p.wage=wageFor(p); G.freeAgents.unshift(p); addNews("📄 "+p.name+" saiu em fim de contrato (agora livre)."); });
+          if(G.freeAgents.length>40)G.freeAgents.length=40; }
+      }
     });
     d.fixtures=buildFixtures(d.clubs.length); d.results=[]; d.week=0;
   });
@@ -623,6 +633,7 @@ function newSeason(){
   const kitty=budgetForObjective(G.myDiv,me().objective);            // verba nova conforme aspiração desta época
   me().budget=Math.round((me().budget+kitty)*100)/100;              // soma à que transitou (incl. prémios)
   G.seasonStartBudget=me().budget; G.budgetGranted=0;
+  refreshFreeAgents(); G.wageCap=wageCapFor();
   addNews("Verba de transferências para a época: "+money(me().budget)+" (aspiração: "+me().objective.label+").");
   if(myMove==="up")addNews("Subiste de divisão!");
   else if(myMove==="down")addNews("Desceste de divisão.");
@@ -674,6 +685,7 @@ function makeBid(fromClubId,playerId,offerFee){
   const p=from.squad.find(x=>x.id===playerId); if(!p)return {status:"gone"};
   offerFee=Math.round(offerFee*100)/100;
   if(meC.budget<offerFee)return {status:"nofunds", msg:"Verba insuficiente ("+money(offerFee)+")."};
+  if(wageRoom()<(p.wage!=null?p.wage:wageFor(p)))return {status:"nofunds", msg:"Sem espaço salarial para o salário dele ("+money(p.wage!=null?p.wage:wageFor(p))+"/época)."};
   if(from.squad.length<=15 && !p.transferListed)return {status:"rejected", msg:from.short+" não quer enfraquecer o plantel."};
   const ask=buyAsk(p,from), key=playerKeyRank(p,from)<3 && !p.transferListed;
   if(offerFee>=ask){
@@ -1126,12 +1138,37 @@ function negotiateOffer(i,counterFee){
   if(o.round<2 && counterFee<=o.maxFee*1.15){ o.fee=Math.round(((counterFee+o.maxFee)/2)*100)/100; addNews(o.clubName+" contrapôs "+money(o.fee)+" por "+o.playerName+"."); save(); return {status:"counter", fee:o.fee}; }
   addNews(o.clubName+" retirou-se da negociação por "+o.playerName+"."); G.transferOffers=G.transferOffers.filter((_,j)=>j!==i); save(); return {status:"withdrawn"};
 }
+/* ---------- salários, teto salarial e mercado de livres ---------- */
+function wageBill(club){ return Math.round((club.squad||[]).reduce((s,p)=>s+(p.wage!=null?p.wage:wageFor(p)),0)*100)/100; }
+function wageCapFor(){ const obj=me().objective||{};
+  const head={title:1.5,promo:1.38,top:1.28,mid:1.20,survive:1.12}[obj.type]||1.22;  // folga sobre a massa atual, conforme aspiração
+  return Math.round(wageBill(me())*head*100)/100; }
+function ensureWageCap(){ if(G.wageCap==null||G.wageCap<=0)G.wageCap=wageCapFor(); return G.wageCap; }
+function wageRoom(){ ensureWageCap(); return Math.round((G.wageCap-wageBill(me()))*100)/100; }
+function ensureFreeAgents(){ if(!G.freeAgents)G.freeAgents=[]; return G.freeAgents; }
+function makeFreeAgent(level){ const p=makePlayer(pick(POSITIONS.filter(x=>x!=="GR"||Math.random()<0.12)), level); if(p.age<22)p.age=ri(22,30); p.contractYears=0; p.transferListed=false; p.onLoan=false; return p; }
+function seedFreeAgents(n,level){ const A=ensureFreeAgents(); for(let k=0;k<n;k++)A.push(makeFreeAgent(clamp(level+ri(-2,2),4,15))); }
+function signFreeAgent(id){ const A=ensureFreeAgents(); const i=A.findIndex(p=>p.id===id); if(i<0)return {ok:false,msg:""};
+  const p=A[i]; if(me().squad.length>=32)return {ok:false,msg:"Plantel cheio (32)."};
+  if(wageRoom()<p.wage)return {ok:false,msg:"Sem espaço salarial ("+money(p.wage)+"/época)."};
+  A.splice(i,1); p.contractYears=ri(2,4); p.free=false; me().squad.push(p);
+  addNews("Assinaste "+p.name+" a custo zero (salário "+money(p.wage)+").");
+  G.lineup=autoPickLineup(me(),G.formation); save(); return {ok:true,msg:"Contratado (livre): "+p.name};
+}
+function refreshFreeAgents(){ const A=ensureFreeAgents();
+  for(let i=A.length-1;i>=0;i--){ A[i].age++; if(A[i].age>35||Math.random()<0.2)A.splice(i,1); }
+  const level=clamp(Math.round((myDivObj().clubs.reduce((s,c)=>s+c.strength,0)/myDivObj().clubs.length)/5),4,15);
+  seedFreeAgents(ri(2,4), level);
+  if(A.length>40)A.length=40;
+}
 function renewContract(pid){
   const c=me(), p=c.squad.find(x=>x.id===pid); if(!p)return {ok:false,msg:""};
-  const cost=Math.max(0.01,Math.round(p.value*0.08*100)/100);
+  const cost=Math.max(0.02,Math.round(p.value*0.10*100)/100);       // prémio de assinatura
+  const newWage=Math.max(p.wage||0, wageFor(p)), delta=Math.round((newWage-(p.wage||0))*100)/100;
+  if(delta>0 && wageRoom()<delta)return {ok:false,msg:"Sem espaço salarial para o novo salário ("+money(newWage)+"/época)."};
   if(c.budget<cost)return {ok:false,msg:"Verba insuficiente ("+money(cost)+")"};
-  c.budget=Math.round((c.budget-cost)*100)/100; p.contractYears=clamp((p.contractYears||1)+2,2,5);
-  addNews("Renovaste com "+p.name+" ("+p.contractYears+" anos, custo "+money(cost)+").");
+  c.budget=Math.round((c.budget-cost)*100)/100; p.contractYears=clamp((p.contractYears||1)+2,2,5); p.wage=newWage;
+  addNews("Renovaste com "+p.name+" ("+p.contractYears+" anos · salário "+money(newWage)+" · custo "+money(cost)+").");
   save(); return {ok:true,msg:"Renovado: "+p.name};
 }
 /* ---------- Taça (eliminação direta, todas as equipas) ---------- */
@@ -1274,6 +1311,7 @@ if(typeof module!=="undefined"&&module.exports){
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     ensureRecords,updateRecordsMatch,endSeasonAwards,
     talkResolve,applyTeamTalkMorale,liveApplyTalk,favTier,clubRecentForm,
+    wageFor,wageBill,wageCapFor,ensureWageCap,wageRoom,ensureFreeAgents,signFreeAgent,refreshFreeAgents,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };

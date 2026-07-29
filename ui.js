@@ -4,7 +4,7 @@
    Usa as funções/dados globais definidos em engine.js.
    ============================================================ */
 
-let TAB="home", tacSel=null, squadFilter="all", marketPos="all", tableTab="table", leagueDiv=null, squadTab="main";
+let TAB="home", tacSel=null, squadFilter="all", marketPos="all", tableTab="table", leagueDiv=null, squadTab="main", marketTab="clubs";
 const $=s=>document.querySelector(s);
 
 function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),1900);}
@@ -275,7 +275,7 @@ function viewSquad(){
     const on=inXI.has(p.id), susp=(c.susp||[]).includes(p.id), inj=(p.injuredWeeks||0)>0, tag=susp?'SUSP':inj?'LES':'';
     return `<div class="pl" data-detail="${p.id}"><div class="num">${on?'<span style="color:var(--accent)">●</span>':'○'}</div>
       <div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}${p.wantsTalk?' 💬':''}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
+      <div class="info"><div class="nm">${p.name}${p.wantsTalk?' 💬':''}${(p.contractYears||0)<=1?' <span title="último ano de contrato" style="color:var(--red);font-weight:800;font-size:11px">⏳</span>':''}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
         <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${enHtml(p.energy)} · ${formIcon(p)} · ⭐${avg5(p)!=null?avg5(p):"—"} · ⚽${p.goals}</div></div>
       <span class="muted" style="font-size:18px">›</span></div>`;
   }).join("")+`</div>`;
@@ -342,7 +342,7 @@ function openPlayer(pid){
       <div class="stat"><div class="v">${p.potential}</div><div class="l">Potencial</div></div>
       <div class="stat"><div class="v">${money(p.value)}</div><div class="l">Valor</div></div></div>
     <div class="muted" style="font-size:11px;margin-bottom:2px">⚽ ${p.goals} golos · 🟨 ${p.yc||0} · 🟥 ${p.rc||0}</div>
-    <div class="muted" style="font-size:11px;margin-bottom:2px">📄 Contrato: ${p.contractYears||"—"} ano(s) · valor de venda ~ ${money(transferFee(p))}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:2px">📄 Contrato: ${p.contractYears||"—"} ano(s)${(p.contractYears||0)<=1?' <span style="color:var(--red);font-weight:800">⏳ último ano</span>':''} · 💶 salário ${money(p.wage!=null?p.wage:0)}/época · venda ~ ${money(transferFee(p))}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">Energia: ${enHtml(p.energy)}${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">⭐ Última avaliação: ${p.lastRating!=null?p.lastRating:"—"} · Média (5 jogos): ${avg5(p)!=null?avg5(p):"—"} · Forma: ${formIcon(p)} ${((p.form||0)>0?"+":"")+(Math.round((p.form||0)*10)/10)}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">🙂 Moral: ${moraleTag(p)}${p.wantsTalk?' · <span style="color:var(--accent)">pediu para reunir</span>':''}</div>
@@ -527,17 +527,35 @@ function viewMarket(){
   myClubs().forEach(cl=>{if(cl.id===G.myId)return;cl.squad.forEach(p=>pool.push({p,from:cl.id,fromName:cl.short}));});
   if(marketPos!=="all")pool=pool.filter(x=>GROUP[x.p.pos]===marketPos);
   pool.sort((a,b)=>ability(b.p)-ability(a.p)); pool=pool.slice(0,40);
+  const bill=wageBill(meC), cap=ensureWageCap(), room2=wageRoom();
   let h=`<div class="card between row"><div>Verba · ${myDivObj().name}</div><div class="big" style="font-size:18px">${money(meC.budget)}</div></div>`;
+  h+=`<div class="card between row" style="padding:10px 12px"><div>Massa salarial <span class="muted" style="font-size:11px">/época</span></div>
+    <div style="text-align:right"><b>${money(bill)}</b> <span class="muted">/ ${money(cap)}</span><div class="muted" style="font-size:11px;color:${room2<0.03?'var(--red)':'var(--muted)'}">espaço ${money(room2)}</div></div></div>`;
   const room=budgetCapRoom(), askDis=room<=0.005;
   h+=`<div class="card" style="padding:8px"><button class="btn sec small" id="btnAskBudget" style="width:100%${askDis?';opacity:.45':''}"${askDis?' disabled':''}>🏦 ${askDis?'Teto de reforço atingido (30%)':'Pedir reforço de verba à direção'}</button>
-    <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">A direção decide conforme a confiança atual (e conceder reduz essa folga). Reforço disponível esta época: até ${money(room)}.</div></div>`;
+    <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">Reforço disponível esta época: até ${money(room)}.</div></div>`;
+  const nFree=(G.freeAgents||[]).length;
+  h+=`<div class="seg" id="segMktTab"><button data-mt="clubs" class="${marketTab==='clubs'?'active':''}">Clubes</button><button data-mt="free" class="${marketTab==='free'?'active':''}">Livres${nFree?" ("+nFree+")":""}</button></div>`;
+  if(marketTab==="free"){
+    let fa=(G.freeAgents||[]).slice();
+    if(marketPos!=="all")fa=fa.filter(p=>GROUP[p.pos]===marketPos);
+    fa.sort((a,b)=>ability(b)-ability(a));
+    h+=`<div class="seg" id="segMkt">`+[["all","Todos"],["GK","GR"],["DEF","DEF"],["MID","MED"],["ATT","ATA"]].map(([k,l])=>`<button data-p="${k}" class="${marketPos===k?'active':''}">${l}</button>`).join("")+`</div>`;
+    h+=`<div class="muted" style="font-size:11px;margin-bottom:6px">Jogadores sem clube — assinas a custo zero, pagas só o salário (tem de caber no teto).</div>`;
+    if(!fa.length)h+=`<div class="muted" style="font-size:13px">Sem livres nesta posição.</div>`;
+    else h+=`<div class="plist">`+fa.map(p=>{const okW=room2>=p.wage;
+      return `<div class="pl" data-freescout="${p.id}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
+        <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · salário ${money(p.wage)}</div></div>
+        <button class="btn small ${okW?'':'warn'}" data-signfree="${p.id}">Assinar</button></div>`;}).join("")+`</div>`;
+    return h;
+  }
   h+=`<div class="seg" id="segMkt">`+[["all","Todos"],["GK","GR"],["DEF","DEF"],["MID","MED"],["ATT","ATA"]].map(([k,l])=>
     `<button data-p="${k}" class="${marketPos===k?'active':''}">${l}</button>`).join("")+`</div>`;
-  h+=`<div class="muted" style="font-size:11px;margin-bottom:6px">Toca num jogador para ver a ficha e fazer uma proposta. Toca no nome do clube para ver o plantel.</div>`;
+  h+=`<div class="muted" style="font-size:11px;margin-bottom:6px">Toca num jogador para ver a ficha e propor. Toca no nome do clube para ver o plantel.</div>`;
   h+=`<div class="plist">`+pool.map(x=>{
     const p=x.p;
     return `<div class="pl" data-scoutmk="${p.id}" data-mkfrom="${x.from}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · <span class="clink" data-club="${x.fromName}" style="text-decoration:underline">${x.fromName}</span> · pot.${p.potential}</div></div>
+      <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · <span class="clink" data-club="${x.fromName}" style="text-decoration:underline">${x.fromName}</span> · salário ${money(p.wage)}</div></div>
       <span class="muted" style="font-size:18px">›</span></div>`;
   }).join("")+`</div>`;
   return h;
@@ -953,6 +971,9 @@ function bindView(){
   const bva=$("#btnVacate");if(bva)bva.onclick=()=>{if(tacSel&&tacSel.type==="slot"){G.lineup[tacSel.slot]=null;tacSel=null;save();render();}};
   const bcs=$("#btnCancelSel");if(bcs)bcs.onclick=()=>{tacSel=null;render();};
   const smk=$("#segMkt");if(smk)smk.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketPos=b.dataset.p;render();});
+  const smt=$("#segMktTab");if(smt)smt.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketTab=b.dataset.mt;render();});
+  document.querySelectorAll("[data-signfree]").forEach(b=>b.onclick=e=>{e.stopPropagation();const r=signFreeAgent(+b.dataset.signfree);toast(r.msg);render();});
+  document.querySelectorAll("[data-freescout]").forEach(el=>el.onclick=e=>{if(e.target.closest("[data-signfree]"))return;const p=(G.freeAgents||[]).find(x=>x.id===+el.dataset.freescout);if(p)openScout(p,{});});
   document.querySelectorAll("[data-scoutmk]").forEach(el=>el.onclick=e=>{if(e.target.closest("[data-club]"))return;const from=+el.dataset.mkfrom,p=myClubs()[from]&&myClubs()[from].squad.find(x=>x.id===+el.dataset.scoutmk);if(p)openScout(p,{fromId:from,clubName:myClubs()[from].short});});
   document.querySelectorAll("[data-club]").forEach(el=>el.onclick=e=>{e.stopPropagation();openClubSquad(el.dataset.club);});
   const bab=$("#btnAskBudget");if(bab)bab.onclick=()=>{const r=requestBudget();toast(r.msg);render();};

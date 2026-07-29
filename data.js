@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-01", texto:"💶 Contratos e salários: cada jogador tem um salário e a direção dá-te um teto de massa salarial. Ao fim do contrato os jogadores saem livres — renova a tempo! Há mercado de livres e os saldos dos clubes subiram para poderes comprar." },
     { data:"2026-07-31", texto:"📋 Relatório pós-jogo: no fim de cada jogo, vês o Homem do Jogo, os golos, expulsões e as notas dos teus jogadores." },
     { data:"2026-07-31", texto:"🗣️ Antevisão do adversário + conversa de balneário! Ao jogar, vês a antevisão (forma, onze provável, forças) e falas à equipa (antes e ao intervalo) — o tom certo dá vantagem real." },
     { data:"2026-07-30", texto:"🏅 Prémios e recordes de fim de época: Bota de Ouro, Jogador do Ano e os teus recordes de carreira (Início › Recordes & Prémios)." },

@@ -5,7 +5,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 
 ## Profundidade de gestão
 - ✅ 🔧 **Academia de jovens** — juniores separados, nível 1-5 (investimento da verba), intake por época, desenvolvimento com foco, potencial em estrelas, empréstimos, promover/dispensar.
-- ⬜ 🔧 Contratos e salários — massa salarial, fim de contrato, transferências livres, renovações com ordenado.
+- ✅ 🔧 Contratos e salários — teto de massa salarial (direção), salário por jogador, fim de contrato → sai livre, mercado de livres, renovações com ordenado.
 - ⬜ 🔧 Empréstimos de jogadores (ceder/receber).
 - ⬜ ⚡ Suspensões por acumulação de amarelos; lesões com gravidade variável.
 - ⬜ ⚡ Papéis de equipa — capitão, marcador de penáltis/livres à escolha, jogador-chave.
