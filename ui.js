@@ -37,6 +37,32 @@ function openNews(){
   mo.querySelector("#nwClose").onclick=close; mo.querySelector("#nwOk").onclick=close;
   mo.onclick=e=>{if(e.target===mo)close();};
 }
+function openRecords(){
+  const R=(typeof ensureRecords==="function")?ensureRecords():(G.records||{}); const aw=G.awards||[];
+  const rec=(icon,label,val)=>val?`<div class="row between" style="border-bottom:1px solid var(--line);padding:6px 2px;font-size:13px"><span>${icon} ${label}</span><b>${val}</b></div>`:"";
+  const recs=[
+    rec("💥","Maior vitória", R.bigWin?(R.bigWin.gf+"–"+R.bigWin.ga+" vs "+(R.bigWin.opp||"?")+" (ép. "+R.bigWin.season+")"):null),
+    rec("🔻","Maior derrota", R.bigLoss?(R.bigLoss.gf+"–"+R.bigLoss.ga+" vs "+(R.bigLoss.opp||"?")+" (ép. "+R.bigLoss.season+")"):null),
+    rec("🛡️","Melhor série sem perder", R.bestUnbeaten?(R.bestUnbeaten.n+" jogos"):null),
+    rec("🔥","Melhor série de vitórias", R.bestWins?(R.bestWins.n+" jogos"):null),
+    rec("⚽","Mais golos numa época", R.mostGoals?(R.mostGoals.n+" (ép. "+R.mostGoals.season+")"):null),
+    rec("📊","Mais pontos numa época", R.mostPoints?(R.mostPoints.n+" (ép. "+R.mostPoints.season+")"):null),
+    rec("🥇","Melhor classificação", R.bestPos?(R.bestPos.n+"º · "+R.bestPos.division+" (ép. "+R.bestPos.season+")"):null)
+  ].join("")||`<div class="muted" style="font-size:13px">Ainda sem recordes — joga umas jornadas.</div>`;
+  const awards=aw.length? aw.map(a=>{ const icon=a.type==="bota"?"🥇":"⭐"; const t=a.type==="bota"?("Bota de Ouro · "+a.player+" ("+a.goals+")"):("Jogador do Ano · "+a.player);
+      return `<div class="row between" style="border-bottom:1px solid var(--line);padding:6px 2px;font-size:13px"><span${a.mine?' style="color:var(--accent)"':''}>${icon} ${t} <span class="muted">${a.club}</span></span><span class="muted" style="font-size:12px">ép. ${a.season}</span></div>`;
+    }).join("") : `<div class="muted" style="font-size:13px">Ainda sem prémios individuais.</div>`;
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><button class="close" id="rcClose">✕</button>
+    <div style="font-weight:800;font-size:16px;margin-bottom:8px">🏅 Recordes & Prémios</div>
+    <h2 style="color:var(--muted);font-size:12px;margin:6px 0 2px">Recordes de carreira</h2>${recs}
+    <h2 style="color:var(--muted);font-size:12px;margin:12px 0 2px">Prémios por época</h2>${awards}
+    <button class="btn" id="rcOk" style="margin-top:12px">Fechar</button></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#rcClose").onclick=close; mo.querySelector("#rcOk").onclick=close;
+  mo.onclick=e=>{if(e.target===mo)close();};
+}
 function textOn(hex){const c=hex.replace("#","");const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)>150?"#111":"#fff";}
 function ratingClass(v){return v>=72?"r-hi":v>=60?"r-mid":"r-lo";}
 function posClass(pos){return "pos-"+GROUP[pos];}
@@ -140,8 +166,14 @@ function viewHome(){
       <button class="btn" id="btnPlay" style="margin-top:4px">▶ Jogar jornada</button>
       <button class="btn sec small" id="btnSim" style="width:100%;margin-top:8px">⏩ Simular resto da época</button></div>`;
   } else if(G.seasonDone){
+    const bota=(G.awards||[]).find(a=>a.season===G.season&&a.type==="bota");
+    const meScorer=c.squad.slice().sort((a,b)=>(b.goals||0)-(a.goals||0))[0];
     h+=`<div class="card center"><h2>Época ${G.season} terminada</h2><div class="big">${rank}º lugar</div>
-      <div class="muted" style="margin:6px 0 12px">${table[0].name} — campeão da ${d.name}</div>
+      <div class="muted" style="margin:6px 0 10px">${table[0].name} — campeão da ${d.name}</div>
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="stat"><div class="v" style="font-size:14px">${bota?bota.player+" ("+bota.goals+")":"—"}</div><div class="l">🥇 Bota de Ouro${bota&&bota.mine?" · TEU":""}</div></div>
+        <div class="stat"><div class="v" style="font-size:14px">${meScorer?meScorer.name+" ("+(meScorer.goals||0)+")":"—"}</div><div class="l">Teu melhor marcador</div></div></div>
+      <button class="btn sec small" id="btnRecords" style="width:100%;margin-bottom:8px">🏅 Recordes & Prémios</button>
       <button class="btn" id="btnNewSeason">▶ Começar época ${G.season+1}</button></div>`;
   }
   if(G.manager&&!G.fired){
@@ -215,6 +247,7 @@ function viewHome(){
         <div class="stat"><div class="v">${st.GA}</div><div class="l">Golos sofridos</div></div></div>
       <div class="muted" style="font-size:12px;margin-bottom:4px">Troféus (${tr.length})</div>
       ${tr.length? tr.slice().reverse().map(t=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:5px 2px;font-size:13px"><span>${t.type==="cup"?"🏆":t.type==="league"?"🥇":"⬆️"} ${t.name}</span><span class="muted" style="font-size:12px">época ${t.season}</span></div>`).join("") : `<div class="muted" style="font-size:13px">Ainda sem troféus — vai à luta!</div>`}
+      <button class="btn sec small" id="btnRecords2" style="width:100%;margin-top:10px">🏅 Recordes & Prémios</button>
     </div>`;
   }
   h+=`<div class="card"><button class="btn sec small" id="btnNews" style="width:100%;margin-bottom:8px">🔔 Novidades${hasNewsNew()?' <span style="color:var(--red);font-weight:900">•</span>':''}</button>
@@ -816,6 +849,8 @@ function bindView(){
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;playMatchAnimated();};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length){playWeek();if(G.meeting&&G.meeting.active)break;}toast("Época simulada");render();};
+  const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();
+  const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
   const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();

@@ -267,7 +267,7 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
-     academy:{level:1,focus:"Equilibrado",youth:[]},
+     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -546,6 +546,7 @@ function simRound(d,preMy,hasUser){
     home.susp=r.expelledH||[]; away.susp=r.expelledA||[];
     if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId), played=r.userAppeared||userLine;
       recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg);
+      updateRecordsMatch(isH?r.hg:r.ag, isH?r.ag:r.hg, (h===G.myId?away:home).name);
       if(!r.liveUser)processEnergyInjuries(uc,userLine);   // no jogo ao vivo a energia já foi tratada
       rateUserMatch(uc,played,r,isH); updateForm(uc,played); updateChem(userLine); trainTick(uc,played); updateMorale(uc,played,isH?r.hg:r.ag,isH?r.ag:r.hg); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
@@ -578,6 +579,7 @@ function endSeason(){
   else if(d.upSlots>0 && meRank<=d.upSlots){ prize+=0.15; G.manager.trophies.push({type:"promo",name:"Subida · "+d.name,season:G.season}); addNews("⬆️ Subida garantida! Prémio: +€150K."); }
   me().budget=Math.round((me().budget+prize)*100)/100;
   addNews("Prémio de classificação: +"+money(prize)+".");
+  endSeasonAwards(meRank);
   evaluateBoard(meRank);
   while(G.cup&&G.cup.active)cupAdvanceRound();
 }
@@ -1198,6 +1200,33 @@ function requestBudget(){
   return {ok:false,msg:"A direção recusou o pedido (a confiança baixou um pouco)."};
 }
 function recordManagerMatch(gf,ga){ const s=G.manager&&G.manager.stats; if(!s)return; s.P++; s.GF+=gf; s.GA+=ga; if(gf>ga)s.W++; else if(gf<ga)s.L++; else s.D++; }
+/* ---------- recordes de carreira + prémios de fim de época ---------- */
+function ensureRecords(){ if(!G.records)G.records={}; if(!G.awards)G.awards=[]; if(G.streakU==null)G.streakU=0; if(G.streakW==null)G.streakW=0; return G.records; }
+function updateRecordsMatch(gf,ga,oppName){
+  const R=ensureRecords();
+  if(gf>ga){ G.streakW++; G.streakU++; const m=gf-ga;
+    if(!R.bigWin||m>R.bigWin.margin||(m===R.bigWin.margin&&gf>R.bigWin.gf))R.bigWin={gf,ga,opp:oppName,margin:m,season:G.season}; }
+  else if(gf<ga){ G.streakW=0; G.streakU=0; const m=ga-gf;
+    if(!R.bigLoss||m>R.bigLoss.margin||(m===R.bigLoss.margin&&ga>R.bigLoss.ga))R.bigLoss={gf,ga,opp:oppName,margin:m,season:G.season}; }
+  else { G.streakW=0; G.streakU++; }
+  if(!R.bestUnbeaten||G.streakU>R.bestUnbeaten.n)R.bestUnbeaten={n:G.streakU,season:G.season};
+  if(!R.bestWins||G.streakW>R.bestWins.n)R.bestWins={n:G.streakW,season:G.season};
+}
+function endSeasonAwards(meRank){
+  ensureRecords(); const R=G.records, d=myDivObj();
+  let top=null; d.clubs.forEach(c=>c.squad.forEach(p=>{ if((p.goals||0)>0 && (!top||p.goals>top.p.goals))top={p,c}; }));
+  if(top){ const mine=top.c.id===G.myId; G.awards.unshift({type:"bota",season:G.season,division:d.name,player:top.p.name,club:top.c.short,goals:top.p.goals,mine});
+    addNews("🥇 Bota de Ouro ("+d.name+"): "+top.p.name+" — "+top.p.goals+" golos ("+top.c.short+")"+(mine?" · é teu!":"")); }
+  let best=null; d.clubs.forEach(c=>c.squad.forEach(p=>{ const sc=(p.goals||0)*3+ability(p); if(!best||sc>best.sc)best={p,c,sc}; }));
+  if(best){ const mine=best.c.id===G.myId; G.awards.unshift({type:"mvp",season:G.season,division:d.name,player:best.p.name,club:best.c.short,mine});
+    if(mine)addNews("⭐ Jogador do Ano da "+d.name+": "+best.p.name+" (teu)!"); }
+  const meC=me();
+  if(!R.mostGoals||meC.GF>R.mostGoals.n)R.mostGoals={n:meC.GF,season:G.season};
+  if(!R.mostPoints||meC.Pts>R.mostPoints.n)R.mostPoints={n:meC.Pts,season:G.season};
+  if(!R.bestPos||meRank<R.bestPos.n)R.bestPos={n:meRank,division:d.name,season:G.season};
+  if(G.awards.length>60)G.awards.length=60;
+  save();
+}
 /* ---------- exports (para node/testes; ignorado no browser) ---------- */
 if(typeof module!=="undefined"&&module.exports){
   module.exports={ POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
@@ -1212,6 +1241,7 @@ if(typeof module!=="undefined"&&module.exports){
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
+    ensureRecords,updateRecordsMatch,endSeasonAwards,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };

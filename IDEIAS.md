@@ -17,7 +17,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 - ⬜ 🔧 Cartão de resultado partilhável (imagem para redes sociais).
 
 ## Época e competições
-- ⬜ 🔧 Prémios e recordes de fim de época — bota de ouro, melhor jogador, assistências, recordes do clube.
+- ✅ 🔧 Prémios e recordes de fim de época — Bota de Ouro, Jogador do Ano, recordes de carreira (maior vitória/derrota, séries, mais golos/pontos, melhor classificação) e resumo de fim de época.
 - ⬜ 🔧 Supertaça (campeão vs vencedor da Taça) e/ou play-off de subida.
 - ⬜ ⚡ História de carreira / hall of fame do treinador.
 
