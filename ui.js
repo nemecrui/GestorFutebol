@@ -4,7 +4,7 @@
    Usa as funções/dados globais definidos em engine.js.
    ============================================================ */
 
-let TAB="home", tacSel=null, squadFilter="all", marketPos="all", tableTab="table", leagueDiv=null;
+let TAB="home", tacSel=null, squadFilter="all", marketPos="all", tableTab="table", leagueDiv=null, squadTab="main";
 const $=s=>document.querySelector(s);
 
 function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),1900);}
@@ -225,12 +225,15 @@ function viewHome(){
 
 /* ---------- PLANTEL ---------- */
 function viewSquad(){
+  const nA=(G.academy&&G.academy.youth?G.academy.youth.length:0);
+  const tabSeg=`<div class="seg" id="segSquadTab"><button data-st="main" class="${squadTab==='main'?'active':''}">Plantel</button><button data-st="academy" class="${squadTab==='academy'?'active':''}">🎓 Academia${nA?" ("+nA+")":""}</button></div>`;
+  if(squadTab==="academy")return tabSeg+viewAcademy();
   const c=me(), inXI=new Set(G.lineup);
   let list=c.squad.slice().sort((a,b)=>POSITIONS.indexOf(a.pos)-POSITIONS.indexOf(b.pos)||ability(b)-ability(a));
   if(squadFilter!=="all")list=list.filter(p=>GROUP[p.pos]===squadFilter);
   const xi=G.lineup.map(id=>c.squad.find(p=>p.id===id)).filter(Boolean);
   const avg=Math.round(xi.reduce((s,p)=>s+ability(p),0)/Math.max(1,xi.length));
-  let h=`<div class="card between row"><div class="row">${swatch(c)}<div><b>${c.name}</b><div class="muted" style="font-size:11px">${c.squad.length} jogadores · toca para ver atributos</div></div></div>
+  let h=tabSeg+`<div class="card between row"><div class="row">${swatch(c)}<div><b>${c.name}</b><div class="muted" style="font-size:11px">${c.squad.length} jogadores · toca para ver atributos</div></div></div>
     <div class="rating ${ratingClass(avg)}">${avg}</div></div>`;
   h+=`<div class="seg" id="segPos">`+[["all","Todos"],["GK","GR"],["DEF","DEF"],["MID","MED"],["ATT","ATA"]].map(([k,l])=>
     `<button data-p="${k}" class="${squadFilter===k?'active':''}">${l}</button>`).join("")+`</div>`;
@@ -245,6 +248,47 @@ function viewSquad(){
   return h;
 }
 
+/* ---------- ACADEMIA ---------- */
+function stars(n){ n=clamp(n||0,0,5); return "★".repeat(n)+"☆".repeat(5-n); }
+function viewAcademy(){
+  const A=ensureAcademy(), cost=academyCost(A.level);
+  let h=`<div class="card"><div class="row between"><div><b>Academia de jovens</b><div class="muted" style="font-size:12px">Nível ${A.level}/5 · <span style="color:var(--accent)">${stars(A.level)}</span></div></div>
+      <div class="rating ${A.level>=4?'r-hi':A.level>=2?'r-mid':'r-lo'}">${A.level}</div></div>
+    ${cost!=null?`<button class="btn sec small" id="acUpgrade" style="width:100%;margin-top:8px">⬆️ Melhorar academia — ${money(cost)}</button>`:`<div class="muted" style="font-size:12px;margin-top:8px">Nível máximo atingido.</div>`}
+    <div class="muted" style="font-size:11px;margin-top:6px">Nível mais alto = mais jovens, com maior potencial e evolução mais rápida. Pago da tua verba de transferências.</div></div>`;
+  h+=`<div class="card"><div class="muted" style="font-size:12px;margin-bottom:4px">Foco de formação:</div>
+    <select id="acFocus">${["Equilibrado","Ataque","Defesa","Físico"].map(f=>`<option${A.focus===f?' selected':''}>${f}</option>`).join("")}</select></div>`;
+  const list=A.youth.slice().sort((a,b)=>youthStars(b)-youthStars(a)||ability(b)-ability(a));
+  h+=`<div class="card"><h2>Juniores (${A.youth.length})</h2>`;
+  if(!list.length)h+=`<div class="muted" style="font-size:13px">Sem jovens de momento. Aparecem no "Dia da formação", no início de cada época.</div>`;
+  else h+=`<div class="plist">`+list.map(p=>`<div class="pl" data-youth="${p.id}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
+      <div class="info"><div class="nm">${p.name}${p.onLoan?' <span class="tag" style="color:var(--blue);font-weight:800;font-size:11px">EMPRÉSTIMO</span>':''}</div>
+        <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · pot. <span style="color:var(--accent)">${stars(youthStars(p))}</span></div></div>
+      <span class="muted" style="font-size:18px">›</span></div>`).join("")+`</div>`;
+  h+=`</div>`;
+  return h;
+}
+function openYouth(id){
+  const A=ensureAcademy(), p=A.youth.find(x=>x.id===id); if(!p)return;
+  const mo=document.createElement("div");mo.className="modal";const abil=ability(p);
+  const attrRows=ATTRS.filter(([k])=>k!=="gr"||p.pos==="GR").map(([k,label])=>{const v=p.attrs[k]||1;return `<div class="attr"><span class="an">${label}</span><span class="abar"><i style="width:${v/20*100}%;background:${attrColor(v)}"></i></span><span class="av">${v}</span></div>`;}).join("");
+  mo.innerHTML=`<div class="box"><button class="close" id="yClose">✕</button>
+    <div class="row" style="gap:10px;margin-bottom:4px"><div class="rating ${ratingClass(abil)}" style="width:44px;height:44px;font-size:18px">${abil}</div>
+      <div><div style="font-weight:800;font-size:16px">${p.name}</div>
+      <div class="muted" style="font-size:12px"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${POS_NAME[p.pos]} · ${p.age} anos</div></div></div>
+    <div class="muted" style="font-size:12px;margin:8px 0">Potencial: <span style="color:var(--accent)">${stars(youthStars(p))}</span> · Valor ~ ${money(p.value)}${p.onLoan?' · <span style="color:var(--blue)">emprestado esta época</span>':''}</div>
+    <button class="btn small" id="yPromote" style="width:100%;margin-bottom:8px">⬆️ Promover ao plantel principal</button>
+    <button class="btn sec small" id="yLoan" style="width:100%;margin-bottom:8px">${p.onLoan?"↩️ Cancelar empréstimo":"🔁 Emprestar (evolui mais esta época)"}</button>
+    <button class="btn warn small" id="yRelease" style="width:100%;margin-bottom:8px">🚪 Dispensar</button>
+    <h2 style="margin:10px 0 4px;color:var(--muted);font-size:12px">Atributos</h2>
+    <div class="attrs">${attrRows}</div></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#yClose").onclick=close; mo.onclick=e=>{if(e.target===mo)close();};
+  mo.querySelector("#yPromote").onclick=()=>{const r=promoteYouth(p.id);toast(r.msg||"");close();render();};
+  mo.querySelector("#yLoan").onclick=()=>{const r=loanYouth(p.id);toast(r&&r.loaned?"Emprestado — vai evoluir mais esta época.":"Empréstimo cancelado.");close();render();};
+  mo.querySelector("#yRelease").onclick=()=>{if(confirm("Dispensar "+p.name+" da academia?")){releaseYouth(p.id);close();render();}};
+}
 /* ---------- ficha de jogador ---------- */
 function openPlayer(pid){
   const c=me(); const p=c.squad.find(x=>x.id===pid); if(!p)return;
@@ -781,6 +825,10 @@ function bindView(){
   document.querySelectorAll("[data-accept]").forEach(b=>b.onclick=()=>{const r=acceptOffer(+b.dataset.accept);if(r.msg)toast(r.msg);render();});
   document.querySelectorAll("[data-reject]").forEach(b=>b.onclick=()=>{rejectOffer(+b.dataset.reject);render();});
   document.querySelectorAll("[data-counter]").forEach(b=>b.onclick=()=>{const i=+b.dataset.counter;const o=G.transferOffers[i];if(!o)return;const r=negotiateOffer(i,Math.round(o.fee*1.2*100)/100);if(r.status==="accepted")toast((r.res&&r.res.msg)||"Vendido");else if(r.status==="counter")toast("Contraproposta do clube: "+money(r.fee));else if(r.status==="withdrawn")toast("O clube retirou-se da negociação");render();});
+  const sst=$("#segSquadTab");if(sst)sst.querySelectorAll("button").forEach(b=>b.onclick=()=>{squadTab=b.dataset.st;render();});
+  const acu=$("#acUpgrade");if(acu)acu.onclick=()=>{const r=upgradeAcademy();toast(r.msg);render();};
+  const acf=$("#acFocus");if(acf)acf.onchange=()=>{setAcademyFocus(acf.value);toast("Foco de formação: "+acf.value);};
+  document.querySelectorAll("[data-youth]").forEach(el=>el.onclick=()=>openYouth(+el.dataset.youth));
   const sp=$("#segPos");if(sp)sp.querySelectorAll("button").forEach(b=>b.onclick=()=>{squadFilter=b.dataset.p;render();});
   document.querySelectorAll("[data-sell]").forEach(b=>b.onclick=e=>{e.stopPropagation();if(confirm("Vender este jogador?")){const r=sellPlayer(+b.dataset.sell);toast(r.msg);render();}});
   document.querySelectorAll("[data-detail]").forEach(el=>el.onclick=()=>openPlayer(+el.dataset.detail));

@@ -267,12 +267,14 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
+     academy:{level:1,focus:"Equilibrado",youth:[]},
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
   setObjectives();
   me().budget=budgetForObjective(G.myDiv,me().objective); G.seasonStartBudget=me().budget; G.budgetGranted=0; G.pendingPrize=0;
   cupCreate();
+  academyIntake();
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
@@ -618,6 +620,7 @@ function newSeason(){
   if(myMove==="up")addNews("Subiste de divisão!");
   else if(myMove==="down")addNews("Desceste de divisão.");
   addNews("Nova época "+G.season+" ("+myDivObj().name+").");
+  developYouth(); academyIntake();     // academia: evoluir juniores + nova camada
   transferWindow();
   cupCreate();
   save();
@@ -874,6 +877,55 @@ function rejectOffer(i){
   addNews("Recusaste a proposta do "+o.clubName+" por "+o.playerName+".");
   G.transferOffers=G.transferOffers.filter((_,j)=>j!==i); save();
 }
+/* ---------- Academia de jovens ---------- */
+function ensureAcademy(){ if(!G.academy)G.academy={level:1,focus:"Equilibrado",youth:[]}; return G.academy; }
+function makeYouth(level){
+  const pos=(Math.random()<0.10)?"GR":pick(POSITIONS.filter(p=>p!=="GR"));
+  const p=makePlayer(pos, clamp(level+ri(-1,1),4,12));
+  p.age=ri(15,18);
+  const cur=roleRatingAttrs(p.attrs,p.pos);
+  p.potential=clamp(cur+ri(6,13)+(level-1)*3, cur, 99);
+  p.youth=true; p.onLoan=false; p.contractYears=ri(2,4);
+  p.value=Math.max(0.02,Math.round(Math.pow(p.potential/70,3)*0.10*100)/100);
+  return p;
+}
+function academyCost(level){ return [0.12,0.20,0.34,0.55][level-1]||null; }
+function youthStars(p){ return clamp(Math.round((p.potential||40)/20),1,5); }
+function upgradeAcademy(){
+  const A=ensureAcademy();
+  if(A.level>=5)return {ok:false,msg:"A academia já está no nível máximo."};
+  const cost=academyCost(A.level);
+  if(me().budget<cost)return {ok:false,msg:"Verba insuficiente ("+money(cost)+")."};
+  me().budget=Math.round((me().budget-cost)*100)/100; A.level++;
+  addNews("Investiste na academia — passou a nível "+A.level+".");
+  save(); return {ok:true,msg:"Academia melhorada para nível "+A.level+" ("+money(cost)+")."};
+}
+function academyIntake(){ const A=ensureAcademy();
+  const n=Math.max(1,Math.round(1+A.level*0.7));
+  for(let k=0;k<n;k++)A.youth.push(makeYouth(A.level));
+  A.youth.sort((a,b)=>b.potential-a.potential);
+  while(A.youth.length>16)A.youth.pop();
+  addNews("🎓 Dia da formação: "+n+" jovens entraram na academia.");
+}
+function developYouth(){ const A=ensureAcademy(); const kept=[];
+  A.youth.forEach(p=>{
+    const times=A.level+(p.onLoan?2:0);
+    for(let t=0;t<times;t++)developPlayer(p, p.onLoan?20:8, true, A.focus);
+    if(p.onLoan){ addNews("Empréstimo: "+p.name+" regressou mais evoluído."); p.onLoan=false; }
+    p.age++;
+    if(p.age>=20){ addNews("Formação: "+p.name+" deixou a academia (idade)."); } else kept.push(p);
+  });
+  A.youth=kept;
+}
+function promoteYouth(id){ const A=ensureAcademy(); const i=A.youth.findIndex(p=>p.id===id); if(i<0)return {ok:false,msg:""};
+  if(me().squad.length>=32)return {ok:false,msg:"Plantel cheio (32) — dispensa alguém primeiro."};
+  const p=A.youth.splice(i,1)[0]; p.youth=false; p.onLoan=false; me().squad.push(p);
+  addNews("Promoveste "+p.name+" da academia ao plantel."); save();
+  return {ok:true,msg:p.name+" promovido ao plantel."};
+}
+function releaseYouth(id){ const A=ensureAcademy(); const i=A.youth.findIndex(p=>p.id===id); if(i<0)return; const p=A.youth.splice(i,1)[0]; addNews("Dispensaste "+p.name+" da academia."); save(); }
+function loanYouth(id){ const A=ensureAcademy(); const p=A.youth.find(x=>x.id===id); if(!p)return {ok:false}; p.onLoan=!p.onLoan; save(); return {ok:true,loaned:p.onLoan}; }
+function setAcademyFocus(f){ ensureAcademy().focus=f; save(); }
 /* ---------- Fase 4: energia/forma, lesões, renovação, negociação ---------- */
 function unavailable(club){ const set=new Set(club.susp||[]); club.squad.forEach(p=>{ if((p.injuredWeeks||0)>0)set.add(p.id); }); return set; }
 function recovery(age){ return clamp(Math.round(22-(age-20)*0.7),6,22); }
@@ -934,8 +986,8 @@ function updateChem(startXI){
 }
 /* ---------- treino & desenvolvimento (fim de época) ---------- */
 const FOCUS_ATTRS={ "Ataque":["rem","cab","dri","cri","pen","liv"], "Defesa":["des","mar","pos","cab","agr"], "Físico":["vel","res","for","rea"], "Equilibrado":null };
-function developPlayer(p,played,isMine){
-  const focus=(isMine&&G.trainFocus)?G.trainFocus:"Equilibrado";
+function developPlayer(p,played,isMine,focusOverride){
+  const focus=focusOverride||((isMine&&G.trainFocus)?G.trainFocus:"Equilibrado");
   const foc=FOCUS_ATTRS[focus]||null, prof=PROFILES[p.pos]||{};
   const relevant=()=>{ let pool=ATTR_KEYS.filter(k=>prof[k]&&(!foc||foc.includes(k))); if(!pool.length)pool=ATTR_KEYS.filter(k=>prof[k]); return pool; };
   if(p.age<24){
@@ -1159,6 +1211,7 @@ if(typeof module!=="undefined"&&module.exports){
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
+    ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
