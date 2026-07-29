@@ -542,6 +542,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   const tlFill=mo.querySelector("#liveTLfill"),tlEl=mo.querySelector("#liveTL"),momH=mo.querySelector("#liveMomH"),momA=mo.querySelector("#liveMomA"),commentEl=mo.querySelector("#liveComment");
   let timer,pauseUntil=0,paused=false,htDone=false,mom=50,momSumH=0,momSumA=0,commentHold=0,windowsUsed=0;
   const aiSide = userSide==="H"?"A":userSide==="A"?"H":null;
+  const aiWins=[46,63,74,84,105,115]; const aiWinUsed={};   // momentos em que a IA pondera substituir
   const stat={H:{sh:0,sot:0,cor:0},A:{sh:0,sot:0,cor:0}};
   const setW=(el,pct)=>{el.style.width=pct+"%";};
   momH.style.background=home.c1;momA.style.background=away.c1;setW(momH,50);setW(momA,50);
@@ -645,7 +646,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   showPhase("Início");sndWhistle(1);vib([30]);pauseUntil=Date.now()+1100;
   timer=setInterval(()=>{
     if(Date.now()<pauseUntil||paused)return;
-    if(!htDone && st.maxMin>=90 && st.minute>=45){ htDone=true; minEl.textContent="Intervalo"; showPhase("Intervalo"); sndWhistle(2); vib([30,40,30]); setComment("Intervalo — "+home.name+" "+st.hg+"–"+st.ag+" "+away.name,3); updateStats(); if(aiSide)aiSubTry(aiSide); if(userSide){pauseUntil=Date.now()+1400; setTimeout(()=>{ if(mo.parentNode)openChanges(true); },900);} else pauseUntil=Date.now()+2000; return; }
+    if(!htDone && st.maxMin>=90 && st.minute>=45){ htDone=true; minEl.textContent="Intervalo"; showPhase("Intervalo"); sndWhistle(2); vib([30,40,30]); setComment("Intervalo — "+home.name+" "+st.hg+"–"+st.ag+" "+away.name,3); updateStats(); if(userSide){pauseUntil=Date.now()+1400; setTimeout(()=>{ if(mo.parentNode)openChanges(true); },900);} else pauseUntil=Date.now()+2000; return; }
     let batch=[]; for(let k=0;k<3 && st.minute<st.maxMin;k++)batch=batch.concat(liveStep(st));
     const minute=st.minute; minEl.textContent=minute+"'"+(minute>90?" (prol.)":""); setW(tlFill,minute/st.maxMin*100);
     const biasNow=clamp(50+((home.strength||60)-(away.strength||60))*0.3+((st.hg-st.ag)*6),20,80);
@@ -653,7 +654,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     const pres=mom>=55?"H":mom<=45?"A":null;
     let hadEvent=batch.length>0;
     batch.forEach(processEvent);
-    if(aiSide && minute>=55 && Math.random()<0.14)aiSubTry(aiSide);
+    if(aiSide)aiWins.forEach(wm=>{ if(!aiWinUsed[wm] && minute>=wm && st.maxMin>=wm){ aiWinUsed[wm]=true; if(Math.random()<0.8)aiSubTry(aiSide); } });
     if(pres){if(Math.random()<0.5)stat[pres].sh++;if(Math.random()<0.22)stat[pres].sot++;if(Math.random()<0.14)stat[pres].cor++;
       if(userSide&&pres===userSide){const ids=st[userSide].line.filter(id=>{const p=userClub.squad.find(x=>x.id===id);return p&&GROUP[p.pos]!=="GK";});if(ids.length)bumpR(pick(ids),0.05);}}
     if(userSide)renderSquad(false);
@@ -663,7 +664,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       else if(roll<0.5){setComment(pres?phrase(PRESS,pres):pick(BAL),0);pauseUntil=Date.now()+750;}}
     updateStats();
     if(st.minute>=st.maxMin){
-      if(cup && st.maxMin===90 && st.hg===st.ag){ st.maxMin=120; showPhase("Prolongamento"); sndWhistle(2); vib([30,40,30]); setComment("Prolongamento! Mais 30 minutos.",3); if(aiSide)aiSubTry(aiSide); pauseUntil=Date.now()+2200; return; }
+      if(cup && st.maxMin===90 && st.hg===st.ag){ st.maxMin=120; showPhase("Prolongamento"); sndWhistle(2); vib([30,40,30]); setComment("Prolongamento! Mais 30 minutos.",3); pauseUntil=Date.now()+2200; return; }
       finish();
     }
   },240);

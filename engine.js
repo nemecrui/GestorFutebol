@@ -499,7 +499,7 @@ function aiMaybeSub(st,side){
   const gone=new Set(S.gone);
   const onOut=S.line.map(id=>club.squad.find(x=>x.id===id)).filter(p=>p&&GROUP[p.pos]!=="GK");
   onOut.sort((a,b)=>(st.fit[a.id]==null?100:st.fit[a.id])-(st.fit[b.id]==null?100:st.fit[b.id]));
-  const worst=onOut[0]; if(!worst||(st.fit[worst.id]==null?100:st.fit[worst.id])>62)return null;
+  const worst=onOut[0]; if(!worst)return null;   // troca o mais cansado em campo (a decisão de quando é feita por janelas)
   const bench=club.squad.filter(p=>!S.line.includes(p.id)&&!gone.has(p.id)&&!(S.off&&S.off.has(p.id))&&(p.injuredWeeks||0)<=0&&GROUP[p.pos]!=="GK");
   const cand=bench.filter(p=>GROUP[p.pos]===GROUP[worst.pos]).sort((a,b)=>ability(b)-ability(a))[0] || bench.sort((a,b)=>ability(b)-ability(a))[0];
   if(!cand)return null;
