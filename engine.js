@@ -579,9 +579,9 @@ function endSeason(){
   const d=myDivObj(), table=sortedTable(d);
   const champ=table[0], meRank=table.findIndex(c=>c.id===G.myId)+1;
   addNews("Fim da época "+G.season+" ("+d.name+"). Campeão: "+champ.name+". Ficaste em "+meRank+"º.");
-  let prize=Math.max(0.03,(d.clubs.length-meRank+1)*0.02);
-  if(meRank===1){ prize+=0.25; G.manager.trophies.push({type:"league",name:"Campeão · "+d.name,season:G.season}); addNews("🏆 Campeão da "+d.name+"! Prémio: +€250K."); }
-  else if(d.upSlots>0 && meRank<=d.upSlots){ prize+=0.15; G.manager.trophies.push({type:"promo",name:"Subida · "+d.name,season:G.season}); addNews("⬆️ Subida garantida! Prémio: +€150K."); }
+  let prize=Math.max(0.1,(d.clubs.length-meRank+1)*0.08);
+  if(meRank===1){ prize+=1.0; G.manager.trophies.push({type:"league",name:"Campeão · "+d.name,season:G.season}); addNews("🏆 Campeão da "+d.name+"! Prémio: +€1M."); }
+  else if(d.upSlots>0 && meRank<=d.upSlots){ prize+=0.6; G.manager.trophies.push({type:"promo",name:"Subida · "+d.name,season:G.season}); addNews("⬆️ Subida garantida! Prémio: +€600K."); }
   me().budget=Math.round((me().budget+prize)*100)/100;
   addNews("Prémio de classificação: +"+money(prize)+".");
   endSeasonAwards(meRank);
@@ -723,9 +723,9 @@ function squadRating(club){
   return n?s/n:55;
 }
 function budgetForObjective(divIdx,obj){
-  const bases=[0.45,0.32,0.22,0.14];                                  // Pró-Nacional → 2ª Divisão
-  const divBase=bases[divIdx]!=null?bases[divIdx]:0.16;
-  const amb={title:1.6,promo:1.4,top:1.1,mid:0.9,survive:0.7}[obj&&obj.type]||1; // aspiração
+  const bases=[1.7,1.15,0.78,0.55];                                   // Pró-Nacional → 2ª Divisão (saldos que permitem comprar)
+  const divBase=bases[divIdx]!=null?bases[divIdx]:0.6;
+  const amb={title:1.6,promo:1.4,top:1.1,mid:0.9,survive:0.7}[obj&&obj.type]||1; // aspiração mantém as diferenças
   return Math.round(divBase*amb*rnd(0.85,1.15)*100)/100;
 }
 function objectiveFor(di,rankExp,n){
@@ -1193,13 +1193,13 @@ function cupAdvanceRound(preUser){
     const oppShort=(userTie.a===ms)?userTie.b:userTie.a, opp=clubByShort(oppShort);
     if(opp){ const higher=(()=>{const oi=divOfShort(oppShort);return oi>=0&&oi<G.myDiv;})();
       const stronger=squadRating(opp)-squadRating(me())>=8;
-      if(higher||stronger){ const bonus=higher?0.06:0.04; me().budget=Math.round((me().budget+bonus)*100)/100;
+      if(higher||stronger){ const bonus=higher?0.25:0.15; me().budget=Math.round((me().budget+bonus)*100)/100;
         addNews("💪 Surpresa na Taça! Eliminaste o "+opp.name+" ("+(higher?"divisão superior":"muito mais forte")+"). Prémio: +"+money(bonus)+"."); } }
   }
   G.cup.history.push({name:cupRoundName(), ties:G.cup.ties.map(t=>({a:t.a,b:t.b,sa:t.sa,sb:t.sb,w:t.w,pens:!!t.pens}))});
   const winners=G.cup.ties.map(t=>t.w);
   G.cup.remaining=winners; G.cup.round++;
-  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByShort(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().short){ G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); me().budget=Math.round((me().budget+0.30)*100)/100; addNews("🏆 Prémio de vencedor da Taça: +€300K."); } }
+  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByShort(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().short){ G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); me().budget=Math.round((me().budget+1.2)*100)/100; addNews("🏆 Prémio de vencedor da Taça: +€1.2M."); } }
   else cupDraw();
   save();
   return userTie;
@@ -1216,7 +1216,7 @@ function requestBudget(){
   const conf=G.board.confidence;
   const chance=clamp((conf-30)/60,0.05,0.9);                         // coerente com a satisfação da direção
   if(Math.random()<chance){
-    let amount=Math.round((0.04+conf/500)*100)/100;                  // pedaço do reforço
+    let amount=Math.round((G.seasonStartBudget||0.6)*(0.06+conf/700)*100)/100;   // reforço proporcional ao saldo inicial
     if(amount>room)amount=room;                                      // nunca ultrapassa o teto de 30%
     me().budget=Math.round((me().budget+amount)*100)/100;
     G.budgetGranted=Math.round(((G.budgetGranted||0)+amount)*100)/100;
