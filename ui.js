@@ -723,7 +723,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     const chg=mo.querySelector("#liveChg"); if(chg)chg.style.display="none";
     const done=mo.querySelector("#liveDone");done.style.display="block";mo.querySelector("#liveSkip").style.display="none";
     if(cup && st.hg===st.ag){ done.textContent="Ir aos penáltis →"; done.onclick=()=>cupPens(mo,r); }
-    else { if(onFinish)onFinish(r); done.onclick=()=>{mo.remove();render();}; }
+    else { if(onFinish)onFinish(r); done.textContent="Relatório do jogo →"; done.onclick=()=>{ mo.style.display="none"; showPostMatch(st,r,()=>{mo.remove();render();}); }; }
   }
   mo.querySelector("#liveSkip").onclick=()=>{ // saltar: simula o resto sem parar
     while(st.minute<st.maxMin)liveStep(st);
@@ -757,6 +757,38 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       finish();
     }
   },240);
+}
+function showPostMatch(st, r, onClose){
+  const home=st.home, away=st.away, userSide=st.userSide;
+  const goalsByPid={}, goalList=[], cardList=[];
+  (r.events||[]).forEach(e=>{
+    if(e.type==="goal"){ const club=e.side==="H"?home:away;
+      if(e.gtype==="own"){ const ogClub=e.ogSide==="H"?home:away, p=ogClub.squad.find(x=>x.id===e.ogPid); goalList.push({m:e.m,side:e.side,txt:(p?p.name.split(" ").slice(-1)[0]:"?")+" (ag)",club:club.short}); }
+      else { const p=club.squad.find(x=>x.id===e.scorer); if(e.scorer)goalsByPid[e.scorer]=(goalsByPid[e.scorer]||0)+1; goalList.push({m:e.m,side:e.side,txt:(p?p.name.split(" ").slice(-1)[0]:"?"),club:club.short}); } }
+    else if(e.type==="red"){ const club=e.side==="H"?home:away, p=club.squad.find(x=>x.id===e.pid); cardList.push({m:e.m,txt:(p?p.name.split(" ").slice(-1)[0]:"?"),club:club.short}); }
+  });
+  goalList.sort((a,b)=>a.m-b.m); cardList.sort((a,b)=>a.m-b.m);
+  let motm=null,best=-1;
+  const consider=(club,side)=>{ const S=side==="H"?st.H:st.A; [...S.appeared].forEach(id=>{ const p=club.squad.find(x=>x.id===id); if(!p)return;
+    const g=goalsByPid[id]||0, rate=(side===userSide&&p.lastRating!=null)?(p.lastRating-6):0, conc=side==="H"?st.ag:st.hg, gk=(GROUP[p.pos]==="GK"&&conc===0)?1.5:0;
+    const sc=g*2.2+rate+ability(p)/25+gk; if(sc>best){best=sc;motm={p,side,g,club};} }); };
+  consider(home,"H"); consider(away,"A");
+  const uClub=userSide==="H"?home:away, uS=userSide==="H"?st.H:st.A, rc=v=>v>=7?"#16a34a":v>=5?"#d9a400":"#e5484d";
+  const yourR=[...uS.appeared].map(id=>uClub.squad.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>(b.lastRating||0)-(a.lastRating||0));
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><div class="center"><h2 style="justify-content:center">Relatório do jogo</h2></div>
+    <div class="scorebug"><div class="t">${clubTag(home)}</div><div class="sc">${r.hg} - ${r.ag}</div><div class="t a">${clubTag(away)}</div></div>
+    ${r.hadET?`<div class="center muted" style="font-size:11px;margin-bottom:4px">após prolongamento</div>`:""}
+    ${motm?`<div class="card" style="padding:10px;margin:8px 0;text-align:center;border-color:var(--accent)"><div class="muted" style="font-size:11px;letter-spacing:1px">⭐ HOMEM DO JOGO</div><div style="font-weight:800;font-size:16px">${motm.p.name}</div><div class="muted" style="font-size:12px"><span class="pill ${posClass(motm.p.pos)}">${motm.p.pos}</span> ${motm.club.short}${motm.g?" · "+motm.g+" golo"+(motm.g>1?"s":""):""}${motm.side===userSide&&motm.p.lastRating!=null?" · nota "+motm.p.lastRating:""}</div></div>`:""}
+    <h2 style="color:var(--muted);font-size:12px;margin:8px 0 4px">⚽ Golos</h2>
+    ${goalList.length?goalList.map(g=>`<div class="row between" style="font-size:13px;padding:3px 2px"><span>${g.m}' ${g.txt}</span><span class="muted">${g.club}</span></div>`).join(""):`<div class="muted" style="font-size:13px">Sem golos.</div>`}
+    ${cardList.length?`<h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">🟥 Expulsões</h2>`+cardList.map(c=>`<div class="row between" style="font-size:13px;padding:3px 2px"><span>${c.m}' 🟥 ${c.txt}</span><span class="muted">${c.club}</span></div>`).join(""):""}
+    <h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">As tuas notas</h2>
+    ${yourR.map(p=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:4px 2px;font-size:13px"><span>${p.name} <span class="pill ${posClass(p.pos)}" style="font-size:9px">${p.pos}</span></span><b style="color:${rc(p.lastRating||6)}">${p.lastRating!=null?p.lastRating:"—"}</b></div>`).join("")}
+    <button class="btn" id="pmrOk" style="margin-top:12px">Continuar</button></div>`;
+  document.body.appendChild(mo);
+  const done=()=>{ mo.remove(); if(onClose)onClose(); };
+  mo.querySelector("#pmrOk").onclick=done; mo.onclick=e=>{if(e.target===mo)done();};
 }
 function openPreMatch(next, startFn){
   const c=me(), opp=myClubs()[next.opp];

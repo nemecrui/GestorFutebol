@@ -13,7 +13,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 ## Experiência de jogo
 - ✅ 🔧 Antevisão do adversário — ecrã de pré-jogo com forma, onze provável, jogadores-chave e barras de força.
 - ✅ ⚡ Conversa de balneário — antes do jogo e ao intervalo; tom afeta a moral e o desempenho (acerto por contexto).
-- ⬜ ⚡ Relatório pós-jogo com Homem do Jogo e destaques.
+- ✅ ⚡ Relatório pós-jogo — Homem do Jogo, golos, expulsões e notas dos teus jogadores.
 - ⬜ 🔧 Cartão de resultado partilhável (imagem para redes sociais).
 
 ## Época e competições
