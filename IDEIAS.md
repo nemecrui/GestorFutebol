@@ -11,8 +11,8 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 - ⬜ ⚡ Papéis de equipa — capitão, marcador de penáltis/livres à escolha, jogador-chave.
 
 ## Experiência de jogo
-- ⬜ 🔧 Antevisão do adversário (forma, melhores jogadores, provável onze).
-- ⬜ ⚡ Conversa de balneário (antes do jogo e ao intervalo) a afetar a moral.
+- ✅ 🔧 Antevisão do adversário — ecrã de pré-jogo com forma, onze provável, jogadores-chave e barras de força.
+- ✅ ⚡ Conversa de balneário — antes do jogo e ao intervalo; tom afeta a moral e o desempenho (acerto por contexto).
 - ⬜ ⚡ Relatório pós-jogo com Homem do Jogo e destaques.
 - ⬜ 🔧 Cartão de resultado partilhável (imagem para redes sociais).
 

@@ -70,6 +70,7 @@ function swatch(cl,sm){return `<span class="swatch ${sm?'sm':''}" style="backgro
 function clubTag(cl,sm){return swatch(cl,sm)+`<span>${cl.short}</span>`;}
 function clubTagFull(cl){return swatch(cl)+`<span class="full clink" data-club="${cl.short}">${cl.name}</span>`;}
 function attrColor(v){return v>=15?"#16a34a":v>=11?"#d9a400":"#e5484d";}
+function teamMoraleAvg(club){const a=club.squad||[];return a.length?a.reduce((s,p)=>s+(p.morale==null?70:p.morale),0)/a.length:70;}
 
 /* ---------- render ---------- */
 function header(){
@@ -609,10 +610,10 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       <div class="statline"><b id="shH">0</b><span class="lbl">Remates</span><b id="shA">0</b></div>
       <div class="statline"><b id="sotH">0</b><span class="lbl">À baliza</span><b id="sotA">0</b></div>
       <div class="statline"><b id="corH">0</b><span class="lbl">Cantos</span><b id="corA">0</b></div></div>
+    ${userSide?`<button class="btn sec small" id="liveChg" style="width:100%;margin:2px 0 8px">🔁 Alterações · subs / tática</button>`:''}
     <div class="live" id="liveEv"></div>
     <div id="liveSquad" class="livesquad"></div>
     <button class="btn" id="liveDone" style="display:none">Continuar</button>
-    ${userSide?`<button class="btn sec small" id="liveChg" style="width:100%;margin-top:8px">🔁 Alterações · subs / tática</button>`:''}
     <button class="btn sec small" id="liveSkip" style="width:100%;margin-top:8px">Saltar</button></div>`;
   document.body.appendChild(mo);
   const evBox=mo.querySelector("#liveEv"),scoreEl=mo.querySelector("#liveScore"),minEl=mo.querySelector("#liveMin"),goalBanner=mo.querySelector("#goalBanner");
@@ -671,16 +672,21 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     if(userSide)renderSquad(false);
   }
   function aiSubTry(side){ const r=aiMaybeSub(st,side); if(r)processEvent({m:st.minute,side,type:"sub",outId:r.outId,inId:r.inId}); }
-  function openChanges(atHT){ if(!userSide)return; paused=true; const S=st[userSide], club=userClub; let sel=null, subsThisOpen=0;
+  function openChanges(atHT){ if(!userSide)return; paused=true; const S=st[userSide], club=userClub; let sel=null, subsThisOpen=0, talkedHT=false, talkMsg="";
     const cm=document.createElement("div");cm.className="modal";cm.style.zIndex="45";
     function draw(){ const maxS=liveMaxSubs(st);
+      let talkBlock="";
+      if(atHT){ talkBlock = talkedHT
+        ? `<div class="muted" style="font-size:12px;margin-bottom:10px">🗣️ ${talkMsg}</div>`
+        : `<div class="muted" style="font-size:11px;margin-bottom:4px">🗣️ Conversa ao intervalo:</div><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">${["Confiante","Exigente","Calmo","Motivador"].map(t=>`<button class="btn sec small" data-htone="${t}" style="flex:1;min-width:44%">${t}</button>`).join("")}</div>`; }
       const onRows=S.line.map(id=>{const p=club.squad.find(x=>x.id===id);if(!p)return"";const fit=Math.round(st.fit[id]==null?100:st.fit[id]);
         return `<div class="pl" data-out="${id}" style="${sel===id?'outline:2px solid var(--accent)':''}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div><div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${enHtml(fit)}</div></div></div>`;}).join("");
       const bench=liveBench(st,userSide).filter(p=>!S.line.includes(p.id));
       const benchRows=bench.length?bench.map(p=>{const fit=Math.round(st.fit[p.id]==null?(p.energy==null?100:p.energy):st.fit[p.id]);
         return `<div class="pl" data-in="${p.id}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div><div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${enHtml(fit)}</div></div></div>`;}).join(""):`<div class="muted" style="font-size:12px">Sem suplentes disponíveis.</div>`;
       cm.innerHTML=`<div class="box"><button class="close" id="cgClose">✕</button>
-        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Alterações · ${st.minute}'</div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:6px">${atHT?"Intervalo · "+st.hg+"–"+st.ag:"Alterações · "+st.minute+"'"}</div>
+        ${talkBlock}
         <div class="muted" style="font-size:12px;margin-bottom:8px">Substituições ${S.subs}/${maxS} · janelas ${windowsUsed}/3${atHT?" · intervalo (livre)":""}. Tática à vontade.</div>
         <div class="row" style="gap:6px;margin-bottom:8px">
           <select id="cgForm" style="flex:1">${Object.keys(FORMATIONS).map(f=>`<option${S.form===f?' selected':''}>${f}</option>`).join("")}</select>
@@ -690,6 +696,12 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
         <div class="muted" style="font-size:11px;margin:8px 0 4px">Suplentes — toca em quem ENTRA:</div>
         <div class="plist" style="max-height:150px;overflow:auto">${benchRows}</div>
         <button class="btn" id="cgDone" style="margin-top:10px">Continuar jogo ▶</button></div>`;
+      cm.querySelectorAll("[data-htone]").forEach(b=>b.onclick=()=>{
+        const myS=teamStrength(st.home,st.H.line,st.H.form,st.H.ment).overall, opS=teamStrength(st.away,st.A.line,st.A.form,st.A.ment).overall;
+        const fav=favTier(userSide==="H"?myS:opS, userSide==="H"?opS:myS), diff=(userSide==="H"?st.hg-st.ag:st.ag-st.hg);
+        const r=talkResolve(b.dataset.htone,{fav,morale:teamMoraleAvg(club),phase:"ht",diff});
+        applyTeamTalkMorale(r.moraleDelta); liveApplyTalk(st,r.boost,35); talkedHT=true; talkMsg=r.msg; toast(r.msg); draw();
+      });
       cm.querySelector("#cgForm").onchange=e=>liveSetTactic(st,userSide,e.target.value,null);
       cm.querySelector("#cgMent").onchange=e=>liveSetTactic(st,userSide,null,e.target.value);
       cm.querySelectorAll("[data-out]").forEach(el=>el.onclick=()=>{sel=+el.dataset.out;draw();});
@@ -746,7 +758,42 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     }
   },240);
 }
-function playMatchAnimated(){
+function openPreMatch(next, startFn){
+  const c=me(), opp=myClubs()[next.opp];
+  const myLine=availableLineup(c,G.lineup,G.formation), oppLine=autoPickLineup(opp,"4-4-2",opp.susp);
+  const myS=teamStrength(c,myLine,G.formation,G.mentality), opS=teamStrength(opp,oppLine,"4-4-2","Equilibrado");
+  const fav=favTier(myS.overall,opS.overall), form=clubRecentForm(opp,5);
+  const tbl=sortedTable(myDivObj()), oppPos=tbl.findIndex(x=>x.id===opp.id)+1;
+  const keys=opp.squad.slice().sort((a,b)=>ability(b)-ability(a)).slice(0,3);
+  const scorer=opp.squad.slice().sort((a,b)=>(b.goals||0)-(a.goals||0))[0];
+  const bar=(l,m1,m2)=>{const t=m1+m2||1,pm=Math.round(m1/t*100);return `<div style="margin:5px 0"><div style="font-size:11px;color:var(--muted)">${l}</div><div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#0006"><i style="width:${pm}%;background:var(--green2)"></i><i style="width:${100-pm}%;background:var(--red)"></i></div></div>`;};
+  const favTxt=fav>=2?"És claro favorito":fav>=1?"Ligeiro favorito":fav<=-2?"És claramente mais fraco":fav<=-1?"És ligeiramente mais fraco":"Jogo equilibrado";
+  const fmtForm=f=>f.length?f.map(x=>`<span style="color:${x==='V'?'#22c55e':x==='D'?'#ef4657':'#93a2b6'};font-weight:800">${x}</span>`).join(" "):"—";
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><button class="close" id="pmClose">✕</button>
+    <div class="center"><h2 style="justify-content:center">Antevisão · ${next.home?"em casa":"fora"}</h2></div>
+    <div class="scorebug"><div class="t">${clubTag(c)}</div><div class="sc" style="font-size:15px">VS</div><div class="t a">${clubTag(opp)}</div></div>
+    <div class="muted center" style="font-size:12px;margin-bottom:8px">${opp.name} · ${oppPos}º · forma: ${fmtForm(form)}</div>
+    <div class="card" style="padding:9px;margin-bottom:8px">
+      ${bar("Ataque",Math.round(myS.atk),Math.round(opS.atk))}${bar("Meio-campo",Math.round(myS.mid),Math.round(opS.mid))}${bar("Defesa",Math.round(myS.def),Math.round(opS.def))}
+      <div class="center" style="font-size:11px;margin-top:5px"><b>${favTxt}</b> · <span style="color:var(--green2)">tu</span> vs <span style="color:var(--red)">eles</span></div></div>
+    <div class="muted" style="font-size:12px;margin-bottom:8px">👀 A vigiar: ${keys.map(p=>p.name+" ("+ability(p)+")").join(", ")}${scorer&&scorer.goals?`<br>⚽ Melhor marcador: ${scorer.name} (${scorer.goals})`:""}</div>
+    <h2 style="color:var(--muted);font-size:12px;margin:6px 0 4px">🗣️ Conversa de balneário</h2>
+    <div id="pmTalk"><div class="row" style="gap:6px;flex-wrap:wrap">${["Confiante","Exigente","Calmo","Motivador"].map(t=>`<button class="btn sec small" data-tone="${t}" style="flex:1;min-width:44%">${t}</button>`).join("")}</div>
+      <button class="btn sec small" id="pmSkip" style="width:100%;margin-top:6px">Não falar</button>
+      <div class="muted" style="font-size:11px;margin-top:6px">Muda o onze na Tática antes de jogar, se precisares.</div></div>
+    <div id="pmStart" style="display:none;margin-top:8px"></div></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#pmClose").onclick=close; mo.onclick=e=>{if(e.target===mo)close();};
+  let boost=0;
+  const showStart=(reaction)=>{ mo.querySelector("#pmTalk").style.display="none"; const el=mo.querySelector("#pmStart"); el.style.display="block";
+    el.innerHTML=`${reaction?`<div class="muted center" style="font-size:12px;margin-bottom:8px">🗣️ ${reaction}</div>`:""}<button class="btn" id="pmGo" style="width:100%">▶ Começar jogo</button>`;
+    el.querySelector("#pmGo").onclick=()=>{ close(); startFn(boost); }; };
+  mo.querySelectorAll("[data-tone]").forEach(b=>b.onclick=()=>{ const r=talkResolve(b.dataset.tone,{fav,morale:teamMoraleAvg(c),phase:"pre"}); applyTeamTalkMorale(r.moraleDelta); boost=r.boost; showStart(r.msg); });
+  mo.querySelector("#pmSkip").onclick=()=>{ boost=0; showStart(""); };
+}
+function playMatchAnimated(talkBoost){
   const next=nextFixture(); if(!next){playWeek();render();return;}
   const c=me(), opp=myClubs()[next.opp];
   const home=next.home?c:opp, away=next.home?opp:c;
@@ -756,6 +803,7 @@ function playMatchAnimated(){
   const st=createLive(home,away,hLine,aLine,{maxMin:90,userSide,
     hForm:next.home?G.formation:"4-4-2", aForm:next.home?"4-4-2":G.formation,
     hMent:next.home?G.mentality:"Equilibrado", aMent:next.home?"Equilibrado":G.mentality});
+  if(talkBoost)liveApplyTalk(st, talkBoost, 35);   // efeito da conversa de pré-jogo na 1ª parte
   animateMatch(st,c,myLine,(r)=>{ playWeek(r); }, null);
 }
 
@@ -846,7 +894,7 @@ function cupBlocksLeague(){
 function bindView(){
   document.querySelectorAll("[data-meet]").forEach(b=>b.onclick=()=>{const r=resolveBoardMeeting(b.dataset.meet);toast(r.msg);TAB="home";render();});
   const meetBlock=()=>{ if(G.meeting&&G.meeting.active){ toast("Responde primeiro à reunião com a direção.");TAB="home";render();return true; } return false; };
-  const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;playMatchAnimated();};
+  const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}openPreMatch(nx,(boost)=>playMatchAnimated(boost));};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length){playWeek();if(G.meeting&&G.meeting.active)break;}toast("Época simulada");render();};
   const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();

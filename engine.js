@@ -436,6 +436,7 @@ function offRateFrom(hS,aS,hRed,aRed){
 function createLive(home,away,hLine,aLine,cfg){
   cfg=cfg||{};
   const st={ home,away, minute:0, maxMin:cfg.maxMin||90, hg:0, ag:0, events:[], userSide:cfg.userSide||null,
+    talkFactor:1, talkFrom:0, talkUntil:0,
     H:{line:hLine.slice(), form:cfg.hForm||"4-4-2", ment:cfg.hMent||"Equilibrado", subs:0, appeared:new Set(hLine), gone:[], off:new Set(), yc:{}},
     A:{line:aLine.slice(), form:cfg.aForm||"4-4-2", ment:cfg.aMent||"Equilibrado", subs:0, appeared:new Set(aLine), gone:[], off:new Set(), yc:{}},
     fit:{} };
@@ -449,6 +450,10 @@ function liveRate(st){
   const ff=(S)=>{ if(!S.line.length)return 0.85; let s=0; S.line.forEach(id=>s+=(st.fit[id]==null?100:st.fit[id])); return 0.82+0.18*((s/S.line.length)/100); };
   const fH=ff(st.H), fA=ff(st.A);
   hS.atk*=fH;hS.mid*=fH;hS.def*=fH; aS.atk*=fA;aS.mid*=fA;aS.def*=fA;
+  if(st.userSide && st.minute<st.talkUntil && st.talkUntil>st.talkFrom){   // efeito da conversa de balneário, a esvair-se
+    const prog=(st.talkUntil-st.minute)/(st.talkUntil-st.talkFrom), mult=1+(st.talkFactor-1)*prog;
+    if(st.userSide==="H"){hS.atk*=mult;hS.mid*=mult;hS.def*=mult;} else {aS.atk*=mult;aS.mid*=mult;aS.def*=mult;}
+  }
   return offRateFrom(hS,aS,st.H.gone.length,st.A.gone.length);
 }
 function liveGoal(st,side,m){
@@ -1046,6 +1051,32 @@ function updateMorale(club,playedIds,gf,ga){
     else if(p.morale<=22 && !p.wantsTalk && !p.transferListed){ p.wantsTalk=true; addNews(p.name+" pediu para reunir contigo — está descontente."); }
   });
 }
+/* ---------- conversa de balneário ---------- */
+const TALK_MSG={ bom:["A equipa entrou eletrizada!","Reagiram bem às tuas palavras.","Sentiu-se a equipa mais ligada.","Deste-lhes a faísca certa."],
+  neutro:["A equipa ouviu, sem grande reação.","Palavras recebidas com naturalidade.","Nada de especial no balneário."],
+  mau:["Alguns jogadores não gostaram do tom.","O balneário ficou tenso.","Não caíram bem as tuas palavras.","Sentiu-se algum desconforto."] };
+function talkResolve(tone, ctx){
+  ctx=ctx||{}; const fav=ctx.fav||0, mor=(ctx.morale==null?70:ctx.morale), phase=ctx.phase||"pre", diff=ctx.diff||0;
+  let s=0;
+  if(tone==="Motivador") s=0.35+(fav<=0?0.3:0)+(mor<55?0.2:0)+((phase==="ht"&&diff<=0)?0.2:0);
+  else if(tone==="Calmo") s=0.1+(fav>=1?0.4:0)+(mor<50?0.35:0)+((phase==="ht"&&diff>0)?0.4:0)-((phase==="ht"&&diff<0)?0.2:0);
+  else if(tone==="Exigente") s=(mor>=55?0.3:-0.6)+(fav<=0?0.2:0)+((phase==="ht"&&diff<0)?0.4:0)-(fav>=2?0.3:0);
+  else if(tone==="Confiante") s=0.05+(fav>=1?0.45:0)+(mor>=65?0.3:0)-(fav<=-1?0.4:0)-((phase==="ht"&&diff>=2)?0.4:0);
+  s+=rnd(-0.25,0.25);
+  if(s>=0.45)return {result:"bom", moraleDelta:6, boost:0.06, msg:pick(TALK_MSG.bom)};
+  if(s<=-0.35)return {result:"mau", moraleDelta:-6, boost:-0.05, msg:pick(TALK_MSG.mau)};
+  return {result:"neutro", moraleDelta:1, boost:0, msg:pick(TALK_MSG.neutro)};
+}
+function applyTeamTalkMorale(delta){ me().squad.forEach(p=>{ p.morale=clamp((p.morale==null?70:p.morale)+delta,0,100); }); }
+function liveApplyTalk(st, boostDelta, dur){ st.talkFactor=1+(boostDelta||0); st.talkFrom=st.minute; st.talkUntil=st.minute+(dur||35); }
+function favTier(myOverall, oppOverall){ const d=(myOverall||60)-(oppOverall||60); return d>=12?2:d>=5?1:d<=-12?-2:d<=-5?-1:0; }
+function clubRecentForm(club, n){ // últimos n resultados do clube na sua divisão
+  let di=-1; for(let i=0;i<G.divisions.length;i++){ if(G.divisions[i].clubs.some(x=>x===club)){di=i;break;} }
+  if(di<0)return []; const d=G.divisions[di], out=[];
+  for(let w=d.results.length-1; w>=0 && out.length<(n||5); w--){ const m=(d.results[w]||[]).find(x=>d.clubs[x.h]===club||d.clubs[x.a]===club); if(!m)continue;
+    const isH=d.clubs[m.h]===club, gf=isH?m.hg:m.ag, ga=isH?m.ag:m.hg; out.push(gf>ga?"V":gf<ga?"D":"E"); }
+  return out;
+}
 function playerMeetingResolve(pid,option){
   const p=me().squad.find(x=>x.id===pid); if(!p)return {msg:""};
   p.wantsTalk=false;
@@ -1242,6 +1273,7 @@ if(typeof module!=="undefined"&&module.exports){
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     ensureRecords,updateRecordsMatch,endSeasonAwards,
+    talkResolve,applyTeamTalkMorale,liveApplyTalk,favTier,clubRecentForm,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };

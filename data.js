@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-07-31", texto:"🗣️ Antevisão do adversário + conversa de balneário! Ao jogar, vês a antevisão (forma, onze provável, forças) e falas à equipa (antes e ao intervalo) — o tom certo dá vantagem real." },
     { data:"2026-07-30", texto:"🏅 Prémios e recordes de fim de época: Bota de Ouro, Jogador do Ano e os teus recordes de carreira (Início › Recordes & Prémios)." },
     { data:"2026-07-30", texto:"🎓 Academia de jovens! Forma os teus juniores, investe no nível da academia, empresta-os para crescerem e promove os melhores ao plantel. (Plantel › Academia)" },
     { data:"2026-07-29", texto:"⚽ Podes fazer substituições e mudar de tática durante o jogo — e agora influenciam mesmo o resultado e as estatísticas." },
