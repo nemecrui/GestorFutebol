@@ -470,7 +470,7 @@ function liveFoul(st,side,m,out){
 function liveStep(st){
   if(st.minute>=st.maxMin)return [];
   st.minute++; const m=st.minute, out=[];
-  const decay=(club,S)=>S.line.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(!p)return; const d=0.42+Math.max(0,(p.age-29))*0.03; st.fit[id]=clamp((st.fit[id]==null?100:st.fit[id])-d,0,100);});
+  const decay=(club,S)=>S.line.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(!p)return; const d=0.22+Math.max(0,(p.age-30))*0.02; st.fit[id]=clamp((st.fit[id]==null?100:st.fit[id])-d,0,100);});
   decay(st.home,st.H); decay(st.away,st.A);
   const rt=liveRate(st);
   if(Math.random()<rt.hx/90){ const e=liveGoal(st,"H",m); if(e){out.push(e); if(e.type==="goal")st.hg++;} }
@@ -511,8 +511,10 @@ function liveResult(st){ return {hg:st.hg, ag:st.ag, events:st.events, expelledH
 function liveApplyEnergy(st){
   const proc=(club,S,full)=>{ club.squad.forEach(p=>{
     if(S.appeared.has(p.id)){ p.apps=(p.apps||0)+1;
-      if(full){ p.energy=Math.round(st.fit[p.id]!=null?st.fit[p.id]:(p.energy==null?100:p.energy));
-        if((p.injuredWeeks||0)<=0 && p.energy<40 && Math.random()<0.02+(40-p.energy)/100*0.05){ p.injuredWeeks=ri(1,5); if(club===me())addNews(p.name+" lesionou-se — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } }
+      if(full){ const start=(p.energy==null?100:p.energy), endFit=(st.fit[p.id]!=null?st.fit[p.id]:start);
+        const loss=Math.round(Math.max(0,start-endFit)*0.35);        // só uma fração do gás gasto vira desgaste persistente
+        p.energy=clamp(start-loss,0,100);
+        if((p.injuredWeeks||0)<=0 && endFit<38 && Math.random()<0.02+(38-endFit)/100*0.05){ p.injuredWeeks=ri(1,5); if(club===me())addNews(p.name+" lesionou-se — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } }
     } else if(full){ if((p.injuredWeeks||0)>0){ p.injuredWeeks--; p.energy=clamp((p.energy==null?100:p.energy)+Math.round(recovery(p.age)*0.6),0,100); }
       else { p.energy=clamp((p.energy==null?100:p.energy)+Math.round(recovery(p.age)*2.5),0,100); } }
   }); };
