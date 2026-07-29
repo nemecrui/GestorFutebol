@@ -20,6 +20,21 @@ const GAME_DATA = {
      Vês tudo no painel: CODIGO.goatcounter.com  (visitas + eventos "nova-carreira" e "nova-epoca"). */
   goatcounter: "nemecrui",
 
+  /* ---- NOVIDADES (aparecem no painel 🔔 do jogo) ----
+     Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
+     Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
+  novidades: [
+    { data:"2026-07-29", texto:"⚽ Podes fazer substituições e mudar de tática durante o jogo — e agora influenciam mesmo o resultado e as estatísticas." },
+    { data:"2026-07-29", texto:"Os jogos passaram a ser simulados ao vivo, minuto a minuto." },
+    { data:"2026-07-29", texto:"A energia dos jogadores foi reequilibrada e dura muito mais." },
+    { data:"2026-07-29", texto:"🔔 Novo painel de Novidades (este!) para acompanhares as atualizações." },
+    { data:"2026-07-28", texto:"🥅 Desempates da Taça com penáltis animados e suspense." },
+    { data:"2026-07-28", texto:"🧠 Reuniões com a direção, objetivos de curto prazo e moral dos jogadores." },
+    { data:"2026-07-27", texto:"💱 Vê o plantel de qualquer clube e negoceia as compras (o clube pode recusar ou contrapropor)." },
+    { data:"2026-07-27", texto:"💾 Gravações: exportar/importar a carreira e 3 espaços de jogo." },
+    { data:"2026-07-27", texto:"🎨 Visual novo estilo transmissão de TV e novo logótipo." }
+  ],
+
   /* ---- ALTERAR clubes já existentes (por sigla) ----
      Muda nome (n), cores (c1/c2) ou força (str, ~35-85). */
   clubs: {

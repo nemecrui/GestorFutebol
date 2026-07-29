@@ -17,6 +17,26 @@ function sndCheer(){ const c=_actx(); if(!c)return; const t=c.currentTime,dur=1.
 function sndThud(){ const c=_actx(); if(!c)return; const t=c.currentTime,o=c.createOscillator(),g=c.createGain(); o.type="sine";o.frequency.setValueAtTime(180,t);o.frequency.exponentialRampToValueAtTime(70,t+0.25); g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.25,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.3); o.connect(g).connect(c.destination);o.start(t);o.stop(t+0.32); }
 function vib(p){ if(SND&&navigator.vibrate){try{navigator.vibrate(p);}catch(e){}} }
 function setSound(on){ SND=on; try{localStorage.setItem("gf_sound",on?"1":"0");}catch(e){} if(on)_actx(); }
+/* ---------- novidades / changelog ---------- */
+const NEWS_LIST=(typeof GAME_DATA!=="undefined"&&GAME_DATA&&GAME_DATA.novidades)||[];
+function newsSig(){ return NEWS_LIST.length+"|"+(NEWS_LIST[0]?NEWS_LIST[0].data:""); }
+function hasNewsNew(){ if(!NEWS_LIST.length)return false; try{ return localStorage.getItem("gf_news")!==newsSig(); }catch(e){ return false; } }
+function markNewsSeen(){ try{ localStorage.setItem("gf_news",newsSig()); }catch(e){} }
+function openNews(){
+  markNewsSeen();
+  const fmt=d=>{const p=String(d||"").split("-");return p.length===3?p[2]+"/"+p[1]+"/"+p[0]:(d||"");};
+  const rows=NEWS_LIST.length? NEWS_LIST.map(n=>`<div style="border-bottom:1px solid var(--line);padding:9px 2px"><div class="muted" style="font-size:11px">${fmt(n.data)}</div><div style="font-size:14px;line-height:1.35">${n.texto}</div></div>`).join("") : `<div class="muted">Sem novidades de momento.</div>`;
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><button class="close" id="nwClose">✕</button>
+    <div style="font-weight:800;font-size:16px;margin-bottom:4px">🔔 Novidades</div>
+    <div class="muted" style="font-size:12px;margin-bottom:8px">O que mudou no jogo recentemente.</div>
+    ${rows}
+    <button class="btn" id="nwOk" style="margin-top:12px">Fechar</button></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#nwClose").onclick=close; mo.querySelector("#nwOk").onclick=close;
+  mo.onclick=e=>{if(e.target===mo)close();};
+}
 function textOn(hex){const c=hex.replace("#","");const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)>150?"#111":"#fff";}
 function ratingClass(v){return v>=72?"r-hi":v>=60?"r-mid":"r-lo";}
 function posClass(pos){return "pos-"+GROUP[pos];}
@@ -197,7 +217,8 @@ function viewHome(){
       ${tr.length? tr.slice().reverse().map(t=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:5px 2px;font-size:13px"><span>${t.type==="cup"?"🏆":t.type==="league"?"🥇":"⬆️"} ${t.name}</span><span class="muted" style="font-size:12px">época ${t.season}</span></div>`).join("") : `<div class="muted" style="font-size:13px">Ainda sem troféus — vai à luta!</div>`}
     </div>`;
   }
-  h+=`<div class="card"><button class="btn sec small" id="btnSaves" style="width:100%;margin-bottom:8px">💾 Gravações · exportar / importar / trocar</button>
+  h+=`<div class="card"><button class="btn sec small" id="btnNews" style="width:100%;margin-bottom:8px">🔔 Novidades${hasNewsNew()?' <span style="color:var(--red);font-weight:900">•</span>':''}</button>
+    <button class="btn sec small" id="btnSaves" style="width:100%;margin-bottom:8px">💾 Gravações · exportar / importar / trocar</button>
     <button class="btn warn small" id="btnReset" style="width:100%">↺ Novo jogo (apaga este slot)</button></div>`;
   return h;
 }
@@ -751,6 +772,7 @@ function bindView(){
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length){playWeek();if(G.meeting&&G.meeting.active)break;}toast("Época simulada");render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
+  const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
   document.querySelectorAll("[data-job]").forEach(b=>b.onclick=()=>{takeNewJob(+b.dataset.job);TAB="home";render();});
@@ -818,8 +840,8 @@ function splashScreen(){
 function boot(){
   document.getElementById("splash")?.remove();
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){TAB="home";render();}
-  else{splashScreen();}
+  if(load()&&G){TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }
 function openExport(){
