@@ -1072,17 +1072,19 @@ function bindView(){
 function splashScreen(){
   const el=document.createElement("div");el.className="splash";el.id="splash";
   const divDefs=[{name:"Pró-Nacional",clubs:PRONAC},{name:"Divisão de Honra",clubs:CLUBS},{name:"1ª Divisão",clubs:DIV1},{name:"2ª Divisão",clubs:DIV2}];
-  el.innerHTML=`<svg width="72" height="72" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 6px 16px rgba(0,0,0,.5))">
-      <defs><linearGradient id="lgSplash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22c55e"/><stop offset="1" stop-color="#0e5a2f"/></linearGradient></defs>
-      <rect x="6" y="6" width="108" height="108" rx="30" fill="url(#lgSplash)" stroke="#ffcf33" stroke-width="5"/>
-      <rect x="14" y="12" width="92" height="44" rx="24" fill="#ffffff" opacity="0.10"/>
-      <circle cx="60" cy="60" r="33" fill="#ffffff"/>
-      <path d="M60 47 L72.4 55.98 L67.64 70.52 L52.36 70.52 L47.64 55.98 Z" fill="#0e1a12"/>
-      <g stroke="#0e1a12" stroke-width="3" stroke-linecap="round">
-        <line x1="60" y1="47" x2="60" y2="31"/><line x1="72.4" y1="55.98" x2="88.5" y2="50.7"/><line x1="67.64" y1="70.52" x2="77.6" y2="84.3"/><line x1="52.36" y1="70.52" x2="42.4" y2="84.3"/><line x1="47.64" y1="55.98" x2="31.5" y2="50.7"/>
-      </g></svg>
+  el.innerHTML=`<svg width="78" height="78" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 6px 16px rgba(0,0,0,.5))">
+      <defs><linearGradient id="lgSplash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12213a"/><stop offset="1" stop-color="#0a0e14"/></linearGradient></defs>
+      <rect width="100" height="100" rx="24" fill="url(#lgSplash)" stroke="#ffcf33" stroke-width="2"/>
+      <rect x="24" y="20" width="52" height="62" rx="6" fill="#182338" stroke="#ffcf33" stroke-width="3.2"/>
+      <rect x="44" y="15" width="12" height="7" rx="2.2" fill="#ffcf33"/>
+      <rect x="29" y="27" width="42" height="50" rx="3" fill="#0e7a3a"/>
+      <line x1="29" y1="52" x2="71" y2="52" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.3"/>
+      <circle cx="50" cy="52" r="7.5" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.3"/>
+      <path d="M 37 71 Q 44 44 60 40" fill="none" stroke="#ffcf33" stroke-width="4" stroke-linecap="round"/>
+      <polygon points="66.5,39.5 57.5,36 59,45.2" fill="#ffcf33"/>
+      <circle cx="37" cy="71" r="3" fill="#f3f7fb"/></svg>
     <h1 style="font-size:24px;margin:14px 0 2px">Gestor de Futebol</h1>
-    <div class="muted" style="margin-bottom:20px">Época 2025/26 · 4 divisões da AF Braga</div>
+    <div class="muted" style="margin-bottom:20px">4 divisões da AF Braga</div>
     <div style="width:100%;max-width:360px">
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">O teu nome (treinador):</div>
       <input id="mgrName" maxlength="28" placeholder="Ex: Nemec Rui" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;font-size:15px;margin-bottom:12px">
@@ -1091,8 +1093,7 @@ function splashScreen(){
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Clube:</div>
       <select id="clubSel" style="margin-bottom:14px"></select>
       <button class="btn" id="startBtn">▶ Começar carreira</button></div>
-    <div class="muted" style="font-size:11px;margin-top:16px;max-width:340px">Clubes e nomes reais da AF Braga. Cores provisórias. Jogadores e atributos fictícios.</div>
-    <div class="muted" style="font-size:10px;margin-top:22px;opacity:.55">made by Rui Xavier - Nemec</div>`;
+    <div class="muted" style="font-size:11px;margin-top:16px;max-width:340px">Cores provisórias, jogadores e atributos fictícios.</div>`;
   document.body.appendChild(el);
   const divSel=el.querySelector("#divSel"), clubSel=el.querySelector("#clubSel");
   function fillClubs(){clubSel.innerHTML=divDefs[+divSel.value].clubs.map((c,i)=>`<option value="${i}">${c.n}</option>`).join("");}
@@ -1197,15 +1198,10 @@ function track(path,title){ try{ if(window.goatcounter&&window.goatcounter.count
 
 /* ---------- PWA ---------- */
 function initPWA(){
+  // manifest, ícones e apple-touch são ficheiros estáticos (ligados no index.html) para o Android
+  // instalar como app real (WebAPK, sem o crachá do Chrome). Aqui só registamos o service worker.
   try{
-    const manifest={name:"Gestor de Futebol",short_name:"Gestor",display:"standalone",background_color:"#0d1117",theme_color:"#0b7a3b",orientation:"portrait",start_url:".",
-      icons:[{src:iconDataURL(192),sizes:"192x192",type:"image/png"},{src:iconDataURL(512),sizes:"512x512",type:"image/png"}]};
-    const link=document.createElement("link");link.rel="manifest";link.href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:"application/json"}));document.head.appendChild(link);
-    const ic=document.createElement("link");ic.rel="apple-touch-icon";ic.href=iconDataURL(192);document.head.appendChild(ic);
-    if("serviceWorker" in navigator){
-      const sw=`self.addEventListener("install",e=>self.skipWaiting());self.addEventListener("activate",e=>self.clients.claim());self.addEventListener("fetch",e=>{});`;
-      navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:"text/javascript"}))).catch(()=>{});
-    }
+    if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
   }catch(e){}
 }
 function iconDataURL(size){
