@@ -23,7 +23,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 
 ## Engajar e crescer
 - ⬜ 🔧 Conquistas/desafios (vencer a Taça, subir 3 divisões, campeão invicto...).
-- ⬜ ⚡ Dérbis/rivalidades com mais em jogo.
+- ✅ ⚡ Dérbis/rivalidades — rivais por clube (config + auto); o dérbi pesa mais na moral e na direção; destaque na antevisão, próximo jogo e ecrã de jogo.
 - ⬜ 🔧 Eventos e notícias com histórias (wonderkid, pedido de saída, mudança na direção).
 - ⬜ ⚡ Tutorial rápido no primeiro arranque.
 

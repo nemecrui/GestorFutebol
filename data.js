@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-01", texto:"🔥 Dérbis! Cada clube tem um rival — os jogos entre eles pesam mais na moral do balneário e na confiança da direção, com destaque na antevisão e no relato." },
     { data:"2026-08-01", texto:"💶 Contratos e salários: cada jogador tem um salário e a direção dá-te um teto de massa salarial. Ao fim do contrato os jogadores saem livres — renova a tempo! Há mercado de livres e os saldos dos clubes subiram para poderes comprar." },
     { data:"2026-07-31", texto:"📋 Relatório pós-jogo: no fim de cada jogo, vês o Homem do Jogo, os golos, expulsões e as notas dos teus jogadores." },
     { data:"2026-07-31", texto:"🗣️ Antevisão do adversário + conversa de balneário! Ao jogar, vês a antevisão (forma, onze provável, forças) e falas à equipa (antes e ao intervalo) — o tom certo dá vantagem real." },
@@ -75,6 +76,14 @@ const GAME_DATA = {
      Se preencheres, substitui por completo os clubes dessa divisão. */
   divisions: {
     // 3: [ {n:"Clube A", s:"CLA", str:45, c1:"#c1121f", c2:"#ffffff"} ]
+  },
+
+  /* ---- RIVALIDADES / DÉRBIS (opcional) ----
+     Define rivais por sigla; os jogos entre eles são "dérbis" (pesam mais na moral e na direção).
+     Basta indicar um lado (fica automaticamente recíproco). O que não indicares é emparelhado automaticamente. */
+  rivalidades: {
+    // "TIB":"PAD",
+    // "CAC":"FER"
   },
 
   /* ---- RAZÕES de despedimento (juntam-se às do jogo) ---- */

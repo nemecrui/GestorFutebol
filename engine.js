@@ -277,7 +277,7 @@ function newGame(divIdx,clubIdx,managerName){
   me().budget=budgetForObjective(G.myDiv,me().objective); G.seasonStartBudget=me().budget; G.budgetGranted=0; G.pendingPrize=0;
   cupCreate();
   academyIntake();
-  seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me());
+  seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me()); ensureRivals();
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
@@ -558,7 +558,8 @@ function simRound(d,preMy,hasUser){
       recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg);
       updateRecordsMatch(isH?r.hg:r.ag, isH?r.ag:r.hg, (h===G.myId?away:home).name);
       if(!r.liveUser)processEnergyInjuries(uc,userLine);   // no jogo ao vivo a energia já foi tratada
-      rateUserMatch(uc,played,r,isH); updateForm(uc,played); updateChem(userLine); trainTick(uc,played); updateMorale(uc,played,isH?r.hg:r.ag,isH?r.ag:r.hg); }
+      const derby=isDerby(me().short,(h===G.myId?away:home).short);
+      rateUserMatch(uc,played,r,isH); updateForm(uc,played); updateChem(userLine); trainTick(uc,played); updateMorale(uc,played,isH?r.hg:r.ag,isH?r.ag:r.hg,derby); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -758,12 +759,23 @@ function setObjectives(){
   G.divisions.forEach((d,di)=>d.clubs.forEach(c=>{ if(di===G.myDiv&&c.id===G.myId)return; c.budget=budgetForObjective(di,c.objective); }));
   const o=me().objective; if(!G.board)G.board={}; G.board.confidence=o?o.baseConf:60;
 }
+/* ---------- rivalidades / dérbis ---------- */
+function ensureRivals(){ if(G.rivals)return G.rivals; const r={};
+  try{ const cfg=(typeof GAME_DATA!=="undefined"&&GAME_DATA&&GAME_DATA.rivalidades)||null; if(cfg)Object.keys(cfg).forEach(a=>{ const b=cfg[a]; if(b){ r[a]=b; r[b]=a; } }); }catch(e){}
+  G.divisions.forEach(d=>{ const free=d.clubs.filter(c=>!r[c.short]); for(let i=0;i+1<free.length;i+=2){ r[free[i].short]=free[i+1].short; r[free[i+1].short]=free[i].short; } });
+  G.rivals=r; return r;
+}
+function rivalOf(short){ return ensureRivals()[short]||null; }
+function isDerby(a,b){ if(!a||!b)return false; const r=ensureRivals(); return r[a]===b||r[b]===a; }
 function boardAfterUserMatch(){
   if(!G.board)return;
   const d=myDivObj(), res=d.results[d.results.length-1]; if(!res)return;
   const my=res.find(x=>x.h===G.myId||x.a===G.myId); if(!my)return;
   const isHome=my.h===G.myId, gf=isHome?my.hg:my.ag, ga=isHome?my.ag:my.hg;
   let delta=gf>ga?6:gf===ga?1:-5;
+  const oppShort=d.clubs[isHome?my.a:my.h].short, derby=isDerby(me().short,oppShort);
+  if(derby){ delta += gf>ga?4 : gf<ga?-4 : 1;    // dérbi pesa mais na confiança da direção
+    addNews("🔥 Dérbi frente ao "+oppShort+": "+(gf>ga?"que vitória!":gf<ga?"derrota que dói.":"empate no dérbi.")); }
   const rank=sortedTable(d).findIndex(c=>c.id===G.myId)+1, target=me().objective?me().objective.target:d.clubs.length;
   if(rank<=target)delta+=2; else delta-=Math.min(6,(rank-target)*0.8);
   G.board.confidence=clamp(Math.round(G.board.confidence+delta),0,100);
@@ -1044,9 +1056,9 @@ function trainTick(club,playedIds){
   });
 }
 /* ---------- moral dos jogadores (equipa do utilizador) ---------- */
-function updateMorale(club,playedIds,gf,ga){
+function updateMorale(club,playedIds,gf,ga,derby){
   const played=new Set(playedIds||[]);
-  const teamDelta=gf>ga?2:gf<ga?-2:0;
+  const teamDelta=(gf>ga?2:gf<ga?-2:0)*(derby?2:1);   // dérbi mexe mais com a moral
   club.squad.forEach(p=>{
     if(p.morale==null)p.morale=70;
     let d=teamDelta;
@@ -1316,6 +1328,7 @@ if(typeof module!=="undefined"&&module.exports){
     ensureRecords,updateRecordsMatch,endSeasonAwards,
     talkResolve,applyTeamTalkMorale,liveApplyTalk,favTier,clubRecentForm,
     wageFor,wageBill,wageCapFor,ensureWageCap,wageRoom,ensureFreeAgents,signFreeAgent,refreshFreeAgents,
+    ensureRivals,rivalOf,isDerby,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };

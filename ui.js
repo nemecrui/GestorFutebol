@@ -163,6 +163,7 @@ function viewHome(){
     const opp=myClubs()[next.opp], home=next.home?c:opp, away=next.home?opp:c;
     h+=`<div class="card"><h2>${d.name} · Jornada ${d.week+1} · ${G.date}</h2>
       <div class="fx"><div class="t">${clubTagFull(home)}</div><div class="sc">${next.home?"CASA":"FORA"}</div><div class="t a">${clubTagFull(away)}</div></div>
+      ${isDerby(c.short,opp.short)?`<div class="center" style="margin:4px 0 2px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:11px;padding:2px 10px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
       ${(function(){const iss=lineupIssues(c);if(iss.ok)return "";const nm=c.squad.filter(p=>(c.susp||[]).includes(p.id)).map(p=>p.name);return `<div class="center" style="color:var(--red);font-size:12px;margin:6px 0">⚠ Onze inválido${iss.sus?` — suspenso(s): ${nm.join(", ")}`:""}${iss.vac?`${iss.sus?"; ":" — "}${iss.vac} vazio(s)`:""}. Corrige na Tática.</div>`;})()}
       <button class="btn" id="btnPlay" style="margin-top:4px">▶ Jogar jornada</button>
       <button class="btn sec small" id="btnSim" style="width:100%;margin-top:8px">⏩ Simular resto da época</button></div>`;
@@ -616,7 +617,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   const home=st.home, away=st.away, userSide=st.userSide, cup=!!cupPens;
   const mo=document.createElement("div");mo.className="modal";
   mo.innerHTML=`<div class="box live-box"><div id="goalFlash"></div><div id="phaseBanner"></div><button id="sndBtn" class="sndbtn"></button><div id="goalBanner">⚽ GOLO!</div>
-    <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}</h2></div>
+    <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}${isDerby(home.short,away.short)?' <span style="color:#ef4657">🔥</span>':''}</h2></div>
     <div class="scorebug"><div class="t">${clubTag(home)}</div><div class="sc" id="liveScore">0 - 0</div><div class="t a">${clubTag(away)}</div></div>
     <div id="liveScorers"><div class="sc-col" id="scH">—</div><div class="sc-col a" id="scA">—</div></div>
     <div class="center muted livemin" id="liveMin">0'</div>
@@ -820,8 +821,10 @@ function openPreMatch(next, startFn){
   const favTxt=fav>=2?"És claro favorito":fav>=1?"Ligeiro favorito":fav<=-2?"És claramente mais fraco":fav<=-1?"És ligeiramente mais fraco":"Jogo equilibrado";
   const fmtForm=f=>f.length?f.map(x=>`<span style="color:${x==='V'?'#22c55e':x==='D'?'#ef4657':'#93a2b6'};font-weight:800">${x}</span>`).join(" "):"—";
   const mo=document.createElement("div");mo.className="modal";
+  const derby=isDerby(c.short,opp.short);
   mo.innerHTML=`<div class="box"><button class="close" id="pmClose">✕</button>
     <div class="center"><h2 style="justify-content:center">Antevisão · ${next.home?"em casa":"fora"}</h2></div>
+    ${derby?`<div class="center" style="margin:2px 0 8px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:12px;padding:3px 12px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
     <div class="scorebug"><div class="t">${clubTag(c)}</div><div class="sc" style="font-size:15px">VS</div><div class="t a">${clubTag(opp)}</div></div>
     <div class="muted center" style="font-size:12px;margin-bottom:8px">${opp.name} · ${oppPos}º · forma: ${fmtForm(form)}</div>
     <div class="card" style="padding:9px;margin-bottom:8px">
