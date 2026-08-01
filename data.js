@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-01", texto:"🟥 Suspensões e lesões: 5 amarelos = 1 jogo de castigo, vermelho direto = 2 jogos (2º amarelo = 1). As lesões passam a ter gravidade variável (de ligeira a muito grave). Vês os castigos e o aviso de amarelos no plantel e na ficha do jogador." },
     { data:"2026-08-01", texto:"⚖️ Motor afinado: menos jogos 0-0 (mais golos e coerência entre divisões), as expulsões pesam muito mais (jogar com 10 é uma grande desvantagem) e a química só desce com 4+ mudanças no onze (as trocas em jogo não contam)." },
     { data:"2026-08-01", texto:"🏆 Supertaça e play-off de subida! A Supertaça abre a época (campeão do Pró-Nacional vs vencedor da Taça) e o último lugar de subida passa a decidir-se num play-off (meias + final) — jogáveis quando estás envolvido." },
     { data:"2026-08-01", texto:"🔥 Dérbis! Cada clube tem um rival — os jogos entre eles pesam mais na moral do balneário e na confiança da direção, com destaque na antevisão e no relato." },

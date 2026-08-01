@@ -232,7 +232,7 @@ function makePlayer(pos,level){
   const potential=clamp(abil+(age<23?ri(3,14):ri(-2,4)),abil,99);
   const value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
   const p={id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
-    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, morale:clamp(65+ri(-5,10),0,100), trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, wage:0};
+    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, morale:clamp(65+ri(-5,10),0,100), trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, banMatches:0, ycBanned:0, wage:0};
   p.wage=wageFor(p); return p;
 }
 function wageFor(p){ return Math.max(0.005, Math.round(Math.pow(ability(p)/55,2.6)*0.042*100)/100); }
@@ -439,6 +439,25 @@ function offRateFrom(hS,aS,hRed,aRed){
   const ax=BASE-0.05+(aAtk-hDef)/SC;
   return {hx:clamp(hx,0.30,3.7), ax:clamp(ax,0.25,3.5)};
 }
+/* ---------- lesões (gravidade variável) ---------- */
+function rollInjury(){ const r=Math.random();
+  if(r<0.60)return ri(1,2);      // ligeira
+  if(r<0.85)return ri(3,5);      // moderada
+  if(r<0.97)return ri(6,9);      // grave
+  return ri(10,16);              // muito grave
+}
+function injuryLabel(w){ return w<=2?"ligeira":w<=5?"moderada":w<=9?"grave":"muito grave"; }
+/* ---------- suspensões (vermelho + acumulação de amarelos) ---------- */
+function applyMatchSuspensions(club, events){
+  const mine=(typeof G!=="undefined"&&G&&G.myId!=null&&club===me());
+  club.squad.forEach(p=>{ if((p.banMatches||0)>0)p.banMatches--; });               // quem estava suspenso cumpriu 1 jogo
+  const newBans=[];
+  (events||[]).forEach(e=>{ if(e.type==="red"){ const p=club.squad.find(x=>x.id===e.pid); if(p){ const add=e.second?1:2; p.banMatches=(p.banMatches||0)+add; newBans.push({p,reason:e.second?"2º amarelo":"vermelho direto",games:add}); } } });
+  club.squad.forEach(p=>{ const th=Math.floor((p.yc||0)/5), prev=(p.ycBanned||0);     // 5 amarelos → 1 jogo
+    if(th>prev){ const add=th-prev; p.banMatches=(p.banMatches||0)+add; p.ycBanned=th; if(!newBans.find(b=>b.p===p))newBans.push({p,reason:(th*5)+" amarelos acumulados",games:add}); } });
+  club.susp=club.squad.filter(p=>(p.banMatches||0)>0).map(p=>p.id);
+  if(mine)newBans.forEach(b=>addNews("🟥 "+b.p.name+" suspenso "+b.games+" jogo"+(b.games>1?"s":"")+" ("+b.reason+")."));
+}
 /* ---------- simulação AO VIVO (jogo animado com substituições/tática) ---------- */
 function createLive(home,away,hLine,aLine,cfg){
   cfg=cfg||{};
@@ -530,7 +549,7 @@ function liveApplyEnergy(st){
       if(full){ const start=(p.energy==null?100:p.energy), endFit=(st.fit[p.id]!=null?st.fit[p.id]:start);
         const loss=Math.round(Math.max(0,start-endFit)*0.35);        // só uma fração do gás gasto vira desgaste persistente
         p.energy=clamp(start-loss,0,100);
-        if((p.injuredWeeks||0)<=0 && endFit<38 && Math.random()<0.02+(38-endFit)/100*0.05){ p.injuredWeeks=ri(1,5); if(club===me())addNews(p.name+" lesionou-se — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } }
+        if((p.injuredWeeks||0)<=0 && endFit<38 && Math.random()<0.02+(38-endFit)/100*0.05){ p.injuredWeeks=rollInjury(); if(club===me())addNews("🤕 "+p.name+" lesionou-se ("+injuryLabel(p.injuredWeeks)+") — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } }
     } else if(full){ if((p.injuredWeeks||0)>0){ p.injuredWeeks--; p.energy=clamp((p.energy==null?100:p.energy)+Math.round(recovery(p.age)*0.6),0,100); }
       else { p.energy=clamp((p.energy==null?100:p.energy)+Math.round(recovery(p.age)*2.5),0,100); } }
   }); };
@@ -557,7 +576,8 @@ function simRound(d,preMy,hasUser){
       [[home,hLine],[away,aLine]].forEach(([cl,ln])=>ln.forEach(id=>{const p=cl.squad.find(x=>x.id===id); if(p)p.apps=(p.apps||0)+1;})); // presenças (IA e simulados)
     }
     applyResult(home,away,r.hg,r.ag,r.events);
-    home.susp=r.expelledH||[]; away.susp=r.expelledA||[];
+    applyMatchSuspensions(home,(r.events||[]).filter(e=>e.side==="H"));
+    applyMatchSuspensions(away,(r.events||[]).filter(e=>e.side==="A"));
     if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId), played=r.userAppeared||userLine;
       recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg);
       updateRecordsMatch(isH?r.hg:r.ag, isH?r.ag:r.hg, (h===G.myId?away:home).name);
@@ -701,7 +721,7 @@ function newSeason(){
     d.clubs.forEach(c=>{c.P=c.W=c.D=c.L=c.GF=c.GA=c.Pts=0; c.susp=[]; const mine=isMineClub(c);
       c.squad.forEach(p=>{
         const played=p.apps||0;                                    // jogos desta época (antes de zerar)
-        p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.energy=100;p.injuredWeeks=0;p.ratings=[];p.lastRating=null;p.form=0;
+        p.goals=0;p.apps=0;p.yc=0;p.rc=0;p.banMatches=0;p.ycBanned=0;p.energy=100;p.injuredWeeks=0;p.ratings=[];p.lastRating=null;p.form=0;
         p.contractYears=(p.contractYears||2)-1; if(!mine && p.contractYears<=0)p.contractYears=ri(2,4);  // IA auto-renova; a tua equipa pode expirar
         if(mine){ if(p.age>32) ATTR_KEYS.forEach(k=>{ if(["vel","res","for","rea"].includes(k)&&Math.random()<0.4)p.attrs[k]=clamp(p.attrs[k]-1,1,20); }); } // tua equipa evolui por jornada; aqui só declínio
         else developPlayer(p,played,false);                        // IA: desenvolvimento no fim da época
@@ -1060,7 +1080,7 @@ function processEnergyInjuries(club,playedIds){
     if(played.has(p.id)){
       p.energy=clamp(p.energy-ri(4,9)-Math.max(0,p.age-32),0,100);             // titular: desgaste menor (dura mais jogos)
       const risk=0.015+(100-p.energy)/100*0.04+Math.max(0,(p.age-31))*0.003;   // pouca energia => mais lesões
-      if(Math.random()<risk){ p.injuredWeeks=ri(1,5); addNews(p.name+" lesionou-se — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); }
+      if(Math.random()<risk){ p.injuredWeeks=rollInjury(); addNews("🤕 "+p.name+" lesionou-se ("+injuryLabel(p.injuredWeeks)+") — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); }
     } else { p.energy=clamp(p.energy+Math.round(recovery(p.age)*2.5),0,100); } // suplente: recupera muito (menos com idade)
   });
 }
@@ -1415,6 +1435,7 @@ if(typeof module!=="undefined"&&module.exports){
     offRateFrom,createLive,liveStep,liveSub,liveSetTactic,aiMaybeSub,liveBench,liveResult,liveApplyEnergy,liveMaxSubs,
     transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
+    rollInjury,injuryLabel,applyMatchSuspensions,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,

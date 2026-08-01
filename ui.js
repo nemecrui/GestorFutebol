@@ -276,10 +276,12 @@ function viewSquad(){
   h+=`<div class="seg" id="segPos">`+[["all","Todos"],["GK","GR"],["DEF","DEF"],["MID","MED"],["ATT","ATA"]].map(([k,l])=>
     `<button data-p="${k}" class="${squadFilter===k?'active':''}">${l}</button>`).join("")+`</div>`;
   h+=`<div class="plist">`+list.map(p=>{
-    const on=inXI.has(p.id), susp=(c.susp||[]).includes(p.id), inj=(p.injuredWeeks||0)>0, tag=susp?'SUSP':inj?'LES':'';
+    const on=inXI.has(p.id), susp=(c.susp||[]).includes(p.id), inj=(p.injuredWeeks||0)>0;
+    const tag=susp?('SUSP'+((p.banMatches||0)>1?' '+p.banMatches:'')):inj?('LES '+p.injuredWeeks):'';
+    const nearBan=!susp&&((p.yc||0)%5===4);   // a um amarelo da suspensão
     return `<div class="pl" data-detail="${p.id}"><div class="num">${on?'<span style="color:var(--accent)">●</span>':'○'}</div>
       <div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}${p.wantsTalk?' 💬':''}${(p.contractYears||0)<=1?' <span title="último ano de contrato" style="color:var(--red);font-weight:800;font-size:11px">⏳</span>':''}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
+      <div class="info"><div class="nm">${p.name}${p.wantsTalk?' 💬':''}${(p.contractYears||0)<=1?' <span title="último ano de contrato" style="color:var(--red);font-weight:800;font-size:11px">⏳</span>':''}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${nearBan?` <span title="a um amarelo da suspensão" style="font-size:11px">🟨⚠</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
         <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${enHtml(p.energy)} · ${formIcon(p)} · ⭐${avg5(p)!=null?avg5(p):"—"} · ⚽${p.goals}</div></div>
       <span class="muted" style="font-size:18px">›</span></div>`;
   }).join("")+`</div>`;
@@ -345,9 +347,9 @@ function openPlayer(pid){
       <div class="stat"><div class="v">${p.altura}cm</div><div class="l">Altura</div></div>
       <div class="stat"><div class="v">${p.potential}</div><div class="l">Potencial</div></div>
       <div class="stat"><div class="v">${money(p.value)}</div><div class="l">Valor</div></div></div>
-    <div class="muted" style="font-size:11px;margin-bottom:2px">⚽ ${p.goals} golos · 🟨 ${p.yc||0} · 🟥 ${p.rc||0}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:2px">⚽ ${p.goals} golos · 🟨 ${p.yc||0} · 🟥 ${p.rc||0}${(p.banMatches||0)>0?` · <span style="color:var(--red);font-weight:800">🟥 Suspenso ${p.banMatches} jogo${p.banMatches>1?"s":""}</span>`:((p.yc||0)%5===4?` · <span style="color:var(--accent);font-weight:800">🟨⚠ a 1 amarelo da suspensão</span>`:"")}</div>
     <div class="muted" style="font-size:11px;margin-bottom:2px">📄 Contrato: ${p.contractYears||"—"} ano(s)${(p.contractYears||0)<=1?' <span style="color:var(--red);font-weight:800">⏳ último ano</span>':''} · 💶 salário ${money(p.wage!=null?p.wage:0)}/época · venda ~ ${money(transferFee(p))}</div>
-    <div class="muted" style="font-size:11px;margin-bottom:6px">Energia: ${enHtml(p.energy)}${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
+    <div class="muted" style="font-size:11px;margin-bottom:6px">Energia: ${enHtml(p.energy)}${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado — ${injuryLabel(p.injuredWeeks)} (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">⭐ Última avaliação: ${p.lastRating!=null?p.lastRating:"—"} · Média (5 jogos): ${avg5(p)!=null?avg5(p):"—"} · Forma: ${formIcon(p)} ${((p.form||0)>0?"+":"")+(Math.round((p.form||0)*10)/10)}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">🙂 Moral: ${moraleTag(p)}${p.wantsTalk?' · <span style="color:var(--accent)">pediu para reunir</span>':''}</div>
     <button class="btn sec small" id="pTalk" style="width:100%;margin-bottom:8px">💬 Reunir com o jogador</button>

@@ -7,7 +7,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 - ✅ 🔧 **Academia de jovens** — juniores separados, nível 1-5 (investimento da verba), intake por época, desenvolvimento com foco, potencial em estrelas, empréstimos, promover/dispensar.
 - ✅ 🔧 Contratos e salários — teto de massa salarial (direção), salário por jogador, fim de contrato → sai livre, mercado de livres, renovações com ordenado.
 - ⬜ 🔧 Empréstimos de jogadores (ceder/receber).
-- ⬜ ⚡ Suspensões por acumulação de amarelos; lesões com gravidade variável.
+- ✅ ⚡ Suspensões por acumulação de amarelos (5 = 1 jogo), vermelho direto = 2 jogos / 2º amarelo = 1 jogo; lesões com gravidade variável (ligeira → muito grave). Marcadores no plantel e na ficha do jogador.
 - ⬜ ⚡ Papéis de equipa — capitão, marcador de penáltis/livres à escolha, jogador-chave.
 
 ## Experiência de jogo
