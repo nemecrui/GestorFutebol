@@ -1209,11 +1209,20 @@ function initPWA(){
   }catch(e){}
 }
 function iconDataURL(size){
-  const c=document.createElement("canvas");c.width=c.height=size;const x=c.getContext("2d");
-  x.fillStyle="#0e5a2f";x.fillRect(0,0,size,size);
-  x.strokeStyle="#ffcf33";x.lineWidth=Math.max(2,size*0.05);x.strokeRect(x.lineWidth/2,x.lineWidth/2,size-x.lineWidth,size-x.lineWidth);
-  x.fillStyle="#ffffff";x.beginPath();x.arc(size/2,size/2,size*0.30,0,7);x.fill();
-  x.fillStyle="#0e1a12";x.beginPath();x.arc(size/2,size/2,size*0.11,0,7);x.fill();
+  const s=size, c=document.createElement("canvas");c.width=c.height=s;const x=c.getContext("2d");
+  const F=v=>v*s;
+  const rr=(X,Y,W,H,r)=>{x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+W,Y,X+W,Y+H,r);x.arcTo(X+W,Y+H,X,Y+H,r);x.arcTo(X,Y+H,X,Y,r);x.arcTo(X,Y,X+W,Y,r);x.closePath();};
+  const g=x.createLinearGradient(0,0,0,s);g.addColorStop(0,"#12213a");g.addColorStop(1,"#0a0e14");x.fillStyle=g;x.fillRect(0,0,s,s);
+  rr(F(0.24),F(0.20),F(0.52),F(0.62),F(0.06));x.fillStyle="#182338";x.fill();x.lineWidth=F(0.032);x.strokeStyle="#ffcf33";x.stroke();  // prancheta
+  rr(F(0.44),F(0.15),F(0.12),F(0.07),F(0.022));x.fillStyle="#ffcf33";x.fill();                                                        // clip
+  rr(F(0.29),F(0.27),F(0.42),F(0.50),F(0.03));x.fillStyle="#0e7a3a";x.fill();                                                         // relvado
+  x.strokeStyle="rgba(255,255,255,0.55)";x.lineWidth=Math.max(1,F(0.013));
+  x.beginPath();x.moveTo(F(0.29),F(0.52));x.lineTo(F(0.71),F(0.52));x.stroke();
+  x.beginPath();x.arc(F(0.5),F(0.52),F(0.075),0,7);x.stroke();
+  x.strokeStyle="#ffcf33";x.lineWidth=F(0.040);x.lineCap="round";x.lineJoin="round";                                                  // seta tática
+  x.beginPath();x.moveTo(F(0.37),F(0.71));x.quadraticCurveTo(F(0.44),F(0.44),F(0.60),F(0.40));x.stroke();
+  x.fillStyle="#ffcf33";x.beginPath();x.moveTo(F(0.665),F(0.395));x.lineTo(F(0.575),F(0.360));x.lineTo(F(0.590),F(0.452));x.closePath();x.fill();
+  x.fillStyle="#f3f7fb";x.beginPath();x.arc(F(0.37),F(0.71),F(0.030),0,7);x.fill();                                                    // ponto de partida
   return c.toDataURL("image/png");
 }
 initPWA();
