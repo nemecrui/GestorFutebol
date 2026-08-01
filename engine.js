@@ -745,7 +745,7 @@ function objectiveFor(di,rankExp,n){
   if(rankExp<=2) return canUp?{type:"promo",label:"Subir de divisão",target:d.upSlots,baseConf:55}:{type:"title",label:"Lutar pelo título",target:3,baseConf:55};
   if(rankExp<=Math.ceil(n*0.4)) return {type:"top",label:canUp?"Lutar pela subida":"Primeira metade da tabela",target:Math.max(d.upSlots+2,Math.ceil(n/2)),baseConf:58};
   if(canDown&&rankExp>n-4) return {type:"survive",label:"Manter a categoria (evitar descida)",target:n-d.downSlots,baseConf:62};
-  return {type:"mid",label:"Meio da tabela, tranquilo",target:canDown?n-d.downSlots:Math.ceil(n/2),baseConf:60};
+  return {type:"mid",label:"Meio da tabela, tranquilo",target:n-5,baseConf:60};   // cumprido se não ficar nas últimas 5
 }
 function setObjectives(){
   G.divisions.forEach((d,di)=>{
