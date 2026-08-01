@@ -430,10 +430,14 @@ function applyResult(home,away,hg,ag,events){
 
 /* ---------- taxa de golo (partilhada) ---------- */
 function offRateFrom(hS,aS,hRed,aRed){
-  const hPen=1-(hRed||0)*0.18, aPen=1-(aRed||0)*0.18;
-  const hAtt=((hS.atk*0.6+hS.mid*0.4)*hPen)+3-(aS.def*aPen)*0.48;
-  const aAtt=((aS.atk*0.6+aS.mid*0.4)*aPen)-(hS.def*hPen)*0.48;
-  return {hx:clamp((hAtt-21)/8.6,0.16,4.6), ax:clamp((aAtt-23)/8.6,0.13,4.3)};
+  const RED=0.30;                                            // impacto de cada expulsão (forte)
+  const hPen=Math.max(0.35,1-(hRed||0)*RED), aPen=Math.max(0.35,1-(aRed||0)*RED);
+  const hAtk=(hS.atk*0.62+hS.mid*0.38)*hPen, aAtk=(aS.atk*0.62+aS.mid*0.38)*aPen;
+  const hDef=hS.def*hPen, aDef=aS.def*aPen;
+  const SC=12, BASE=1.74;                                    // baseado na DIFERENÇA ataque-defesa → comprime entre divisões
+  const hx=BASE+0.15+(hAtk-aDef)/SC;                         // +0.15 vantagem caseira
+  const ax=BASE-0.05+(aAtk-hDef)/SC;
+  return {hx:clamp(hx,0.30,3.7), ax:clamp(ax,0.25,3.5)};
 }
 /* ---------- simulação AO VIVO (jogo animado com substituições/tática) ---------- */
 function createLive(home,away,hLine,aLine,cfg){
@@ -1094,11 +1098,15 @@ function updateForm(club,playedIds){
 function teamForm(club){ const arr=(club.squad||[]).filter(p=>p.form).map(p=>p.form); return arr.length?Math.round(arr.reduce((s,x)=>s+x,0)/arr.length*10)/10:0; }
 /* ---------- química de equipa (entrosamento do onze) ---------- */
 function updateChem(startXI){
+  // Compara SEMPRE o onze inicial (as substituições feitas durante o jogo não contam para a química).
+  // Até 3 mudanças no onze de uma jornada para a outra não afetam a química; só a partir de 4 há decréscimo.
   if(G.chem==null)G.chem=65;
   const prev=G.lastXI||[], cur=(startXI||[]).filter(id=>id!=null);
   if(prev.length){
     let changes=0; cur.forEach(id=>{ if(prev.indexOf(id)<0)changes++; });
-    G.chem=changes===0?clamp(G.chem+5,30,100):clamp(G.chem-changes*2,30,100);
+    if(changes===0)G.chem=clamp(G.chem+5,30,100);            // onze estável → sobe
+    else if(changes<=3)G.chem=clamp(G.chem,30,100);          // até 3 mudanças → sem efeito
+    else G.chem=clamp(G.chem-(changes-3)*3,30,100);          // 4+ mudanças → decréscimo
   }
   G.lastXI=cur;
 }
