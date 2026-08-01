@@ -497,6 +497,7 @@ function liveSub(st,side,outId,inId){
   if(S.line.includes(inId))return {ok:false,msg:"Esse jogador já está em campo."};
   if(S.off&&S.off.has(inId))return {ok:false,msg:"Esse jogador já foi substituído e não pode voltar."};
   const pin=club.squad.find(x=>x.id===inId); if(!pin)return {ok:false,msg:""};
+  if((pin.injuredWeeks||0)>0||(club.susp||[]).includes(inId))return {ok:false,msg:"Indisponível (lesionado ou suspenso)."};
   S.line[idx]=inId; S.subs++; S.appeared.add(inId); if(S.off)S.off.add(outId);
   st.fit[inId]=(pin.energy!=null?pin.energy:100);
   st.events.push({m:st.minute,side,type:"sub",outId,inId});
@@ -510,13 +511,14 @@ function aiMaybeSub(st,side){
   const onOut=S.line.map(id=>club.squad.find(x=>x.id===id)).filter(p=>p&&GROUP[p.pos]!=="GK");
   onOut.sort((a,b)=>(st.fit[a.id]==null?100:st.fit[a.id])-(st.fit[b.id]==null?100:st.fit[b.id]));
   const worst=onOut[0]; if(!worst)return null;   // troca o mais cansado em campo (a decisão de quando é feita por janelas)
-  const bench=club.squad.filter(p=>!S.line.includes(p.id)&&!gone.has(p.id)&&!(S.off&&S.off.has(p.id))&&(p.injuredWeeks||0)<=0&&GROUP[p.pos]!=="GK");
+  const susp=new Set(club.susp||[]);
+  const bench=club.squad.filter(p=>!S.line.includes(p.id)&&!gone.has(p.id)&&!(S.off&&S.off.has(p.id))&&(p.injuredWeeks||0)<=0&&!susp.has(p.id)&&GROUP[p.pos]!=="GK");
   const cand=bench.filter(p=>GROUP[p.pos]===GROUP[worst.pos]).sort((a,b)=>ability(b)-ability(a))[0] || bench.sort((a,b)=>ability(b)-ability(a))[0];
   if(!cand)return null;
   const r=liveSub(st,side,worst.id,cand.id); return r.ok?r:null;
 }
-function liveBench(st,side){ const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away, gone=new Set(S.gone);
-  return club.squad.filter(p=>!S.line.includes(p.id)&&!gone.has(p.id)&&!(S.off&&S.off.has(p.id))&&(p.injuredWeeks||0)<=0); }
+function liveBench(st,side){ const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away, gone=new Set(S.gone), susp=new Set(club.susp||[]);
+  return club.squad.filter(p=>!S.line.includes(p.id)&&!gone.has(p.id)&&!(S.off&&S.off.has(p.id))&&(p.injuredWeeks||0)<=0&&!susp.has(p.id)); }
 function liveResult(st){ return {hg:st.hg, ag:st.ag, events:st.events, expelledH:st.H.gone.slice(), expelledA:st.A.gone.slice(), maxMinute:st.maxMin, hadET:st.maxMin>90, liveUser:true, userAppeared:[...(st.userSide==="H"?st.H.appeared:st.A.appeared)]}; }
 function liveApplyEnergy(st){
   const proc=(club,S,full)=>{ club.squad.forEach(p=>{
