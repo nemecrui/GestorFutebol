@@ -269,7 +269,7 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
-     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageCap:0, freeAgents:[],
+     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[],
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -277,7 +277,7 @@ function newGame(divIdx,clubIdx,managerName){
   me().budget=budgetForObjective(G.myDiv,me().objective); G.seasonStartBudget=me().budget; G.budgetGranted=0; G.pendingPrize=0;
   cupCreate();
   academyIntake();
-  seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageCap=wageCapFor();
+  seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me());
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
@@ -633,7 +633,7 @@ function newSeason(){
   const kitty=budgetForObjective(G.myDiv,me().objective);            // verba nova conforme aspiração desta época
   me().budget=Math.round((me().budget+kitty)*100)/100;              // soma à que transitou (incl. prémios)
   G.seasonStartBudget=me().budget; G.budgetGranted=0;
-  refreshFreeAgents(); G.wageCap=wageCapFor();
+  refreshFreeAgents(); G.wageBase=wageBill(me());
   addNews("Verba de transferências para a época: "+money(me().budget)+" (aspiração: "+me().objective.label+").");
   if(myMove==="up")addNews("Subiste de divisão!");
   else if(myMove==="down")addNews("Desceste de divisão.");
@@ -1140,11 +1140,13 @@ function negotiateOffer(i,counterFee){
 }
 /* ---------- salários, teto salarial e mercado de livres ---------- */
 function wageBill(club){ return Math.round((club.squad||[]).reduce((s,p)=>s+(p.wage!=null?p.wage:wageFor(p)),0)*100)/100; }
-function wageCapFor(){ const obj=me().objective||{};
-  const head={title:1.5,promo:1.38,top:1.28,mid:1.20,survive:1.12}[obj.type]||1.22;  // folga sobre a massa atual, conforme aspiração
-  return Math.round(wageBill(me())*head*100)/100; }
-function ensureWageCap(){ if(G.wageCap==null||G.wageCap<=0)G.wageCap=wageCapFor(); return G.wageCap; }
-function wageRoom(){ ensureWageCap(); return Math.round((G.wageCap-wageBill(me()))*100)/100; }
+function wageHead(){ const obj=me().objective||{};
+  return {title:1.75,promo:1.60,top:1.48,mid:1.38,survive:1.25}[obj.type]||1.42;  // folga sobre a massa de arranque, conforme aspiração
+}
+function ensureWageBase(){ if(G.wageBase==null||G.wageBase<=0)G.wageBase=wageBill(me()); return G.wageBase; }  // massa salarial no início da época (referência fixa)
+function wageCapFor(){ return Math.round(ensureWageBase()*wageHead()*100)/100; }
+function ensureWageCap(){ return wageCapFor(); }
+function wageRoom(){ return Math.round((wageCapFor()-wageBill(me()))*100)/100; }
 function ensureFreeAgents(){ if(!G.freeAgents)G.freeAgents=[]; return G.freeAgents; }
 function makeFreeAgent(level){ const p=makePlayer(pick(POSITIONS.filter(x=>x!=="GR"||Math.random()<0.12)), level); if(p.age<22)p.age=ri(22,30); p.contractYears=0; p.transferListed=false; p.onLoan=false; return p; }
 function seedFreeAgents(n,level){ const A=ensureFreeAgents(); for(let k=0;k<n;k++)A.push(makeFreeAgent(clamp(level+ri(-2,2),4,15))); }
