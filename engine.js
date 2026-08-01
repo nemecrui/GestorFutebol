@@ -269,7 +269,7 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
-     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[],
+     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -580,6 +580,77 @@ function playWeek(preMy){
   }
   save();
 }
+/* ---------- Supertaça + Play-off de subida ---------- */
+function poSimTie(aShort,bShort){                 // simula rapidamente uma eliminatória (empate → moeda ponderada = "penáltis")
+  const a=clubByShort(aShort), b=clubByShort(bShort); if(!a||!b)return {sa:0,sb:0,w:a?aShort:bShort,pens:false};
+  const la=autoPickLineup(a,"4-4-2",a.susp), lb=autoPickLineup(b,"4-4-2",b.susp);
+  const r=simulate(a,b,la,lb,1,1);
+  let w;
+  if(r.hg>r.ag)w=aShort; else if(r.ag>r.hg)w=bShort;
+  else { const oa=teamStrength(a,la,"4-4-2","Equilibrado").overall, ob=teamStrength(b,lb,"4-4-2","Equilibrado").overall; w=(Math.random()<oa/(oa+ob))?aShort:bShort; }
+  return {sa:r.hg,sb:r.ag,w,pens:(r.hg===r.ag)};
+}
+function simPlayoffWinner(seeds){                  // seeds[0..3] (1º melhor classificado)
+  if(seeds.length<2)return seeds[0]||null;
+  if(seeds.length===2)return poSimTie(seeds[0],seeds[1]).w;
+  if(seeds.length===3)return poSimTie(seeds[0], poSimTie(seeds[1],seeds[2]).w).w;
+  const w1=poSimTie(seeds[0],seeds[3]).w, w2=poSimTie(seeds[1],seeds[2]).w;
+  return poSimTie(w1,w2).w;
+}
+function playoffZoneInfo(d){                        // { N, auto:[...], po:[4 seeds] } para uma divisão que sobe
+  const N=d.upSlots; if(N<=0)return null;
+  const t=sortedTable(d), a0=Math.max(0,N-1);
+  return { N, auto:t.slice(0,a0), po:t.slice(a0, a0+4) };
+}
+function setupPlayoff(){                            // só cria play-off jogável se o utilizador estiver na zona
+  G.playoff=null;
+  const d=myDivObj(); if(!d||d.upSlots<=0)return;
+  const info=playoffZoneInfo(d); if(!info||info.po.length!==4)return;
+  const ms=me().short; if(!info.po.some(c=>c.short===ms))return;
+  const s=info.po.map(c=>c.short);                 // s[0]=melhor seed
+  G.playoff={ div:G.myDiv, divName:d.name, seeds:s,
+    semis:[{a:s[0],b:s[3],w:null,sa:null,sb:null,pens:false},{a:s[1],b:s[2],w:null,sa:null,sb:null,pens:false}],
+    final:{a:null,b:null,w:null,sa:null,sb:null,pens:false},
+    stage:"semi", winner:null, userIn:true, pending:true };
+}
+function resolvePlayoffOutcome(){                   // notícia + (se fores tu) troféu/prémio de subida
+  const po=G.playoff; if(!po||!po.winner)return;
+  const w=clubByShort(po.winner), ms=me().short;
+  addNews("⬆️ Play-off de subida ("+(po.divName||"")+"): "+(w?w.name:po.winner)+" conquista o último lugar de subida.");
+  if(po.winner===ms){
+    G.manager.trophies.push({type:"promo",name:"Subida (play-off) · "+(po.divName||""),season:G.season});
+    me().budget=Math.round((me().budget+0.6)*100)/100;
+    addNews("⬆️ Ganhaste o play-off e subiste de divisão! Prémio: +€600K.");
+  }
+}
+function superCupSetup(){                           // campeão do topo (Pró-Nacional) vs vencedor da Taça
+  G.superCup=null;
+  const top=G.divisions[0]; if(!top)return;
+  const champ=sortedTable(top)[0], cupW=G.cup?G.cup.winner:null;
+  if(!champ||!cupW)return;
+  const champShort=champ.short, ms=me().short;
+  if(champShort===cupW){                            // dobradinha → Supertaça automática
+    const club=clubByShort(cupW);
+    addNews("🏆 Supertaça: "+(club?club.name:cupW)+" conquista a Supertaça (dobradinha de campeão e Taça).");
+    if(cupW===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:G.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); }
+    return;
+  }
+  const userIn=(champShort===ms||cupW===ms);
+  G.superCup={ champ:champShort, cup:cupW, season:G.season, userIn, pending:true, winner:null, sa:null, sb:null, pens:false };
+  if(!userIn)superCupResolve(null);                 // sem o utilizador → simula já
+}
+function superCupResolve(userResult){
+  const sc=G.superCup; if(!sc)return null;
+  const a=clubByShort(sc.champ), b=clubByShort(sc.cup), ms=me().short;
+  let sa,sb,w,pens=false;
+  if(userResult){ sa=userResult.sa; sb=userResult.sb; w=userResult.w; pens=!!userResult.pens; }
+  else { const r=poSimTie(sc.champ,sc.cup); sa=r.sa; sb=r.sb; w=r.w; pens=r.pens; }
+  const wc=clubByShort(w);
+  addNews("🏆 Supertaça "+sc.season+": "+(a?a.name:sc.champ)+" "+sa+"–"+sb+" "+(b?b.name:sc.cup)+(pens?" (nos penáltis)":"")+" · vencedor: "+(wc?wc.name:w)+".");
+  if(w===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:sc.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); }
+  sc.winner=w; sc.sa=sa; sc.sb=sb; sc.pens=pens; sc.pending=false;
+  return {w,sa,sb,pens};
+}
 function endSeason(){
   G.seasonDone=true;
   const d=myDivObj(), table=sortedTable(d);
@@ -593,6 +664,8 @@ function endSeason(){
   endSeasonAwards(meRank);
   evaluateBoard(meRank);
   while(G.cup&&G.cup.active)cupAdvanceRound();
+  setupPlayoff();          // play-off jogável se estiveres na zona de subida
+  superCupSetup();         // Supertaça (campeão do topo vs Taça) — simulada se não te envolver
 }
 function newSeason(){
   const mineShort=me().short;
@@ -600,9 +673,20 @@ function newSeason(){
   const leaving=G.divisions.map(()=>new Set()), incoming=G.divisions.map(()=>[]);
   let myMove=null;
   for(let i=0;i<G.divisions.length-1;i++){
-    const up=G.divisions[i], down=G.divisions[i+1];
+    const up=G.divisions[i], down=G.divisions[i+1], t=tables[i+1];
     const releg=tables[i].slice(tables[i].length-up.downSlots);
-    const promo=tables[i+1].slice(0,down.upSlots);
+    const N=down.upSlots; let promo=[];
+    if(N>0){
+      promo=t.slice(0,Math.max(0,N-1));                              // subida automática (topo N-1)
+      const a0=Math.max(0,N-1), po=t.slice(a0,a0+4);                 // último lugar via play-off
+      let winShort=null;
+      if(po.length===4){
+        if(G.playoff && G.playoff.div===(i+1) && G.playoff.winner)winShort=G.playoff.winner;   // resultado jogado pelo utilizador
+        else winShort=simPlayoffWinner(po.map(c=>c.short));                                     // outras divisões: simulado
+      } else if(po.length>0)winShort=po[0].short;
+      const winClub=winShort?down.clubs.find(c=>c.short===winShort):null;
+      if(winClub && promo.indexOf(winClub)<0)promo.push(winClub);
+    }
     releg.forEach(c=>{leaving[i].add(c); incoming[i+1].push(c); if(c.short===mineShort)myMove="down";});
     promo.forEach(c=>{leaving[i+1].add(c); incoming[i].push(c); if(c.short===mineShort)myMove="up";});
   }
@@ -644,6 +728,7 @@ function newSeason(){
   developYouth(); academyIntake();     // academia: evoluir juniores + nova camada
   transferWindow();
   cupCreate();
+  G.playoff=null; G.superCup=null;
   save();
 }
 function sortedTable(d){
@@ -1329,6 +1414,7 @@ if(typeof module!=="undefined"&&module.exports){
     talkResolve,applyTeamTalkMorale,liveApplyTalk,favTier,clubRecentForm,
     wageFor,wageBill,wageCapFor,ensureWageCap,wageRoom,ensureFreeAgents,signFreeAgent,refreshFreeAgents,
     ensureRivals,rivalOf,isDerby,
+    poSimTie,simPlayoffWinner,playoffZoneInfo,setupPlayoff,resolvePlayoffOutcome,superCupSetup,superCupResolve,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };

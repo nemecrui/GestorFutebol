@@ -176,7 +176,10 @@ function viewHome(){
         <div class="stat"><div class="v" style="font-size:14px">${bota?bota.player+" ("+bota.goals+")":"—"}</div><div class="l">🥇 Bota de Ouro${bota&&bota.mine?" · TEU":""}</div></div>
         <div class="stat"><div class="v" style="font-size:14px">${meScorer?meScorer.name+" ("+(meScorer.goals||0)+")":"—"}</div><div class="l">Teu melhor marcador</div></div></div>
       <button class="btn sec small" id="btnRecords" style="width:100%;margin-bottom:8px">🏅 Recordes & Prémios</button>
-      <button class="btn" id="btnNewSeason">▶ Começar época ${G.season+1}</button></div>`;
+      ${(function(){ const sc=G.superCup; if(sc&&!sc.pending&&sc.winner&&!sc.userIn){ const wc=clubByShort(sc.winner); return `<div class="muted" style="font-size:12px;margin-bottom:2px">🏆 Supertaça: <b>${wc?wc.name:sc.winner}</b> venceu.</div>`; } return ""; })()}
+      ${(G.playoff&&G.playoff.pending)||(G.superCup&&G.superCup.pending&&G.superCup.userIn)?"":`<button class="btn" id="btnNewSeason">▶ Começar época ${G.season+1}</button>`}</div>`;
+    if(G.playoff&&G.playoff.pending){ h+=playoffCardHtml(); }
+    else if(G.superCup&&G.superCup.pending&&G.superCup.userIn){ h+=superCupCardHtml(); }
   }
   if(G.manager&&!G.fired){
     const conf=G.board?G.board.confidence:60;
@@ -936,6 +939,82 @@ function showCupResult(userTie){
   mo.querySelector("#cupDone").onclick=()=>{mo.remove();render();};
 }
 
+/* ---------- Play-off de subida + Supertaça ---------- */
+function poTieRow(tie,ms){
+  const a=clubByShort(tie.a), b=clubByShort(tie.b);
+  const an=a?a.name:(tie.a||"?"), bn=b?b.name:(tie.b||"?");
+  const sc=tie.w?`${tie.sa} - ${tie.sb}${tie.pens?" (p)":""}`:"vs";
+  const you=t=>(t===ms)?' style="color:var(--accent);font-weight:800"':'';
+  const wmk=t=>(tie.w===t)?" ✓":"";
+  return `<div class="fx" style="font-size:13px"><div class="t"${you(tie.a)}>${an}${wmk(tie.a)}</div><div class="sc" style="font-size:13px">${sc}</div><div class="t a"${you(tie.b)}>${bn}${wmk(tie.b)}</div></div>`;
+}
+function playoffCardHtml(){
+  const po=G.playoff, ms=me().short;
+  let inner=`<div class="card"><h2>⬆️ Play-off de subida · ${po.divName}</h2>
+    <div class="muted" style="font-size:12px;margin-bottom:6px">O vencedor conquista o último lugar de subida.</div>
+    <div class="muted" style="font-size:11px;margin-bottom:2px">Meias-finais</div>
+    ${poTieRow(po.semis[0],ms)}${poTieRow(po.semis[1],ms)}`;
+  if(po.stage==="final"&&po.final.a){ inner+=`<div class="muted" style="font-size:11px;margin:6px 0 2px">Final</div>${poTieRow(po.final,ms)}`; }
+  inner+=`<button class="btn" id="btnPlayoff" style="margin-top:8px">${po.stage==="final"?"▶ Jogar a final":"▶ Jogar a meia-final"}</button></div>`;
+  return inner;
+}
+function superCupCardHtml(){
+  const sc=G.superCup, ms=me().short, a=clubByShort(sc.champ), b=clubByShort(sc.cup);
+  return `<div class="card"><h2>🏆 Supertaça</h2>
+    <div class="muted" style="font-size:12px;margin-bottom:6px">Campeão do Pró-Nacional vs vencedor da Taça.</div>
+    <div class="fx"><div class="t"${sc.champ===ms?' style="color:var(--accent);font-weight:800"':''}>${a?clubTagFull(a):sc.champ}</div><div class="sc">VS</div><div class="t a"${sc.cup===ms?' style="color:var(--accent);font-weight:800"':''}>${b?clubTagFull(b):sc.cup}</div></div>
+    <button class="btn" id="btnSuperCup" style="margin-top:8px">▶ Jogar a Supertaça</button></div>`;
+}
+function playPoTie(tie,onDone){
+  const ms=me().short, c=me();
+  const ca=clubByShort(tie.a), cb=clubByShort(tie.b), userIsA=(tie.a===ms);
+  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
+  const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
+  const userSide=userIsA?"H":"A", userLine=userIsA?aLine:bLine;
+  const st=createLive(ca,cb,aLine,bLine,{maxMin:90,userSide,hForm:userIsA?G.formation:"4-4-2",aForm:userIsA?"4-4-2":G.formation,hMent:userIsA?G.mentality:"Equilibrado",aMent:userIsA?"Equilibrado":G.mentality});
+  const settle=(r)=>{ tie.sa=r.hg;tie.sb=r.ag;tie.w=r.hg>r.ag?tie.a:tie.b;tie.pens=false; onDone(); };
+  const pens=(matchMo,r)=>{ const shoot=penaltyShootout(teamStrength(ca,st.H.line,st.H.form,st.H.ment).overall,teamStrength(cb,st.A.line,st.A.form,st.A.ment).overall);
+    animateShootout(ca,cb,shoot,(winSide)=>{ tie.sa=r.hg;tie.sb=r.ag;tie.w=winSide==="A"?tie.a:tie.b;tie.pens=true; if(matchMo)matchMo.remove(); onDone(); render(); }); };
+  animateMatch(st,c,userLine,settle,pens);
+}
+function afterUserSemi(){
+  const po=G.playoff, ms=me().short;
+  const other=po.semis.find(t=>t.w===null&&t.a!==ms&&t.b!==ms);
+  if(other){ const rs=poSimTie(other.a,other.b); other.sa=rs.sa;other.sb=rs.sb;other.w=rs.w;other.pens=rs.pens; }
+  po.final.a=po.semis[0].w; po.final.b=po.semis[1].w; po.stage="final";
+  if(po.final.a!==ms&&po.final.b!==ms){                 // não chegaste à final → simula-a
+    const rf=poSimTie(po.final.a,po.final.b); po.final.sa=rf.sa;po.final.sb=rf.sb;po.final.w=rf.w;po.final.pens=rf.pens;
+    po.winner=po.final.w; po.pending=false; resolvePlayoffOutcome(); toast("Eliminado no play-off (meias-finais).");
+  } else { toast("Passaste à final do play-off!"); }
+  render();
+}
+function playPlayoff(){
+  const po=G.playoff; if(!po||!po.pending)return;
+  if(!ensureValidXI())return;
+  const ms=me().short;
+  if(po.stage==="semi"){
+    const tie=po.semis.find(t=>t.a===ms||t.b===ms); if(!tie)return;
+    playPoTie(tie,()=>afterUserSemi());
+  } else if(po.stage==="final"){
+    playPoTie(po.final,()=>{ po.winner=po.final.w; po.pending=false; resolvePlayoffOutcome();
+      toast(po.winner===ms?"⬆️ Subiste pelo play-off!":"Perdeste a final do play-off."); render(); });
+  }
+}
+function playSuperCup(){
+  const sc=G.superCup; if(!sc||!sc.pending||!sc.userIn)return;
+  if(!ensureValidXI())return;
+  const ms=me().short, c=me();
+  const ca=clubByShort(sc.champ), cb=clubByShort(sc.cup), userIsA=(sc.champ===ms);
+  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
+  const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
+  const userSide=userIsA?"H":"A", userLine=userIsA?aLine:bLine;
+  const st=createLive(ca,cb,aLine,bLine,{maxMin:90,userSide,hForm:userIsA?G.formation:"4-4-2",aForm:userIsA?"4-4-2":G.formation,hMent:userIsA?G.mentality:"Equilibrado",aMent:userIsA?"Equilibrado":G.mentality});
+  const settle=(r)=>{ const w=r.hg>r.ag?sc.champ:sc.cup; superCupResolve({sa:r.hg,sb:r.ag,w,pens:false}); toast(w===ms?"🏆 Ganhaste a Supertaça!":"Supertaça perdida."); };
+  const pens=(matchMo,r)=>{ const shoot=penaltyShootout(teamStrength(ca,st.H.line,st.H.form,st.H.ment).overall,teamStrength(cb,st.A.line,st.A.form,st.A.ment).overall);
+    animateShootout(ca,cb,shoot,(winSide)=>{ const w=winSide==="A"?sc.champ:sc.cup; superCupResolve({sa:r.hg,sb:r.ag,w,pens:true}); if(matchMo)matchMo.remove(); toast(w===ms?"🏆 Supertaça nos penáltis!":"Supertaça perdida nos penáltis"); render(); }); };
+  animateMatch(st,c,userLine,settle,pens);
+}
+
 /* ---------- eventos ---------- */
 function cupBlocksLeague(){
   if(!cupAvailable())return false;
@@ -952,6 +1031,8 @@ function bindView(){
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();while(d.week<d.fixtures.length){playWeek();if(G.meeting&&G.meeting.active)break;}toast("Época simulada");render();};
   const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();
   const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();
+  const bpo=$("#btnPlayoff");if(bpo)bpo.onclick=()=>{if(meetBlock())return;playPlayoff();};
+  const bsc=$("#btnSuperCup");if(bsc)bsc.onclick=()=>{if(meetBlock())return;playSuperCup();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
   const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();

@@ -18,7 +18,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 
 ## Época e competições
 - ✅ 🔧 Prémios e recordes de fim de época — Bota de Ouro, Jogador do Ano, recordes de carreira (maior vitória/derrota, séries, mais golos/pontos, melhor classificação) e resumo de fim de época.
-- ⬜ 🔧 Supertaça (campeão vs vencedor da Taça) e/ou play-off de subida.
+- ✅ 🔧 Supertaça (campeão do Pró-Nacional vs vencedor da Taça, no arranque da época; jogável se te envolver, senão simulada; dobradinha = automática) + play-off de subida (as primeiras sobem direto, as 4 seguintes disputam o último lugar em meias + final; jogas se estiveres na zona).
 - ⬜ ⚡ História de carreira / hall of fame do treinador.
 
 ## Engajar e crescer

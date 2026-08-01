@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-01", texto:"🏆 Supertaça e play-off de subida! A Supertaça abre a época (campeão do Pró-Nacional vs vencedor da Taça) e o último lugar de subida passa a decidir-se num play-off (meias + final) — jogáveis quando estás envolvido." },
     { data:"2026-08-01", texto:"🔥 Dérbis! Cada clube tem um rival — os jogos entre eles pesam mais na moral do balneário e na confiança da direção, com destaque na antevisão e no relato." },
     { data:"2026-08-01", texto:"💶 Contratos e salários: cada jogador tem um salário e a direção dá-te um teto de massa salarial. Ao fim do contrato os jogadores saem livres — renova a tempo! Há mercado de livres e os saldos dos clubes subiram para poderes comprar." },
     { data:"2026-07-31", texto:"📋 Relatório pós-jogo: no fim de cada jogo, vês o Homem do Jogo, os golos, expulsões e as notas dos teus jogadores." },
