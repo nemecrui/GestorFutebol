@@ -571,7 +571,11 @@ function viewMarket(){
 function viewTable(){
   if(leagueDiv===null)leagueDiv=G.myDiv;
   const d=G.divisions[leagueDiv], mineHere=leagueDiv===G.myDiv;
-  let h=`<div class="seg" id="segDiv">`+G.divisions.map((dv,i)=>`<button data-d="${i}" class="${leagueDiv===i?'active':''}">${dv.name}</button>`).join("")+`</div>`;
+  const divMeta=[]; G.divisions.forEach((x,i)=>{ if(!divMeta.some(o=>o.tier===x.tier))divMeta.push({tier:x.tier,name:x.name.split(" · ")[0],idx:i}); });
+  const shortDiv={"Pró-Nacional":"Pró-Nac.","Divisão de Honra":"Honra","1ª Divisão":"1ª Div","2ª Divisão":"2ª Div"};
+  let h=`<div class="seg" id="segDivT">`+divMeta.map(o=>`<button data-dt="${o.tier}" data-idx="${o.idx}" class="${d.tier===o.tier?'active':''}">${shortDiv[o.name]||o.name}</button>`).join("")+`</div>`;
+  const sameTier=G.divisions.map((x,i)=>({x,i})).filter(o=>o.x.tier===d.tier);
+  if(sameTier.length>1){ h+=`<div class="seg" id="segSerT">`+sameTier.map(o=>`<button data-d="${o.i}" class="${leagueDiv===o.i?'active':''}">${o.x.serie||"—"}</button>`).join("")+`</div>`; }
   h+=`<div class="seg" id="segLeague">
     <button data-t="table" class="${tableTab==='table'?'active':''}">Classificação</button>
     <button data-t="scorers" class="${tableTab==='scorers'?'active':''}">Marcadores</button>
@@ -1086,7 +1090,8 @@ function bindView(){
   document.querySelectorAll("[data-club]").forEach(el=>el.onclick=e=>{e.stopPropagation();openClubSquad(el.dataset.club);});
   const bab=$("#btnAskBudget");if(bab)bab.onclick=()=>{const r=requestBudget();toast(r.msg);render();};
   const sl=$("#segLeague");if(sl)sl.querySelectorAll("button").forEach(b=>b.onclick=()=>{tableTab=b.dataset.t;render();});
-  const sdv=$("#segDiv");if(sdv)sdv.querySelectorAll("button").forEach(b=>b.onclick=()=>{leagueDiv=+b.dataset.d;render();});
+  const segDT=$("#segDivT");if(segDT)segDT.querySelectorAll("button").forEach(b=>b.onclick=()=>{const dt=+b.dataset.dt; if(G.divisions[leagueDiv].tier!==dt)leagueDiv=+b.dataset.idx; render();});
+  const segST=$("#segSerT");if(segST)segST.querySelectorAll("button").forEach(b=>b.onclick=()=>{leagueDiv=+b.dataset.d;render();});
   if(document.querySelector(".pitch"))initTacticsTap();
 }
 
