@@ -1396,7 +1396,8 @@ function requestBudget(){
   save();
   return {ok:false,msg:"A direção recusou o pedido (a confiança baixou um pouco)."};
 }
-function recordManagerMatch(gf,ga){ const s=G.manager&&G.manager.stats; if(!s)return; s.P++; s.GF+=gf; s.GA+=ga; if(gf>ga)s.W++; else if(gf<ga)s.L++; else s.D++; }
+function recordManagerMatch(gf,ga){ const s=G.manager&&G.manager.stats; if(!s)return; s.P++; s.GF+=gf; s.GA+=ga; if(gf>ga)s.W++; else if(gf<ga)s.L++; else s.D++;
+  if(typeof onManagerMatch==="function"){ try{ onManagerMatch(gf,ga); }catch(e){} } }   // hook opcional (a UI usa-o para analytics de jogos jogados)
 /* ---------- recordes de carreira + prémios de fim de época ---------- */
 function ensureRecords(){ if(!G.records)G.records={}; if(!G.awards)G.awards=[]; if(G.streakU==null)G.streakU=0; if(G.streakW==null)G.streakW=0; return G.records; }
 function updateRecordsMatch(gf,ga,oppName){

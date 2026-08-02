@@ -1195,6 +1195,8 @@ function initAnalytics(){
   }catch(e){}
 }
 function track(path,title){ try{ if(window.goatcounter&&window.goatcounter.count) window.goatcounter.count({path:path,title:title||path,event:true}); }catch(e){} }
+// chamado pelo motor a cada jogo do campeonato — conta jogos jogados por equipa (com treinador no título)
+function onManagerMatch(){ try{ if(typeof G!=="undefined"&&G&&G.manager) track("jogo/"+me().short, G.manager.name+" · "+me().name+" ("+myDivObj().name+")"); }catch(e){} }
 
 /* ---------- PWA ---------- */
 function initPWA(){
