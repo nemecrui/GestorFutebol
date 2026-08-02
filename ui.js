@@ -68,7 +68,7 @@ function ratingClass(v){return v>=72?"r-hi":v>=60?"r-mid":"r-lo";}
 function posClass(pos){return "pos-"+GROUP[pos];}
 function swatch(cl,sm){return `<span class="swatch ${sm?'sm':''}" style="background:linear-gradient(135deg,${cl.c1} 0 55%,${cl.c2} 55% 100%)"></span>`;}
 function clubTag(cl,sm){return swatch(cl,sm)+`<span>${cl.short}</span>`;}
-function clubTagFull(cl){return swatch(cl)+`<span class="full clink" data-club="${cl.short}">${cl.name}</span>`;}
+function clubTagFull(cl){return swatch(cl)+`<span class="full clink" data-club="${cl.gid}">${cl.name}</span>`;}
 function attrColor(v){return v>=15?"#16a34a":v>=11?"#d9a400":"#e5484d";}
 function teamMoraleAvg(club){const a=club.squad||[];return a.length?a.reduce((s,p)=>s+(p.morale==null?70:p.morale),0)/a.length:70;}
 
@@ -163,7 +163,7 @@ function viewHome(){
     const opp=myClubs()[next.opp], home=next.home?c:opp, away=next.home?opp:c;
     h+=`<div class="card"><h2>${d.name} · Jornada ${d.week+1} · ${G.date}</h2>
       <div class="fx"><div class="t">${clubTagFull(home)}</div><div class="sc">${next.home?"CASA":"FORA"}</div><div class="t a">${clubTagFull(away)}</div></div>
-      ${isDerby(c.short,opp.short)?`<div class="center" style="margin:4px 0 2px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:11px;padding:2px 10px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
+      ${isDerby(c.gid,opp.gid)?`<div class="center" style="margin:4px 0 2px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:11px;padding:2px 10px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
       ${(function(){const iss=lineupIssues(c);if(iss.ok)return "";const nm=c.squad.filter(p=>(c.susp||[]).includes(p.id)).map(p=>p.name);return `<div class="center" style="color:var(--red);font-size:12px;margin:6px 0">⚠ Onze inválido${iss.sus?` — suspenso(s): ${nm.join(", ")}`:""}${iss.vac?`${iss.sus?"; ":" — "}${iss.vac} vazio(s)`:""}. Corrige na Tática.</div>`;})()}
       <button class="btn" id="btnPlay" style="margin-top:4px">▶ Jogar jornada</button>
       <button class="btn sec small" id="btnSim" style="width:100%;margin-top:8px">⏩ Simular resto da época</button></div>`;
@@ -176,9 +176,9 @@ function viewHome(){
         <div class="stat"><div class="v" style="font-size:14px">${bota?bota.player+" ("+bota.goals+")":"—"}</div><div class="l">🥇 Bota de Ouro${bota&&bota.mine?" · TEU":""}</div></div>
         <div class="stat"><div class="v" style="font-size:14px">${meScorer?meScorer.name+" ("+(meScorer.goals||0)+")":"—"}</div><div class="l">Teu melhor marcador</div></div></div>
       <button class="btn sec small" id="btnRecords" style="width:100%;margin-bottom:8px">🏅 Recordes & Prémios</button>
-      ${(function(){ const sc=G.superCup; if(sc&&!sc.pending&&sc.winner&&!sc.userIn){ const wc=clubByShort(sc.winner); return `<div class="muted" style="font-size:12px;margin-bottom:2px">🏆 Supertaça: <b>${wc?wc.name:sc.winner}</b> venceu.</div>`; } return ""; })()}
-      ${(G.playoff&&G.playoff.pending)||(G.superCup&&G.superCup.pending&&G.superCup.userIn)?"":`<button class="btn" id="btnNewSeason">▶ Começar época ${G.season+1}</button>`}</div>`;
-    if(G.playoff&&G.playoff.pending){ h+=playoffCardHtml(); }
+      ${(function(){ const sc=G.superCup; if(sc&&!sc.pending&&sc.winner&&!sc.userIn){ const wc=clubByGid(sc.winner); return `<div class="muted" style="font-size:12px;margin-bottom:2px">🏆 Supertaça: <b>${wc?wc.name:sc.winner}</b> venceu.</div>`; } return ""; })()}
+      ${(G.finalissima&&G.finalissima.pending&&G.finalissima.userIn)||(G.superCup&&G.superCup.pending&&G.superCup.userIn)?"":`<button class="btn" id="btnNewSeason">▶ Começar época ${G.season+1}</button>`}</div>`;
+    if(G.finalissima&&G.finalissima.pending&&G.finalissima.userIn){ h+=finalissimaCardHtml(); }
     else if(G.superCup&&G.superCup.pending&&G.superCup.userIn){ h+=superCupCardHtml(); }
   }
   if(G.manager&&!G.fired){
@@ -200,14 +200,14 @@ function viewHome(){
         <button class="btn small warn" data-reject="${i}">Recusar</button></div>`).join("")+`</div>`;
   }
   if(G.cup){
-    const cup=G.cup, ms=c.short;
-    if(!cup.active&&cup.winner){ const wc=clubByShort(cup.winner);
+    const cup=G.cup, ms=c.gid;
+    if(!cup.active&&cup.winner){ const wc=clubByGid(cup.winner);
       h+=`<div class="card center"><h2>🏆 Taça</h2><div class="muted">Vencedor: <b>${wc?wc.name:cup.winner}</b></div></div>`;
     } else if(cup.active){
       const ut=cupUserTie(), avail=cupAvailable();
       h+=`<div class="card"><h2>🏆 Taça · ${cupRoundName()}</h2>`;
       if(cup.userAlive&&ut&&ut.b){
-        const opp=(ut.a===ms?ut.b:ut.a), oc=clubByShort(opp);
+        const opp=(ut.a===ms?ut.b:ut.a), oc=clubByGid(opp);
         h+=`<div class="fx"><div class="t">${clubTagFull(c)}</div><div class="sc">vs</div><div class="t a">${oc?clubTagFull(oc):opp}</div></div>`;
         h+= avail ? `<button class="btn" id="btnCup" style="margin-top:4px">▶ Jogar eliminatória da Taça</button>`
                   : `<div class="center muted" style="font-size:12px;margin-top:6px">Disponível a partir da jornada ${cupRoundDue()} do campeonato.</div>`;
@@ -414,10 +414,10 @@ function openScout(p,opts){
     const bb=mo.querySelector("#bidBtn");if(bb)bb.onclick=()=>doBid(offer);
   }
 }
-function openClubSquad(short){
-  const club=clubByShort(short);if(!club)return;
+function openClubSquad(gid){
+  const club=clubByGid(+gid);if(!club)return;
   const mo=document.createElement("div");mo.className="modal";
-  const negotiable=(club.id!=null && myClubs()[club.id]===club && club.id!==G.myId);
+  const negotiable=(myClubs().indexOf(club)>=0 && club.gid!==me().gid);
   const rows=club.squad.slice().sort((a,b)=>POSITIONS.indexOf(a.pos)-POSITIONS.indexOf(b.pos)||ability(b)-ability(a)).map(p=>
     `<div class="pl" data-scout="${p.id}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
       <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · pot.${p.potential}${p.transferListed?' · <span style="color:var(--accent)">LT</span>':''}</div></div>
@@ -530,7 +530,7 @@ function initTacticsTap(){document.querySelectorAll(".pitch .spot, #benchList .b
 function viewMarket(){
   const meC=me();
   let pool=[];
-  myClubs().forEach(cl=>{if(cl.id===G.myId)return;cl.squad.forEach(p=>pool.push({p,from:cl.id,fromName:cl.short}));});
+  myClubs().forEach(cl=>{if(cl.id===G.myId)return;cl.squad.forEach(p=>pool.push({p,from:cl.id,fromName:cl.short,fromGid:cl.gid}));});
   if(marketPos!=="all")pool=pool.filter(x=>GROUP[x.p.pos]===marketPos);
   pool.sort((a,b)=>ability(b.p)-ability(a.p)); pool=pool.slice(0,40);
   const bill=wageBill(meC), cap=ensureWageCap(), room2=wageRoom();
@@ -561,7 +561,7 @@ function viewMarket(){
   h+=`<div class="plist">`+pool.map(x=>{
     const p=x.p;
     return `<div class="pl" data-scoutmk="${p.id}" data-mkfrom="${x.from}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · <span class="clink" data-club="${x.fromName}" style="text-decoration:underline">${x.fromName}</span> · salário ${money(p.wage)}</div></div>
+      <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · <span class="clink" data-club="${x.fromGid}" style="text-decoration:underline">${x.fromName}</span> · salário ${money(p.wage)}</div></div>
       <span class="muted" style="font-size:18px">›</span></div>`;
   }).join("")+`</div>`;
   return h;
@@ -581,7 +581,7 @@ function viewTable(){
     const t=sortedTable(d), n=t.length;
     h+=`<div class="card" style="padding:6px"><table><thead><tr><th>#</th><th class="name">Clube</th><th>J</th><th>V</th><th>E</th><th>D</th><th>DG</th><th>P</th></tr></thead><tbody>`;
     t.forEach((c,i)=>{const zone=(d.upSlots&&i<d.upSlots)?"zone-up":((d.downSlots&&i>=n-d.downSlots)?"zone-down":"");
-      h+=`<tr class="${(mineHere&&c.id===G.myId)?'me':''} ${zone}"><td>${i+1}</td><td class="name">${swatch(c,true)} <span class="clink" data-club="${c.short}">${c.name}</span></td><td>${c.P}</td><td>${c.W}</td><td>${c.D}</td><td>${c.L}</td><td>${(c.GF-c.GA>0?'+':'')+(c.GF-c.GA)}</td><td><b>${c.Pts}</b></td></tr>`;});
+      h+=`<tr class="${(mineHere&&c.id===G.myId)?'me':''} ${zone}"><td>${i+1}</td><td class="name">${swatch(c,true)} <span class="clink" data-club="${c.gid}">${c.name}</span></td><td>${c.P}</td><td>${c.W}</td><td>${c.D}</td><td>${c.L}</td><td>${(c.GF-c.GA>0?'+':'')+(c.GF-c.GA)}</td><td><b>${c.Pts}</b></td></tr>`;});
     h+=`</tbody></table></div>`;
     const leg=[];
     if(d.upSlots)leg.push(`<span style="color:var(--green2)">▌</span> Sobe à Divisão de Honra (${d.upSlots})`);
@@ -595,18 +595,18 @@ function viewTable(){
     if(!all.length)h+=`<tr><td colspan="4" class="muted">Ainda sem golos.</td></tr>`;
     h+=`</tbody></table></div>`;
   } else if(tableTab==="cup"){
-    const cup=G.cup, ms=me().short;
+    const cup=G.cup, ms=me().gid;
     if(!cup){ h+=`<div class="card muted">Sem Taça.</div>`; }
     else {
       if(cup.active){
         const ut=cup.ties.find(t=>t.a===ms||t.b===ms);
         h+=`<div class="card"><h2>🏆 ${cupRoundName()}</h2>`;
-        if(ut){const a=clubByShort(ut.a),b=ut.b?clubByShort(ut.b):null;h+=`<div class="fx" style="border-color:var(--accent)"><div class="t">${a?clubTag(a):ut.a}</div><div class="sc">${ut.b?"vs":"bye"}</div><div class="t a">${b?clubTag(b):""}</div></div>`;}
+        if(ut){const a=clubByGid(ut.a),b=ut.b?clubByGid(ut.b):null;h+=`<div class="fx" style="border-color:var(--accent)"><div class="t">${a?clubTag(a):ut.a}</div><div class="sc">${ut.b?"vs":"bye"}</div><div class="t a">${b?clubTag(b):""}</div></div>`;}
         h+=`<div class="center muted" style="font-size:12px">${cup.ties.length} jogos · ${cup.remaining.length} equipas em prova</div></div>`;
       }
       const path=[]; cup.history.forEach(hr=>{const t=hr.ties.find(x=>x.a===ms||x.b===ms); if(t)path.push({name:hr.name,t});});
-      if(path.length){ h+=`<div class="card"><h2>O teu percurso</h2>`+path.slice().reverse().map(o=>{const a=clubByShort(o.t.a),b=o.t.b?clubByShort(o.t.b):null,won=o.t.w===ms;return `<div class="fx"><div class="t">${a?clubTag(a):o.t.a}</div><div class="sc">${o.t.b?(o.t.sa+"-"+o.t.sb):"bye"}</div><div class="t a">${b?clubTag(b):""}</div></div><div class="muted" style="font-size:11px;margin:-2px 0 6px">${o.name}${o.t.pens?" (penáltis)":""} — ${won?"passou":"eliminado"}</div>`;}).join("")+`</div>`; }
-      if(cup.winner){const wc=clubByShort(cup.winner);h+=`<div class="card center"><h2>🏆 Vencedor da Taça</h2><div class="big">${wc?wc.name:cup.winner}</div></div>`;}
+      if(path.length){ h+=`<div class="card"><h2>O teu percurso</h2>`+path.slice().reverse().map(o=>{const a=clubByGid(o.t.a),b=o.t.b?clubByGid(o.t.b):null,won=o.t.w===ms;return `<div class="fx"><div class="t">${a?clubTag(a):o.t.a}</div><div class="sc">${o.t.b?(o.t.sa+"-"+o.t.sb):"bye"}</div><div class="t a">${b?clubTag(b):""}</div></div><div class="muted" style="font-size:11px;margin:-2px 0 6px">${o.name}${o.t.pens?" (penáltis)":""} — ${won?"passou":"eliminado"}</div>`;}).join("")+`</div>`; }
+      if(cup.winner){const wc=clubByGid(cup.winner);h+=`<div class="card center"><h2>🏆 Vencedor da Taça</h2><div class="big">${wc?wc.name:cup.winner}</div></div>`;}
     }
   } else {
     const wk=Math.min(d.week,d.fixtures.length-1), round=d.fixtures[wk]||[], res=d.results[wk];
@@ -622,7 +622,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   const home=st.home, away=st.away, userSide=st.userSide, cup=!!cupPens;
   const mo=document.createElement("div");mo.className="modal";
   mo.innerHTML=`<div class="box live-box"><div id="goalFlash"></div><div id="phaseBanner"></div><button id="sndBtn" class="sndbtn"></button><div id="goalBanner">⚽ GOLO!</div>
-    <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}${isDerby(home.short,away.short)?' <span style="color:#ef4657">🔥</span>':''}</h2></div>
+    <div class="center"><h2 style="justify-content:center">${home.name} vs ${away.name}${isDerby(home.gid,away.gid)?' <span style="color:#ef4657">🔥</span>':''}</h2></div>
     <div class="scorebug"><div class="t">${clubTag(home)}</div><div class="sc" id="liveScore">0 - 0</div><div class="t a">${clubTag(away)}</div></div>
     <div id="liveScorers"><div class="sc-col" id="scH">—</div><div class="sc-col a" id="scA">—</div></div>
     <div class="center muted livemin" id="liveMin">0'</div>
@@ -826,7 +826,7 @@ function openPreMatch(next, startFn){
   const favTxt=fav>=2?"És claro favorito":fav>=1?"Ligeiro favorito":fav<=-2?"És claramente mais fraco":fav<=-1?"És ligeiramente mais fraco":"Jogo equilibrado";
   const fmtForm=f=>f.length?f.map(x=>`<span style="color:${x==='V'?'#22c55e':x==='D'?'#ef4657':'#93a2b6'};font-weight:800">${x}</span>`).join(" "):"—";
   const mo=document.createElement("div");mo.className="modal";
-  const derby=isDerby(c.short,opp.short);
+  const derby=isDerby(c.gid,opp.gid);
   mo.innerHTML=`<div class="box"><button class="close" id="pmClose">✕</button>
     <div class="center"><h2 style="justify-content:center">Antevisão · ${next.home?"em casa":"fora"}</h2></div>
     ${derby?`<div class="center" style="margin:2px 0 8px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:12px;padding:3px 12px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
@@ -869,11 +869,11 @@ function playMatchAnimated(talkBoost){
 function playCupTie(){
   const cup=G.cup; if(!cup||!cup.active)return;
   if(!cupAvailable()){ toast("A próxima eliminatória é na jornada "+cupRoundDue()+" do campeonato"); return; }
-  const ms=me().short, ut=cupUserTie();
+  const ms=me().gid, ut=cupUserTie();
   if(!cup.userAlive||!ut){ cupAdvanceRound(); render(); toast("Eliminatória simulada"); return; }
   if(!ut.b){ cupAdvanceRound(); render(); toast("Passaste por folga (bye)"); return; }
   if(!ensureValidXI())return;
-  const c=me(), aShort=ut.a, bShort=ut.b, ca=clubByShort(aShort), cb=clubByShort(bShort), userIsA=(aShort===ms);
+  const c=me(), aShort=ut.a, bShort=ut.b, ca=clubByGid(aShort), cb=clubByGid(bShort), userIsA=(aShort===ms);
   const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
   const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
   const userSide=userIsA?"H":"A", userLine=userIsA?aLine:bLine;
@@ -924,17 +924,17 @@ function animateShootout(ca,cb,shoot,onDone){
   setTimeout(step,800);
 }
 function showCupResult(userTie){
-  const cup=G.cup, ms=me().short;
+  const cup=G.cup, ms=me().gid;
   const mo=document.createElement("div");mo.className="modal";
   let inner=`<div class="box"><div class="center"><h2 style="justify-content:center">🏆 Taça</h2></div>`;
   if(userTie&&userTie.b){
-    const a=clubByShort(userTie.a), b=clubByShort(userTie.b), adv=userTie.w===ms;
+    const a=clubByGid(userTie.a), b=clubByGid(userTie.b), adv=userTie.w===ms;
     inner+=`<div class="fx"><div class="t">${a?clubTag(a):userTie.a}</div><div class="sc">${userTie.sa} - ${userTie.sb}</div><div class="t a">${b?clubTag(b):userTie.b}</div></div>`;
     if(userTie.pens)inner+=`<div class="center muted" style="font-size:12px">decidido nos penáltis</div>`;
     inner+=`<div class="center" style="margin:10px 0;font-weight:800;color:${adv?'var(--green2)':'var(--red)'}">${adv?"Passaste à eliminatória seguinte!":"Foste eliminado da Taça."}</div>`;
   } else if(userTie&&!userTie.b){ inner+=`<div class="center" style="margin:10px 0">Passaste por folga (bye).</div>`; }
   else { inner+=`<div class="center muted" style="margin:10px 0">Eliminatória simulada.</div>`; }
-  if(!cup.active&&cup.winner){ const wc=clubByShort(cup.winner); inner+=`<div class="center" style="margin:10px 0"><b>🏆 ${wc?wc.name:cup.winner}</b> venceu a Taça.</div>`; }
+  if(!cup.active&&cup.winner){ const wc=clubByGid(cup.winner); inner+=`<div class="center" style="margin:10px 0"><b>🏆 ${wc?wc.name:cup.winner}</b> venceu a Taça.</div>`; }
   else if(cup.active){ inner+=`<div class="center muted" style="font-size:12px;margin-bottom:8px">Segue para: ${cupRoundName()} (${cup.remaining.length} equipas)</div>`; }
   inner+=`<button class="btn" id="cupDone">Continuar</button></div>`;
   mo.innerHTML=inner; document.body.appendChild(mo);
@@ -961,11 +961,32 @@ function playoffCardHtml(){
   return inner;
 }
 function superCupCardHtml(){
-  const sc=G.superCup, ms=me().short, a=clubByShort(sc.champ), b=clubByShort(sc.cup);
+  const sc=G.superCup, ms=me().gid, a=clubByGid(sc.champ), b=clubByGid(sc.cup);
   return `<div class="card"><h2>🏆 Supertaça</h2>
     <div class="muted" style="font-size:12px;margin-bottom:6px">Campeão do Pró-Nacional vs vencedor da Taça.</div>
     <div class="fx"><div class="t"${sc.champ===ms?' style="color:var(--accent);font-weight:800"':''}>${a?clubTagFull(a):sc.champ}</div><div class="sc">VS</div><div class="t a"${sc.cup===ms?' style="color:var(--accent);font-weight:800"':''}>${b?clubTagFull(b):sc.cup}</div></div>
     <button class="btn" id="btnSuperCup" style="margin-top:8px">▶ Jogar a Supertaça</button></div>`;
+}
+function finalissimaCardHtml(){
+  const f=G.finalissima, ms=me().gid, a=clubByGid(f.a), b=clubByGid(f.b);
+  return `<div class="card"><h2>🏆 Finalíssima · Divisão de Honra</h2>
+    <div class="muted" style="font-size:12px;margin-bottom:6px">Vencedor da Série A vs vencedor da Série B — troféu de Campeão da Divisão de Honra.</div>
+    <div class="fx"><div class="t"${f.a===ms?' style="color:var(--accent);font-weight:800"':''}>${a?clubTagFull(a):f.a}</div><div class="sc">VS</div><div class="t a"${f.b===ms?' style="color:var(--accent);font-weight:800"':''}>${b?clubTagFull(b):f.b}</div></div>
+    <button class="btn" id="btnFinalissima" style="margin-top:8px">▶ Jogar a Finalíssima</button></div>`;
+}
+function playFinalissima(){
+  const f=G.finalissima; if(!f||!f.pending||!f.userIn)return;
+  if(!ensureValidXI())return;
+  const ms=me().gid, c=me();
+  const ca=clubByGid(f.a), cb=clubByGid(f.b), userIsA=(f.a===ms);
+  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
+  const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
+  const userSide=userIsA?"H":"A", userLine=userIsA?aLine:bLine;
+  const st=createLive(ca,cb,aLine,bLine,{maxMin:90,userSide,hForm:userIsA?G.formation:"4-4-2",aForm:userIsA?"4-4-2":G.formation,hMent:userIsA?G.mentality:"Equilibrado",aMent:userIsA?"Equilibrado":G.mentality});
+  const settle=(r)=>{ const w=r.hg>r.ag?f.a:f.b; finalissimaResolve({sa:r.hg,sb:r.ag,w,pens:false}); toast(w===ms?"🏆 És Campeão da Divisão de Honra!":"Finalíssima perdida."); };
+  const pens=(matchMo,r)=>{ const shoot=penaltyShootout(teamStrength(ca,st.H.line,st.H.form,st.H.ment).overall,teamStrength(cb,st.A.line,st.A.form,st.A.ment).overall);
+    animateShootout(ca,cb,shoot,(winSide)=>{ const w=winSide==="A"?f.a:f.b; finalissimaResolve({sa:r.hg,sb:r.ag,w,pens:true}); if(matchMo)matchMo.remove(); toast(w===ms?"🏆 Campeão da Honra nos penáltis!":"Finalíssima perdida nos penáltis"); render(); }); };
+  animateMatch(st,c,userLine,settle,pens);
 }
 function playPoTie(tie,onDone){
   const ms=me().short, c=me();
@@ -1005,8 +1026,8 @@ function playPlayoff(){
 function playSuperCup(){
   const sc=G.superCup; if(!sc||!sc.pending||!sc.userIn)return;
   if(!ensureValidXI())return;
-  const ms=me().short, c=me();
-  const ca=clubByShort(sc.champ), cb=clubByShort(sc.cup), userIsA=(sc.champ===ms);
+  const ms=me().gid, c=me();
+  const ca=clubByGid(sc.champ), cb=clubByGid(sc.cup), userIsA=(sc.champ===ms);
   const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
   const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
   const userSide=userIsA?"H":"A", userLine=userIsA?aLine:bLine;
@@ -1035,6 +1056,7 @@ function bindView(){
   const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();
   const bpo=$("#btnPlayoff");if(bpo)bpo.onclick=()=>{if(meetBlock())return;playPlayoff();};
   const bsc=$("#btnSuperCup");if(bsc)bsc.onclick=()=>{if(meetBlock())return;playSuperCup();};
+  const bfi=$("#btnFinalissima");if(bfi)bfi.onclick=()=>{if(meetBlock())return;playFinalissima();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
   const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();
@@ -1071,7 +1093,9 @@ function bindView(){
 /* ---------- ecrã inicial ---------- */
 function splashScreen(){
   const el=document.createElement("div");el.className="splash";el.id="splash";
-  const divDefs=[{name:"Pró-Nacional",clubs:PRONAC},{name:"Divisão de Honra",clubs:CLUBS},{name:"1ª Divisão",clubs:DIV1},{name:"2ª Divisão",clubs:DIV2}];
+  const GRPS=[]; let _fi=0;
+  (typeof LEAGUES!=="undefined"?LEAGUES:[]).forEach(dv=>dv.series.forEach(se=>GRPS.push({fi:_fi++,divName:dv.name,serie:se.name,clubs:se.clubs})));
+  const DIVN=[...new Set(GRPS.map(g=>g.divName))];
   el.innerHTML=`<svg width="78" height="78" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 6px 16px rgba(0,0,0,.5))">
       <defs><linearGradient id="lgSplash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12213a"/><stop offset="1" stop-color="#0a0e14"/></linearGradient></defs>
       <rect width="100" height="100" rx="24" fill="url(#lgSplash)" stroke="#ffcf33" stroke-width="2"/>
@@ -1089,15 +1113,21 @@ function splashScreen(){
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">O teu nome (treinador):</div>
       <input id="mgrName" maxlength="28" placeholder="Ex: Nemec Rui" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;font-size:15px;margin-bottom:12px">
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Divisão:</div>
-      <select id="divSel" style="margin-bottom:12px">${divDefs.map((d,i)=>`<option value="${i}">${d.name}</option>`).join("")}</select>
+      <select id="divSel" style="margin-bottom:12px">${DIVN.map((n,i)=>`<option value="${i}">${n}</option>`).join("")}</select>
+      <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px" id="serieLbl">Série:</div>
+      <select id="serieSel" style="margin-bottom:12px"></select>
       <div class="muted" style="text-align:left;margin-bottom:6px;font-size:13px">Clube:</div>
       <select id="clubSel" style="margin-bottom:14px"></select>
       <button class="btn" id="startBtn">▶ Começar carreira</button></div>
     <div class="muted" style="font-size:11px;margin-top:16px;max-width:340px">Cores provisórias, jogadores e atributos fictícios.</div>`;
   document.body.appendChild(el);
-  const divSel=el.querySelector("#divSel"), clubSel=el.querySelector("#clubSel");
-  function fillClubs(){clubSel.innerHTML=divDefs[+divSel.value].clubs.map((c,i)=>`<option value="${i}">${c.n}</option>`).join("");}
-  fillClubs(); divSel.onchange=fillClubs;
+  const divSel=el.querySelector("#divSel"), serieSel=el.querySelector("#serieSel"), clubSel=el.querySelector("#clubSel"), serieLbl=el.querySelector("#serieLbl");
+  const curGroup=()=>GRPS.find(g=>g.fi===+serieSel.value)||GRPS[0];
+  function fillClubs(){ const g=curGroup(); clubSel.innerHTML=g.clubs.map((c,i)=>`<option value="${i}">${c.n}</option>`).join(""); }
+  function fillSeries(){ const dn=DIVN[+divSel.value], ss=GRPS.filter(g=>g.divName===dn);
+    serieSel.innerHTML=ss.map(g=>`<option value="${g.fi}">${g.serie?("Série "+g.serie):"Série única"}</option>`).join("");
+    const one=ss.length<=1; serieSel.style.display=one?"none":""; serieLbl.style.display=one?"none":""; fillClubs(); }
+  fillSeries(); divSel.onchange=fillSeries; serieSel.onchange=fillClubs;
   el.querySelector("#startBtn").onclick=()=>{
     const nm=(el.querySelector("#mgrName").value||"").trim();
     if(nm.length<4){
@@ -1106,7 +1136,7 @@ function splashScreen(){
       e.textContent="O nome do treinador precisa de pelo menos 4 caracteres.";
       el.querySelector("#mgrName").focus(); return;
     }
-    newGame(+divSel.value,+clubSel.value,nm);track("nova-carreira/"+me().short, G.manager.name+" · "+me().name+" ("+myDivObj().name+")");el.remove();TAB="home";render();
+    newGame(curGroup().fi,+clubSel.value,nm);track("nova-carreira/"+me().short, G.manager.name+" · "+me().name+" ("+myDivObj().name+")");el.remove();TAB="home";render();
   };
 }
 function boot(){

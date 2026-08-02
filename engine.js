@@ -181,7 +181,7 @@ const SQUAD_TEMPLATE=["GR","GR","GR",
   "MDC","MDC","MC","MC","MC","MD","MD","ME","ME","MO",
   "ED","EE","PL","PL","PL"];
 
-let G=null, PID=1;
+let G=null, PID=1, GID=1;
 const CFG = (typeof GAME_DATA!=="undefined" && GAME_DATA) ? GAME_DATA : {};
 function divDefs(builtIn, idx){
   let list = (CFG.divisions && CFG.divisions[idx]) ? CFG.divisions[idx].slice() : builtIn.slice();
@@ -259,22 +259,42 @@ function makeDivision(name,defs,upSlots,downSlots){
   const clubs=defs.map((d,i)=>clubFromDef(d,i));
   return {name, clubs, fixtures:buildFixtures(clubs.length), results:[], week:0, upSlots, downSlots};
 }
+/* ---------- construção das competições a partir de LEAGUES (divisões com séries) ---------- */
+const TIER_SLOTS={0:{up:0,down:4}, 1:{up:2,down:3}, 2:{up:1,down:1}, 3:{up:6,down:0}};   // por escalão
+function buildGroups(){
+  const src=(typeof LEAGUES!=="undefined"&&LEAGUES)?LEAGUES:[];
+  const groups=[];
+  src.forEach(div=>{
+    const slots=TIER_SLOTS[div.tier]||{up:0,down:0};
+    div.series.forEach(se=>{
+      const name=div.name+(se.name?" · Série "+se.name:"");
+      const defs=se.clubs.map(c=>{ const x=Object.assign({},c);
+        if(typeof CFG!=="undefined"&&CFG.clubs&&CFG.clubs[x.s])Object.assign(x,CFG.clubs[x.s]);
+        if(x.n==="Cachapuz WLS" && typeof CFG!=="undefined"&&CFG.rosters&&CFG.rosters["CAC"])x.roster=CFG.rosters["CAC"];
+        return x; });
+      const clubs=defs.map((d,i)=>{ const c=clubFromDef(d,i); c.gid=GID++; c.tier=div.tier; c.serie=se.name; return c; });
+      groups.push({name, tier:div.tier, serie:se.name, upSlots:slots.up, downSlots:slots.down,
+        clubs, fixtures:buildFixtures(clubs.length), results:[], week:0});
+    });
+  });
+  return groups;
+}
+function clubByGid(gid){ for(const d of G.divisions){ const c=d.clubs.find(x=>x.gid===gid); if(c)return c; } return null; }
+function groupIndexOf(tier,serie){ return G.divisions.findIndex(d=>d.tier===tier && (d.serie||"")===(serie||"")); }
+function allClubGids(){ const a=[]; G.divisions.forEach(d=>d.clubs.forEach(c=>a.push(c.gid))); return a; }
 function newGame(divIdx,clubIdx,managerName){
-  PID=1;
-  const dPN=makeDivision("Pró-Nacional",divDefs(PRONAC,0),0,3);
-  const dH =makeDivision("Divisão de Honra",divDefs(CLUBS,1),3,3);
-  const dU =makeDivision("1ª Divisão",divDefs(DIV1,2),3,3);
-  const dD =makeDivision("2ª Divisão",divDefs(DIV2,3),3,0);
-  G={version:6, divisions:[dPN,dH,dU,dD], myDiv:divIdx, myId:clubIdx,
+  PID=1; GID=1;
+  const groups=buildGroups();
+  G={version:7, divisions:groups, myDiv:divIdx, myTier:(groups[divIdx]?groups[divIdx].tier:0), myId:clubIdx,
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
-     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null,
+     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null, finalissima:null,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
   setObjectives();
-  me().budget=budgetForObjective(G.myDiv,me().objective); G.seasonStartBudget=me().budget; G.budgetGranted=0; G.pendingPrize=0;
+  me().budget=budgetForObjective(G.myTier,me().objective); G.seasonStartBudget=me().budget; G.budgetGranted=0; G.pendingPrize=0;
   cupCreate();
   academyIntake();
   seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me()); ensureRivals();
@@ -582,7 +602,7 @@ function simRound(d,preMy,hasUser){
       recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg);
       updateRecordsMatch(isH?r.hg:r.ag, isH?r.ag:r.hg, (h===G.myId?away:home).name);
       if(!r.liveUser)processEnergyInjuries(uc,userLine);   // no jogo ao vivo a energia já foi tratada
-      const derby=isDerby(me().short,(h===G.myId?away:home).short);
+      const derby=isDerby(me().gid,(h===G.myId?away:home).gid);
       rateUserMatch(uc,played,r,isH); updateForm(uc,played); updateChem(userLine); trainTick(uc,played); updateMorale(uc,played,isH?r.hg:r.ag,isH?r.ag:r.hg,derby); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
@@ -605,13 +625,13 @@ function playWeek(preMy){
   save();
 }
 /* ---------- Supertaça + Play-off de subida ---------- */
-function poSimTie(aShort,bShort){                 // simula rapidamente uma eliminatória (empate → moeda ponderada = "penáltis")
-  const a=clubByShort(aShort), b=clubByShort(bShort); if(!a||!b)return {sa:0,sb:0,w:a?aShort:bShort,pens:false};
+function poSimTie(aGid,bGid){                 // simula rapidamente uma eliminatória (empate → moeda ponderada = "penáltis")
+  const a=clubByGid(aGid), b=clubByGid(bGid); if(!a||!b)return {sa:0,sb:0,w:a?aGid:bGid,pens:false};
   const la=autoPickLineup(a,"4-4-2",a.susp), lb=autoPickLineup(b,"4-4-2",b.susp);
   const r=simulate(a,b,la,lb,1,1);
   let w;
-  if(r.hg>r.ag)w=aShort; else if(r.ag>r.hg)w=bShort;
-  else { const oa=teamStrength(a,la,"4-4-2","Equilibrado").overall, ob=teamStrength(b,lb,"4-4-2","Equilibrado").overall; w=(Math.random()<oa/(oa+ob))?aShort:bShort; }
+  if(r.hg>r.ag)w=aGid; else if(r.ag>r.hg)w=bGid;
+  else { const oa=teamStrength(a,la,"4-4-2","Equilibrado").overall, ob=teamStrength(b,lb,"4-4-2","Equilibrado").overall; w=(Math.random()<oa/(oa+ob))?aGid:bGid; }
   return {sa:r.hg,sb:r.ag,w,pens:(r.hg===r.ag)};
 }
 function simPlayoffWinner(seeds){                  // seeds[0..3] (1º melhor classificado)
@@ -649,27 +669,27 @@ function resolvePlayoffOutcome(){                   // notícia + (se fores tu) 
 }
 function superCupSetup(){                           // campeão do topo (Pró-Nacional) vs vencedor da Taça
   G.superCup=null;
-  const top=G.divisions[0]; if(!top)return;
+  const top=G.divisions.find(d=>d.tier===0); if(!top)return;
   const champ=sortedTable(top)[0], cupW=G.cup?G.cup.winner:null;
-  if(!champ||!cupW)return;
-  const champShort=champ.short, ms=me().short;
-  if(champShort===cupW){                            // dobradinha → Supertaça automática
-    const club=clubByShort(cupW);
+  if(!champ||cupW==null)return;
+  const champGid=champ.gid, ms=me().gid;
+  if(champGid===cupW){                              // dobradinha → Supertaça automática
+    const club=clubByGid(cupW);
     addNews("🏆 Supertaça: "+(club?club.name:cupW)+" conquista a Supertaça (dobradinha de campeão e Taça).");
     if(cupW===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:G.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); }
     return;
   }
-  const userIn=(champShort===ms||cupW===ms);
-  G.superCup={ champ:champShort, cup:cupW, season:G.season, userIn, pending:true, winner:null, sa:null, sb:null, pens:false };
+  const userIn=(champGid===ms||cupW===ms);
+  G.superCup={ champ:champGid, cup:cupW, season:G.season, userIn, pending:true, winner:null, sa:null, sb:null, pens:false };
   if(!userIn)superCupResolve(null);                 // sem o utilizador → simula já
 }
 function superCupResolve(userResult){
   const sc=G.superCup; if(!sc)return null;
-  const a=clubByShort(sc.champ), b=clubByShort(sc.cup), ms=me().short;
+  const a=clubByGid(sc.champ), b=clubByGid(sc.cup), ms=me().gid;
   let sa,sb,w,pens=false;
   if(userResult){ sa=userResult.sa; sb=userResult.sb; w=userResult.w; pens=!!userResult.pens; }
   else { const r=poSimTie(sc.champ,sc.cup); sa=r.sa; sb=r.sb; w=r.w; pens=r.pens; }
-  const wc=clubByShort(w);
+  const wc=clubByGid(w);
   addNews("🏆 Supertaça "+sc.season+": "+(a?a.name:sc.champ)+" "+sa+"–"+sb+" "+(b?b.name:sc.cup)+(pens?" (nos penáltis)":"")+" · vencedor: "+(wc?wc.name:w)+".");
   if(w===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:sc.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); }
   sc.winner=w; sc.sa=sa; sc.sb=sb; sc.pens=pens; sc.pending=false;
@@ -688,36 +708,54 @@ function endSeason(){
   endSeasonAwards(meRank);
   evaluateBoard(meRank);
   while(G.cup&&G.cup.active)cupAdvanceRound();
-  setupPlayoff();          // play-off jogável se estiveres na zona de subida
-  superCupSetup();         // Supertaça (campeão do topo vs Taça) — simulada se não te envolver
+  finalissimaSetup();      // Divisão de Honra: vencedores Série A vs Série B (troféu)
+  superCupSetup();         // Supertaça (campeão do Pró vs vencedor da Taça)
+}
+/* ---------- Finalíssima da Divisão de Honra (vencedor Série A vs Série B) ---------- */
+function finalissimaSetup(){
+  G.finalissima=null;
+  const gs=G.divisions.filter(d=>d.tier===1); if(gs.length<2)return;
+  const wa=sortedTable(gs[0])[0], wb=sortedTable(gs[1])[0]; if(!wa||!wb)return;
+  const ms=me().gid, userIn=(wa.gid===ms||wb.gid===ms);
+  G.finalissima={a:wa.gid, b:wb.gid, season:G.season, userIn, pending:true, winner:null, sa:null, sb:null, pens:false};
+  if(!userIn)finalissimaResolve(null);
+}
+function finalissimaResolve(userResult){
+  const f=G.finalissima; if(!f)return null;
+  const a=clubByGid(f.a), b=clubByGid(f.b), ms=me().gid;
+  let sa,sb,w,pens=false;
+  if(userResult){ sa=userResult.sa; sb=userResult.sb; w=userResult.w; pens=!!userResult.pens; }
+  else { const r=poSimTie(f.a,f.b); sa=r.sa; sb=r.sb; w=r.w; pens=r.pens; }
+  const wc=clubByGid(w);
+  addNews("🏆 Finalíssima da Divisão de Honra "+f.season+": "+(a?a.name:f.a)+" "+sa+"–"+sb+" "+(b?b.name:f.b)+(pens?" (penáltis)":"")+" · Campeão: "+(wc?wc.name:w)+".");
+  if(w===ms){ G.manager.trophies.push({type:"honra",name:"Campeão da Divisão de Honra",season:f.season}); me().budget=Math.round((me().budget+0.6)*100)/100; addNews("🏆 És Campeão da Divisão de Honra! Prémio: +€600K."); }
+  f.winner=w; f.sa=sa; f.sb=sb; f.pens=pens; f.pending=false;
+  return {w,sa,sb,pens};
 }
 function newSeason(){
-  const mineShort=me().short;
+  const mineGid=me().gid, oldTier=me().tier;
   const tables=G.divisions.map(d=>sortedTable(d));
+  const T=i=>tables[i], top=(i,n)=>T(i).slice(0,n), bottom=(i,n)=>T(i).slice(Math.max(0,T(i).length-n));
+  const pro=groupIndexOf(0,""), honA=groupIndexOf(1,"A"), honB=groupIndexOf(1,"B");
+  const prim=["A","B","C","D","E","F"].map(s=>groupIndexOf(2,s)), seg=groupIndexOf(3,"");
   const leaving=G.divisions.map(()=>new Set()), incoming=G.divisions.map(()=>[]);
-  let myMove=null;
-  for(let i=0;i<G.divisions.length-1;i++){
-    const up=G.divisions[i], down=G.divisions[i+1], t=tables[i+1];
-    const releg=tables[i].slice(tables[i].length-up.downSlots);
-    const N=down.upSlots; let promo=[];
-    if(N>0){
-      promo=t.slice(0,Math.max(0,N-1));                              // subida automática (topo N-1)
-      const a0=Math.max(0,N-1), po=t.slice(a0,a0+4);                 // último lugar via play-off
-      let winShort=null;
-      if(po.length===4){
-        if(G.playoff && G.playoff.div===(i+1) && G.playoff.winner)winShort=G.playoff.winner;   // resultado jogado pelo utilizador
-        else winShort=simPlayoffWinner(po.map(c=>c.short));                                     // outras divisões: simulado
-      } else if(po.length>0)winShort=po[0].short;
-      const winClub=winShort?down.clubs.find(c=>c.short===winShort):null;
-      if(winClub && promo.indexOf(winClub)<0)promo.push(winClub);
-    }
-    releg.forEach(c=>{leaving[i].add(c); incoming[i+1].push(c); if(c.short===mineShort)myMove="down";});
-    promo.forEach(c=>{leaving[i+1].add(c); incoming[i].push(c); if(c.short===mineShort)myMove="up";});
-  }
+  const move=(club,fromIdx,toIdx)=>{ if(fromIdx<0||toIdx<0||!club)return; leaving[fromIdx].add(club); incoming[toIdx].push(club); };
+  // Pró: descem 4 → Honra (2 p/ Série A, 2 p/ Série B)
+  if(pro>=0) bottom(pro,4).forEach((c,k)=> move(c,pro,(k%2===0)?honA:honB));
+  // Honra: sobem 2 de cada série → Pró
+  [honA,honB].forEach(hi=>{ if(hi>=0) top(hi,2).forEach(c=>move(c,hi,pro)); });
+  // Honra: descem 3 de cada série → 1ª (uma por cada uma das 6 séries)
+  const honDown=[]; [honA,honB].forEach(hi=>{ if(hi>=0) bottom(hi,3).forEach(c=>honDown.push([c,hi])); });
+  honDown.forEach(([c,hi],k)=> move(c,hi,prim[k%prim.length]));
+  // 1ª: sobe 1 de cada série → Honra (séries A/B/C→A, D/E/F→B); desce 1 de cada série → 2ª
+  prim.forEach((pi,k)=>{ if(pi<0)return; move(top(pi,1)[0],pi,(k<3)?honA:honB); move(bottom(pi,1)[0],pi,seg); });
+  // 2ª: sobem 6 (o melhor para a Série A, ... o 6º para a Série F)
+  if(seg>=0) top(seg,6).forEach((c,k)=> move(c,seg,prim[k%prim.length]));
+
   G.divisions.forEach((d,i)=>{ d.clubs=d.clubs.filter(c=>!leaving[i].has(c)).concat(incoming[i]); });
   G.divisions.forEach(d=>{
-    d.clubs.forEach((c,i)=>c.id=i);
-    const isMineClub=c=>c.short===mineShort;
+    d.clubs.forEach((c,i)=>{ c.id=i; c.tier=d.tier; c.serie=d.serie; });
+    const isMineClub=c=>c.gid===mineGid;
     d.clubs.forEach(c=>{c.P=c.W=c.D=c.L=c.GF=c.GA=c.Pts=0; c.susp=[]; const mine=isMineClub(c);
       c.squad.forEach(p=>{
         const played=p.apps||0;                                    // jogos desta época (antes de zerar)
@@ -737,11 +775,13 @@ function newSeason(){
     });
     d.fixtures=buildFixtures(d.clubs.length); d.results=[]; d.week=0;
   });
-  for(let di=0;di<G.divisions.length;di++){ const idx=G.divisions[di].clubs.findIndex(c=>c.short===mineShort); if(idx>=0){G.myDiv=di;G.myId=idx;break;} }
+  for(let di=0;di<G.divisions.length;di++){ const idx=G.divisions[di].clubs.findIndex(c=>c.gid===mineGid); if(idx>=0){G.myDiv=di;G.myId=idx;break;} }
+  G.myTier=myDivObj().tier;
+  let myMove = G.myTier<oldTier ? "up" : (G.myTier>oldTier ? "down" : null);
   G.season++; G.week=0; G.seasonDone=false; G.date="Set"; G.midWindowDone=false; G.budgetAsked=false;
   G.lineup=autoPickLineup(me(),G.formation);
   G.manager.seasons=(G.manager.seasons||0)+1; setObjectives();
-  const kitty=budgetForObjective(G.myDiv,me().objective);            // verba nova conforme aspiração desta época
+  const kitty=budgetForObjective(G.myTier,me().objective);            // verba nova conforme aspiração desta época
   me().budget=Math.round((me().budget+kitty)*100)/100;              // soma à que transitou (incl. prémios)
   G.seasonStartBudget=me().budget; G.budgetGranted=0;
   refreshFreeAgents(); G.wageBase=wageBill(me());
@@ -752,7 +792,7 @@ function newSeason(){
   developYouth(); academyIntake();     // academia: evoluir juniores + nova camada
   transferWindow();
   cupCreate();
-  G.playoff=null; G.superCup=null;
+  G.playoff=null; G.superCup=null; G.finalissima=null;
   save();
 }
 function sortedTable(d){
@@ -826,14 +866,14 @@ const SAVE_PREFIX="gestorafb_";
 function slotKey(n){ return SAVE_PREFIX+(n||1); }
 function curSlot(){ try{ return parseInt(localStorage.getItem("gestorafb_slot"))||1; }catch(e){ return 1; } }
 function setSlot(n){ try{ localStorage.setItem("gestorafb_slot",String(n||1)); }catch(e){} }
-function migrate(o){ if(!o)return null; if(o.version===6)return o; return null; /* versões antigas recomeçam; migrações futuras aqui */ }
+function migrate(o){ if(!o)return null; if(o.version===7)return o; return null; /* versões antigas recomeçam; migrações futuras aqui */ }
 function migrateLegacy(){ try{ const legacy=localStorage.getItem("gestorafb"); if(legacy && !localStorage.getItem(slotKey(1))){ localStorage.setItem(slotKey(1),legacy); localStorage.removeItem("gestorafb"); } }catch(e){} }
 function save(){ if(typeof localStorage==="undefined")return; try{localStorage.setItem(slotKey(curSlot()),JSON.stringify(G));}catch(e){} }
 function loadSlot(n){ if(typeof localStorage==="undefined")return false; try{ const s=localStorage.getItem(slotKey(n)); if(s){ const m=migrate(JSON.parse(s)); if(m){G=m; setSlot(n); return true;} } }catch(e){} return false; }
 function load(){ if(typeof localStorage==="undefined")return false; migrateLegacy(); return loadSlot(curSlot()); }
 function wipeSlot(n){ try{ localStorage.removeItem(slotKey(n)); }catch(e){} if(n===curSlot())G=null; }
 function wipe(){ wipeSlot(curSlot()); }
-function slotInfo(n){ try{ const s=localStorage.getItem(slotKey(n)); if(!s)return {exists:false}; const o=JSON.parse(s); if(!o||o.version!==6)return {exists:true,broken:true};
+function slotInfo(n){ try{ const s=localStorage.getItem(slotKey(n)); if(!s)return {exists:false}; const o=JSON.parse(s); if(!o||o.version!==7)return {exists:true,broken:true};
   const d=o.divisions&&o.divisions[o.myDiv], club=d&&d.clubs[o.myId];
   return {exists:true, name:(o.manager&&o.manager.name)||"—", club:club?club.name:"—", division:d?d.name:"—", season:o.season||1, fired:!!o.fired}; }catch(e){ return {exists:true,broken:true}; } }
 function exportSave(){ try{ return JSON.stringify(G||JSON.parse(localStorage.getItem(slotKey(curSlot()))||"null")); }catch(e){ return ""; } }
@@ -865,17 +905,16 @@ function setObjectives(){
     ranked.forEach((o,idx)=>{ o.c.objective=objectiveFor(di,idx+1,d.clubs.length); });
   });
   // verba de cada clube conforme a sua aspiração (a do utilizador é gerida à parte)
-  G.divisions.forEach((d,di)=>d.clubs.forEach(c=>{ if(di===G.myDiv&&c.id===G.myId)return; c.budget=budgetForObjective(di,c.objective); }));
+  G.divisions.forEach((d,di)=>d.clubs.forEach(c=>{ if(di===G.myDiv&&c.id===G.myId)return; c.budget=budgetForObjective(d.tier,c.objective); }));
   const o=me().objective; if(!G.board)G.board={}; G.board.confidence=o?o.baseConf:60;
 }
 /* ---------- rivalidades / dérbis ---------- */
-function ensureRivals(){ if(G.rivals)return G.rivals; const r={};
-  try{ const cfg=(typeof GAME_DATA!=="undefined"&&GAME_DATA&&GAME_DATA.rivalidades)||null; if(cfg)Object.keys(cfg).forEach(a=>{ const b=cfg[a]; if(b){ r[a]=b; r[b]=a; } }); }catch(e){}
-  G.divisions.forEach(d=>{ const free=d.clubs.filter(c=>!r[c.short]); for(let i=0;i+1<free.length;i+=2){ r[free[i].short]=free[i+1].short; r[free[i+1].short]=free[i].short; } });
+function ensureRivals(){ if(G.rivals)return G.rivals; const r={};   // rivais emparelhados por gid, dentro de cada série
+  G.divisions.forEach(d=>{ const cl=d.clubs; for(let i=0;i+1<cl.length;i+=2){ r[cl[i].gid]=cl[i+1].gid; r[cl[i+1].gid]=cl[i].gid; } });
   G.rivals=r; return r;
 }
-function rivalOf(short){ return ensureRivals()[short]||null; }
-function isDerby(a,b){ if(!a||!b)return false; const r=ensureRivals(); return r[a]===b||r[b]===a; }
+function rivalOf(gid){ return ensureRivals()[gid]||null; }
+function isDerby(a,b){ if(a==null||b==null)return false; const r=ensureRivals(); return r[a]===b||r[b]===a; }
 function boardAfterUserMatch(){
   if(!G.board)return;
   const d=myDivObj(), res=d.results[d.results.length-1]; if(!res)return;
@@ -1306,7 +1345,7 @@ function clubByShort(sh){ for(const d of G.divisions){ const c=d.clubs.find(x=>x
 function divOfShort(sh){ for(let i=0;i<G.divisions.length;i++){ if(G.divisions[i].clubs.some(x=>x.short===sh))return i; } return -1; }
 function cupRoundName(){ const t=G.cup?G.cup.remaining.length:0; if(t<=2)return "Final"; if(t<=4)return "Meias-finais"; if(t<=8)return "Quartos-de-final"; if(t<=16)return "Oitavos-de-final"; return (G.cup.round+1)+"ª eliminatória"; }
 function cupCreate(){
-  const rem=shuffleArr(allClubShorts());
+  const rem=shuffleArr(allClubGids());
   G.cup={active:true,round:0,remaining:rem,ties:[],history:[],winner:null,userAlive:true,schedule:[]};
   cupDraw();
   let n=rem.length, rounds=0; while(n>1){ n=Math.ceil(n/2); rounds++; }
@@ -1316,7 +1355,7 @@ function cupCreate(){
 function cupRoundDue(){ return (G.cup&&G.cup.schedule&&G.cup.round<G.cup.schedule.length)?G.cup.schedule[G.cup.round]:999; }
 function cupAvailable(){ return !!(G.cup&&G.cup.active&&myDivObj().week>=cupRoundDue()); }
 function cupDraw(){ const rem=G.cup.remaining.slice(), ties=[]; while(rem.length>=2){ ties.push({a:rem.shift(),b:rem.shift(),sa:null,sb:null,w:null}); } if(rem.length===1)ties.push({a:rem.shift(),b:null,sa:null,sb:null,w:null}); G.cup.ties=ties; }
-function cupUserTie(){ if(!G.cup||!G.cup.active)return null; const ms=me().short; return G.cup.ties.find(t=>t.a===ms||t.b===ms)||null; }
+function cupUserTie(){ if(!G.cup||!G.cup.active)return null; const ms=me().gid; return G.cup.ties.find(t=>t.a===ms||t.b===ms)||null; }
 /* desempate por penáltis: 5 para cada equipa (termina quando uma não pode empatar), depois séries de 1 */
 function penaltyShootout(saStr,sbStr){
   const pA=clamp(0.72+((saStr||60)-(sbStr||60))/500,0.55,0.9), pB=clamp(0.72+((sbStr||60)-(saStr||60))/500,0.55,0.9);
@@ -1335,8 +1374,8 @@ function penaltyShootout(saStr,sbStr){
 }
 function cupResolveTie(t){
   if(!t.b){ t.w=t.a; return; }
-  const ms=me().short, involvesUser=(t.a===ms||t.b===ms);
-  const ca=clubByShort(t.a), cb=clubByShort(t.b);
+  const ms=me().gid, involvesUser=(t.a===ms||t.b===ms);
+  const ca=clubByGid(t.a), cb=clubByGid(t.b);
   const aLine=(involvesUser&&t.a===ms)?availableLineup(ca,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
   const bLine=(involvesUser&&t.b===ms)?availableLineup(cb,G.lineup,G.formation):autoPickLineup(cb,"4-4-2",cb.susp);
   const eA=(involvesUser&&t.a===ms)?energyFactor(ca,aLine):1, eB=(involvesUser&&t.b===ms)?energyFactor(cb,bLine):1;
@@ -1350,14 +1389,14 @@ function cupResolveTie(t){
 }
 function cupAdvanceRound(preUser){
   if(!G.cup||!G.cup.active)return null;
-  const ms=me().short;
+  const ms=me().gid;
   const userTie=G.cup.ties.find(t=>t.a===ms||t.b===ms)||null;
   G.cup.ties.forEach(t=>{ if(t===userTie&&preUser){ t.sa=preUser.sa;t.sb=preUser.sb;t.w=preUser.w;t.pens=!!preUser.pens;t.et=!!preUser.et; } else cupResolveTie(t); });
   if(userTie && userTie.b){ const ug=(userTie.a===ms)?userTie.sa:userTie.sb, ua=(userTie.a===ms)?userTie.sb:userTie.sa; recordManagerMatch(ug,ua); }
   if(userTie && userTie.b && userTie.w!==ms)G.cup.userAlive=false;
   if(userTie && userTie.b && userTie.w===ms){                          // prémio pequeno por vencer clube superior/muito mais forte
-    const oppShort=(userTie.a===ms)?userTie.b:userTie.a, opp=clubByShort(oppShort);
-    if(opp){ const higher=(()=>{const oi=divOfShort(oppShort);return oi>=0&&oi<G.myDiv;})();
+    const oppGid=(userTie.a===ms)?userTie.b:userTie.a, opp=clubByGid(oppGid);
+    if(opp){ const higher=(opp.tier!=null && opp.tier<me().tier);       // escalão superior = tier menor
       const stronger=squadRating(opp)-squadRating(me())>=8;
       if(higher||stronger){ const bonus=higher?0.25:0.15; me().budget=Math.round((me().budget+bonus)*100)/100;
         addNews("💪 Surpresa na Taça! Eliminaste o "+opp.name+" ("+(higher?"divisão superior":"muito mais forte")+"). Prémio: +"+money(bonus)+"."); } }
@@ -1365,7 +1404,7 @@ function cupAdvanceRound(preUser){
   G.cup.history.push({name:cupRoundName(), ties:G.cup.ties.map(t=>({a:t.a,b:t.b,sa:t.sa,sb:t.sb,w:t.w,pens:!!t.pens}))});
   const winners=G.cup.ties.map(t=>t.w);
   G.cup.remaining=winners; G.cup.round++;
-  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByShort(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().short){ G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); me().budget=Math.round((me().budget+1.2)*100)/100; addNews("🏆 Prémio de vencedor da Taça: +€1.2M."); } }
+  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByGid(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().gid){ G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); me().budget=Math.round((me().budget+1.2)*100)/100; addNews("🏆 Prémio de vencedor da Taça: +€1.2M."); } }
   else cupDraw();
   save();
   return userTie;
@@ -1445,6 +1484,7 @@ if(typeof module!=="undefined"&&module.exports){
     wageFor,wageBill,wageCapFor,ensureWageCap,wageRoom,ensureFreeAgents,signFreeAgent,refreshFreeAgents,
     ensureRivals,rivalOf,isDerby,
     poSimTie,simPlayoffWinner,playoffZoneInfo,setupPlayoff,resolvePlayoffOutcome,superCupSetup,superCupResolve,
+    buildGroups,clubByGid,groupIndexOf,allClubGids,finalissimaSetup,finalissimaResolve,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };
