@@ -24,9 +24,12 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-02", texto:"🏟️ GRANDE ATUALIZAÇÃO — competições reformuladas! Agora com os clubes reais da AF Braga: Pró-Nacional (18), Divisão de Honra em 2 séries, 1ª Divisão em 6 séries e 2ª Divisão. Jogas na tua série e sobes/desces entre elas. Nova carreira obrigatória (a estrutura mudou)." },
+    { data:"2026-08-02", texto:"🏆 Finalíssima da Divisão de Honra (vencedor da Série A vs Série B pelo título) e Supertaça (campeão do Pró-Nacional vs vencedor da Taça) — jogáveis quando estás envolvido." },
+    { data:"2026-08-02", texto:"📲 Novo símbolo da app (prancheta tática) e instalação como aplicação a sério no telemóvel (Adicionar ao ecrã inicial), com ícone próprio." },
     { data:"2026-08-01", texto:"🟥 Suspensões e lesões: 5 amarelos = 1 jogo de castigo, vermelho direto = 2 jogos (2º amarelo = 1). As lesões passam a ter gravidade variável (de ligeira a muito grave). Vês os castigos e o aviso de amarelos no plantel e na ficha do jogador." },
     { data:"2026-08-01", texto:"⚖️ Motor afinado: menos jogos 0-0 (mais golos e coerência entre divisões), as expulsões pesam muito mais (jogar com 10 é uma grande desvantagem) e a química só desce com 4+ mudanças no onze (as trocas em jogo não contam)." },
-    { data:"2026-08-01", texto:"🏆 Supertaça e play-off de subida! A Supertaça abre a época (campeão do Pró-Nacional vs vencedor da Taça) e o último lugar de subida passa a decidir-se num play-off (meias + final) — jogáveis quando estás envolvido." },
+    { data:"2026-08-01", texto:"🥇 Prémios por vencer troféus e por bater equipas de escalão superior na Taça." },
     { data:"2026-08-01", texto:"🔥 Dérbis! Cada clube tem um rival — os jogos entre eles pesam mais na moral do balneário e na confiança da direção, com destaque na antevisão e no relato." },
     { data:"2026-08-01", texto:"💶 Contratos e salários: cada jogador tem um salário e a direção dá-te um teto de massa salarial. Ao fim do contrato os jogadores saem livres — renova a tempo! Há mercado de livres e os saldos dos clubes subiram para poderes comprar." },
     { data:"2026-07-31", texto:"📋 Relatório pós-jogo: no fim de cada jogo, vês o Homem do Jogo, os golos, expulsões e as notas dos teus jogadores." },
