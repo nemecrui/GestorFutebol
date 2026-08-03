@@ -52,18 +52,64 @@ const GAME_DATA = {
      Recomeça a carreira depois de editar. */
   rosters: {
     "Cachapuz WLS": [
-      {n:"Tiago Pinto",p:"GR"},{n:"Henrique Pizzarro",p:"GR"},{n:"Rui Xavier",p:"LD"},{n:"Luís Pereira",p:"LD"},
-      {n:"Alvaro Araújo",p:"LE"},{n:"Vicente Pereira",p:"LE"},{n:"Gabriel Teixeira",p:"DC"},{n:"Gonçalo Martins",p:"DC"},
-      {n:"Leonardo Vitoria",p:"DC"},{n:"Tiago Veiga",p:"MDC"},{n:"Rui Francisco",p:"MDC"},{n:"João Lopes",p:"MC"},
-      {n:"Domingos Barroso",p:"MC"},{n:"Ana Lopes",p:"MC"},{n:"Susana Feio",p:"MC"},{n:"Pedro Carvalho",p:"MD"},
-      {n:"Luís Ferreira",p:"ME"},{n:"Duarte Pinto",p:"ME"},{n:"Filipa Rebelo",p:"MO"},{n:"Pedro Gonçalves",p:"MO"},{n:"André Calçada",p:"ED"},
-      {n:"Agostinho Costa",p:"EE"},{n:"Narciso Batista",p:"PL"},{n:"Sérgio Melo",p:"PL"},{n:"António Miranda",p:"PL"}
+      {n:"Tiago Pinto", p:"GR"},
+      {n:"Henrique Pizzarro", p:"GR"},
+      {n:"Rui Xavier", p:"LD"},
+      {n:"Luís Pereira", p:"LD"},
+      {n:"Alvaro Araújo", p:"LE"},
+      {n:"Vicente Pereira", p:"LE"},
+      {n:"Gabriel Teixeira", p:"DC"},
+      {n:"Gonçalo Martins", p:"DC"},
+      {n:"Leonardo Vitoria", p:"DC"},
+      {n:"Tiago Veiga", p:"MDC"},
+      {n:"Rui Francisco", p:"MDC"},
+      {n:"João Lopes", p:"MC"},
+      {n:"Domingos Barroso", p:"MC"},
+      {n:"Ana Lopes", p:"MC"},
+      {n:"Susana Feio", p:"MC"},
+      {n:"Pedro Carvalho", p:"MD"},
+      {n:"Luís Ferreira", p:"ME"},
+      {n:"Duarte Pinto", p:"ME"},
+      {n:"Filipa Rebelo", p:"MO"},
+      {n:"Pedro Gonçalves", p:"MO"},
+      {n:"André Calçada", p:"ED"},
+      {n:"Agostinho Costa", p:"EE"},
+      {n:"Narciso Batista", p:"PL"},
+      {n:"Sérgio Melo", p:"PL"},
+      {n:"António Miranda", p:"PL"}
+    ],
+    "CD Maximinense": [
+      {n:"Marcos Ferreira", p:"GR", idade:39, altura:180, nivel:20, attrs:{pas:20, des:20, pos:20, vel:20, res:20, for:20, rea:20, gr:20}}
+    ],
+    "SuperBraga": [
+      {n:"Victor Fernandes", p:"GR"},
+      {n:"Zé Gusman", p:"GR", altura:189},
+      {n:"Hugo Pinto", p:"DC"},
+      {n:"Nuno Pinto", p:"DC"},
+      {n:"Pirata", p:"LD", altura:169},
+      {n:"Artur Monteiro", p:"LE"},
+      {n:"Nuno Santos", p:"LE"},
+      {n:"Joni", p:"MC"},
+      {n:"Jorge Sousa", p:"MDC"},
+      {n:"Jota Castro", p:"DC"},
+      {n:"Luís Mico", p:"GR"},
+      {n:"Rui Xavier", p:"LD", altura:160, attrs:{des:18, pos:15, vel:20}},
+      {n:"David Rodrigues", p:"MD"},
+      {n:"Miguel Rodrigues", p:"MO"},
+      {n:"Ricardo Machado", p:"PL", attrs:{rem:19}},
+      {n:"Bruno Brandão", p:"MC", attrs:{rem:17, cru:17, pas:19, dri:18, pos:18}},
+      {n:"Miguel Gonçalves", p:"MC"},
+      {n:"João Vaz", p:"MO"},
+      {n:"Berto Pinhão", p:"MDC"},
+      {n:"Cláudio Correia", p:"MD", altura:163},
+      {n:"Nuno Alpoim", p:"MC"},
+      {n:"Igor", p:"PL"},
+      {n:"Bruno Caravana", p:"ME"},
+      {n:"Carlos Vaz", p:"MC"},
+      {n:"Rodrigo", p:"EE"},
+      {n:"Paulo Paraíso", p:"ME"},
+      {n:"Lininho 1", p:"PL", attrs:{rem:20, cab:20, cru:20, pas:20, dri:20}}
     ]
-    // Exemplo com características forçadas:
-    // "ACDR Tibães": [
-    //   {n:"João Silva", p:"PL", idade:24, altura:182, nivel:14, attrs:{rem:17, vel:16, cab:15}},
-    //   {n:"Rui Costa",  p:"GR", idade:31, altura:190, attrs:{gr:16, rea:15}}
-    // ]
   },
 
   /* ---- ADICIONAR clubes novos a uma divisão ----

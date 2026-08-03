@@ -167,7 +167,7 @@ const LEAGUES = [
     {n:"ACDR Tibães",s:"TIB",str:43,c1:"#111111",c2:"#ffffff"},
     {n:"GD Nogueira",s:"NGR",str:46,c1:"#c1121f",c2:"#2f9be0"},
     {n:"GDC Gualtar",s:"GUA",str:45,c1:"#2f9be0",c2:"#c1121f"},
-    {n:"GD Lamaçães",s:"LAM",str:41,c1:"#9d174d",c2:"#f2c200"},
+    {n:"SuperBraga",s:"SB",str:41,c1:"#c1121f",c2:"#ffffff"},
     {n:"GD Ferreiros",s:"FER",str:42,c1:"#c1121f",c2:"#ffffff"},
     {n:"AD Palmeira",s:"PLM",str:41,c1:"#15803d",c2:"#ffffff"},
     {n:"GDR Semelhe",s:"SEM",str:39,c1:"#111111",c2:"#c1121f"},
