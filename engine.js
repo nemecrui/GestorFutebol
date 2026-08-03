@@ -237,8 +237,20 @@ function makePlayer(pos,level){
 }
 function wageFor(p){ return Math.max(0.005, Math.round(Math.pow(ability(p)/55,2.6)*0.042*100)/100); }
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
+function applyRosterEntry(p,r){                 // aplica overrides opcionais de um jogador definido à mão
+  if(r.idade!=null)p.age=clamp(Math.round(r.idade),15,42);
+  if(r.altura!=null)p.altura=clamp(Math.round(r.altura),150,215);
+  if(r.attrs){ for(const k in r.attrs){ if(ATTR_KEYS.indexOf(k)>=0)p.attrs[k]=clamp(Math.round(r.attrs[k]),1,20); } }
+  if(r.idade!=null||r.altura!=null||r.attrs||r.nivel!=null){    // recalcular derivados coerentes com os overrides
+    const abil=roleRatingAttrs(p.attrs,p.pos);
+    p.potential=clamp(Math.max(p.potential||abil, abil, (p.age<23?abil+ri(2,10):abil)),abil,99);
+    p.value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(p.age<30?1:0.6)*100)/100);
+    p.wage=wageFor(p);
+  }
+  return p;
+}
 function makeSquadFromRoster(roster,level){
-  const squad=roster.map(r=>{const p=makePlayer(r.p,level); p.name=r.n; return p;});
+  const squad=roster.map(r=>{const p=makePlayer(r.p, r.nivel!=null?clamp(r.nivel,1,20):level); p.name=r.n; return applyRosterEntry(p,r);});
   let gk=squad.filter(p=>p.pos==="GR").length; while(gk<3){ squad.push(makePlayer("GR",level)); gk++; }
   const fillPos=["DC","LD","LE","DC","MC","MDC","MC","ME","MD","MO","PL","ED","EE","PL","DC","MC","PL","LE","LD","DC","MC","MO"];
   let fi=0; while(squad.length<27){ squad.push(makePlayer(fillPos[fi%fillPos.length],level)); fi++; }
@@ -270,7 +282,7 @@ function buildGroups(){
       const name=div.name+(se.name?" · Série "+se.name:"");
       const defs=se.clubs.map(c=>{ const x=Object.assign({},c);
         if(typeof CFG!=="undefined"&&CFG.clubs&&CFG.clubs[x.s])Object.assign(x,CFG.clubs[x.s]);
-        if(x.n==="Cachapuz WLS" && typeof CFG!=="undefined"&&CFG.rosters&&CFG.rosters["CAC"])x.roster=CFG.rosters["CAC"];
+        if(typeof CFG!=="undefined"&&CFG.rosters&&CFG.rosters[x.n])x.roster=CFG.rosters[x.n];   // plantel real por NOME do clube
         return x; });
       const clubs=defs.map((d,i)=>{ const c=clubFromDef(d,i); c.gid=GID++; c.tier=div.tier; c.serie=se.name; return c; });
       groups.push({name, tier:div.tier, serie:se.name, upSlots:slots.up, downSlots:slots.down,

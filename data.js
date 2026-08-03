@@ -28,23 +28,6 @@ const GAME_DATA = {
     { data:"2026-08-02", texto:"🏆 Finalíssima da Divisão de Honra (vencedor da Série A vs Série B pelo título) e Supertaça (campeão do Pró-Nacional vs vencedor da Taça) — jogáveis quando estás envolvido." },
     { data:"2026-08-02", texto:"📲 Novo símbolo da app (prancheta tática) e instalação como aplicação a sério no telemóvel (Adicionar ao ecrã inicial), com ícone próprio." },
     { data:"2026-08-01", texto:"🟥 Suspensões e lesões: 5 amarelos = 1 jogo de castigo, vermelho direto = 2 jogos (2º amarelo = 1). As lesões passam a ter gravidade variável (de ligeira a muito grave). Vês os castigos e o aviso de amarelos no plantel e na ficha do jogador." },
-    { data:"2026-08-01", texto:"⚖️ Motor afinado: menos jogos 0-0 (mais golos e coerência entre divisões), as expulsões pesam muito mais (jogar com 10 é uma grande desvantagem) e a química só desce com 4+ mudanças no onze (as trocas em jogo não contam)." },
-    { data:"2026-08-01", texto:"🥇 Prémios por vencer troféus e por bater equipas de escalão superior na Taça." },
-    { data:"2026-08-01", texto:"🔥 Dérbis! Cada clube tem um rival — os jogos entre eles pesam mais na moral do balneário e na confiança da direção, com destaque na antevisão e no relato." },
-    { data:"2026-08-01", texto:"💶 Contratos e salários: cada jogador tem um salário e a direção dá-te um teto de massa salarial. Ao fim do contrato os jogadores saem livres — renova a tempo! Há mercado de livres e os saldos dos clubes subiram para poderes comprar." },
-    { data:"2026-07-31", texto:"📋 Relatório pós-jogo: no fim de cada jogo, vês o Homem do Jogo, os golos, expulsões e as notas dos teus jogadores." },
-    { data:"2026-07-31", texto:"🗣️ Antevisão do adversário + conversa de balneário! Ao jogar, vês a antevisão (forma, onze provável, forças) e falas à equipa (antes e ao intervalo) — o tom certo dá vantagem real." },
-    { data:"2026-07-30", texto:"🏅 Prémios e recordes de fim de época: Bota de Ouro, Jogador do Ano e os teus recordes de carreira (Início › Recordes & Prémios)." },
-    { data:"2026-07-30", texto:"🎓 Academia de jovens! Forma os teus juniores, investe no nível da academia, empresta-os para crescerem e promove os melhores ao plantel. (Plantel › Academia)" },
-    { data:"2026-07-29", texto:"⚽ Podes fazer substituições e mudar de tática durante o jogo — e agora influenciam mesmo o resultado e as estatísticas." },
-    { data:"2026-07-29", texto:"Os jogos passaram a ser simulados ao vivo, minuto a minuto." },
-    { data:"2026-07-29", texto:"A energia dos jogadores foi reequilibrada e dura muito mais." },
-    { data:"2026-07-29", texto:"🔔 Novo painel de Novidades (este!) para acompanhares as atualizações." },
-    { data:"2026-07-28", texto:"🥅 Desempates da Taça com penáltis animados e suspense." },
-    { data:"2026-07-28", texto:"🧠 Reuniões com a direção, objetivos de curto prazo e moral dos jogadores." },
-    { data:"2026-07-27", texto:"💱 Vê o plantel de qualquer clube e negoceia as compras (o clube pode recusar ou contrapropor)." },
-    { data:"2026-07-27", texto:"💾 Gravações: exportar/importar a carreira e 3 espaços de jogo." },
-    { data:"2026-07-27", texto:"🎨 Visual novo estilo transmissão de TV e novo logótipo." }
   ],
 
   /* ---- ALTERAR clubes já existentes (por sigla) ----
@@ -54,21 +37,33 @@ const GAME_DATA = {
     // "TIB": { n:"ACDR Tibães", c1:"#111111", c2:"#ffffff" }
   },
 
-  /* ---- PLANTEL fixo de um clube (por sigla) ----
-     Substitui os jogadores gerados por estes. {n:"Nome", p:"POSIÇÃO"} */
+  /* ---- PLANTÉIS REAIS de um clube (por NOME EXATO do clube) ----
+     Só para clubes que autorizem nomes reais. A chave é o nome do clube tal como aparece no jogo.
+     Cada jogador: { n:"Nome", p:"POSIÇÃO", ...opcionais }
+       Obrigatórios:  n = nome · p = posição
+       Opcionais:     idade (15-42) · altura (em cm) · nivel (1-20, força geral do jogador)
+                      attrs = { código:1-20, ... }  → força atributos específicos
+     POSIÇÕES: GR · LD · DC · LE · MDC · MC · MD · ME · MO · ED · EE · PL
+     ATRIBUTOS (códigos): rem=Remate cab=Cabeceamento cru=Cruzamento pas=Passe dri=Drible
+       des=Desarme mar=Marcação pos=Posicionamento vel=Velocidade res=Resistência for=Força
+       rea=Reação cri=Criatividade agr=Agressividade pen=Penáltis liv=Livres gr=Guarda-redes
+     Notas: não precisas de listar 27 jogadores — o resto é preenchido automaticamente (com pelo
+       menos 3 GR). Se não indicares idade/altura/attrs, são gerados ao nível do clube.
+     Recomeça a carreira depois de editar. */
   rosters: {
-    "CAC": [
+    "Cachapuz WLS": [
       {n:"Tiago Pinto",p:"GR"},{n:"Henrique Pizzarro",p:"GR"},{n:"Rui Xavier",p:"LD"},{n:"Luís Pereira",p:"LD"},
       {n:"Alvaro Araújo",p:"LE"},{n:"Vicente Pereira",p:"LE"},{n:"Gabriel Teixeira",p:"DC"},{n:"Gonçalo Martins",p:"DC"},
       {n:"Leonardo Vitoria",p:"DC"},{n:"Tiago Veiga",p:"MDC"},{n:"Rui Francisco",p:"MDC"},{n:"João Lopes",p:"MC"},
       {n:"Domingos Barroso",p:"MC"},{n:"Ana Lopes",p:"MC"},{n:"Susana Feio",p:"MC"},{n:"Pedro Carvalho",p:"MD"},
-      {n:"Luís Ferreira",p:"ME"},{n:"Duarte Pinto",p:"ME"}, {n:"Filipa Rebelo",p:"MO"}, {n:"Pedro Gonçalves",p:"MO"},{n:"André Calçada",p:"ED"},
+      {n:"Luís Ferreira",p:"ME"},{n:"Duarte Pinto",p:"ME"},{n:"Filipa Rebelo",p:"MO"},{n:"Pedro Gonçalves",p:"MO"},{n:"André Calçada",p:"ED"},
       {n:"Agostinho Costa",p:"EE"},{n:"Narciso Batista",p:"PL"},{n:"Sérgio Melo",p:"PL"},{n:"António Miranda",p:"PL"}
-    ],
-	"TIB": [ {n: "António Xavier", p:"ED"}],
-	"PAD": [ {n: "André Correia", p:"ED"}]
-    // Exemplo para outro clube:
-    // "SFT": [ {n:"Guarda-Redes X",p:"GR"}, {n:"Avançado Y",p:"PL"} ]
+    ]
+    // Exemplo com características forçadas:
+    // "ACDR Tibães": [
+    //   {n:"João Silva", p:"PL", idade:24, altura:182, nivel:14, attrs:{rem:17, vel:16, cab:15}},
+    //   {n:"Rui Costa",  p:"GR", idade:31, altura:190, attrs:{gr:16, rea:15}}
+    // ]
   },
 
   /* ---- ADICIONAR clubes novos a uma divisão ----
