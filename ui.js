@@ -820,7 +820,7 @@ function showPostMatch(st, r, onClose){
 }
 function openPreMatch(next, startFn){
   const c=me(), opp=myClubs()[next.opp];
-  const myLine=availableLineup(c,G.lineup,G.formation), oppLine=autoPickLineup(opp,"4-4-2",opp.susp);
+  const myLine=availableLineup(c,G.lineup,G.formation), oppLine=aiPickLineup(opp,"4-4-2");
   const myS=teamStrength(c,myLine,G.formation,G.mentality), opS=teamStrength(opp,oppLine,"4-4-2","Equilibrado");
   const fav=favTier(myS.overall,opS.overall), form=clubRecentForm(opp,5);
   const tbl=sortedTable(myDivObj()), oppPos=tbl.findIndex(x=>x.id===opp.id)+1;
@@ -859,7 +859,7 @@ function playMatchAnimated(talkBoost){
   const next=nextFixture(); if(!next){playWeek();render();return;}
   const c=me(), opp=myClubs()[next.opp];
   const home=next.home?c:opp, away=next.home?opp:c;
-  const myLine=availableLineup(c,G.lineup,G.formation), oppLine=autoPickLineup(opp,"4-4-2",opp.susp);
+  const myLine=availableLineup(c,G.lineup,G.formation), oppLine=aiPickLineup(opp,"4-4-2");
   const hLine=next.home?myLine:oppLine, aLine=next.home?oppLine:myLine;
   const userSide=next.home?"H":"A";
   const st=createLive(home,away,hLine,aLine,{maxMin:90,userSide,
@@ -878,8 +878,8 @@ function playCupTie(){
   if(!ut.b){ cupAdvanceRound(); render(); toast("Passaste por folga (bye)"); return; }
   if(!ensureValidXI())return;
   const c=me(), aShort=ut.a, bShort=ut.b, ca=clubByGid(aShort), cb=clubByGid(bShort), userIsA=(aShort===ms);
-  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
-  const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
+  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):aiPickLineup(ca,"4-4-2");
+  const bLine=userIsA?aiPickLineup(cb,"4-4-2"):availableLineup(c,G.lineup,G.formation);
   const userSide=userIsA?"H":"A", userLine=userIsA?aLine:bLine;
   const st=createLive(ca,cb,aLine,bLine,{maxMin:90,userSide,
     hForm:userIsA?G.formation:"4-4-2", aForm:userIsA?"4-4-2":G.formation,
@@ -983,8 +983,8 @@ function playFinalissima(){
   if(!ensureValidXI())return;
   const ms=me().gid, c=me();
   const ca=clubByGid(f.a), cb=clubByGid(f.b), userIsA=(f.a===ms);
-  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
-  const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
+  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):aiPickLineup(ca,"4-4-2");
+  const bLine=userIsA?aiPickLineup(cb,"4-4-2"):availableLineup(c,G.lineup,G.formation);
   const userSide=userIsA?"H":"A", userLine=userIsA?aLine:bLine;
   const st=createLive(ca,cb,aLine,bLine,{maxMin:90,userSide,hForm:userIsA?G.formation:"4-4-2",aForm:userIsA?"4-4-2":G.formation,hMent:userIsA?G.mentality:"Equilibrado",aMent:userIsA?"Equilibrado":G.mentality});
   const settle=(r)=>{ const w=r.hg>r.ag?f.a:f.b; finalissimaResolve({sa:r.hg,sb:r.ag,w,pens:false}); toast(w===ms?"🏆 És Campeão da Divisão de Honra!":"Finalíssima perdida."); };
@@ -995,8 +995,8 @@ function playFinalissima(){
 function playPoTie(tie,onDone){
   const ms=me().short, c=me();
   const ca=clubByShort(tie.a), cb=clubByShort(tie.b), userIsA=(tie.a===ms);
-  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
-  const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
+  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):aiPickLineup(ca,"4-4-2");
+  const bLine=userIsA?aiPickLineup(cb,"4-4-2"):availableLineup(c,G.lineup,G.formation);
   const userSide=userIsA?"H":"A", userLine=userIsA?aLine:bLine;
   const st=createLive(ca,cb,aLine,bLine,{maxMin:90,userSide,hForm:userIsA?G.formation:"4-4-2",aForm:userIsA?"4-4-2":G.formation,hMent:userIsA?G.mentality:"Equilibrado",aMent:userIsA?"Equilibrado":G.mentality});
   const settle=(r)=>{ tie.sa=r.hg;tie.sb=r.ag;tie.w=r.hg>r.ag?tie.a:tie.b;tie.pens=false; onDone(); };
@@ -1032,8 +1032,8 @@ function playSuperCup(){
   if(!ensureValidXI())return;
   const ms=me().gid, c=me();
   const ca=clubByGid(sc.champ), cb=clubByGid(sc.cup), userIsA=(sc.champ===ms);
-  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
-  const bLine=userIsA?autoPickLineup(cb,"4-4-2",cb.susp):availableLineup(c,G.lineup,G.formation);
+  const aLine=userIsA?availableLineup(c,G.lineup,G.formation):aiPickLineup(ca,"4-4-2");
+  const bLine=userIsA?aiPickLineup(cb,"4-4-2"):availableLineup(c,G.lineup,G.formation);
   const userSide=userIsA?"H":"A", userLine=userIsA?aLine:bLine;
   const st=createLive(ca,cb,aLine,bLine,{maxMin:90,userSide,hForm:userIsA?G.formation:"4-4-2",aForm:userIsA?"4-4-2":G.formation,hMent:userIsA?G.mentality:"Equilibrado",aMent:userIsA?"Equilibrado":G.mentality});
   const settle=(r)=>{ const w=r.hg>r.ag?sc.champ:sc.cup; superCupResolve({sa:r.hg,sb:r.ag,w,pens:false}); toast(w===ms?"🏆 Ganhaste a Supertaça!":"Supertaça perdida."); };

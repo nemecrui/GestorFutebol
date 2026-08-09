@@ -345,6 +345,29 @@ function availableLineup(club,baseLineup,formation){
   for(let i=0;i<slots.length;i++){ if(line[i]==null){ const p=bestForSlot(club,slots[i].pos,used,susp); if(p){line[i]=p.id;used.add(p.id);} } }
   return line.filter(x=>x!=null);
 }
+/* ---------- onze da IA: exclui lesionados/suspensos e roda por energia (descansa cansados) ---------- */
+function aiPickLineup(club,formation){
+  const slots=FORMATIONS[formation].slots, un=unavailable(club), used=new Set(), line=[];
+  const ew=p=>0.55+0.45*((p.energy==null?100:p.energy)/100);   // cansado vale menos na escolha → o CPU roda o plantel
+  for(const slot of slots){
+    let best=null,bv=-1;
+    for(const p of club.squad){ if(used.has(p.id)||un.has(p.id))continue;
+      const v=effAt(p,slot.pos)*ew(p); if(v>bv){bv=v;best=p;} }
+    if(best){used.add(best.id);line.push(best.id);} else line.push(null);
+  }
+  return line;
+}
+function aiEnergyTick(club,playedIds){                          // energia do CPU: quem jogou cansa, o resto recupera (sem notícias)
+  const played=new Set(playedIds||[]);
+  club.squad.forEach(p=>{
+    if(p.energy==null)p.energy=100; if(p.injuredWeeks==null)p.injuredWeeks=0;
+    if(p.injuredWeeks>0){ p.injuredWeeks--; p.energy=clamp(p.energy+Math.round(recovery(p.age)*0.6),0,100); return; }
+    if(played.has(p.id)){ p.energy=clamp(p.energy-ri(4,9)-Math.max(0,p.age-32),0,100);
+      const risk=0.012+(100-p.energy)/100*0.03+Math.max(0,(p.age-31))*0.002;
+      if(Math.random()<risk)p.injuredWeeks=rollInjury(); }
+    else p.energy=clamp(p.energy+Math.round(recovery(p.age)*2.5),0,100);
+  });
+}
 
 /* ---------- força da equipa (a partir de atributos/posições) ---------- */
 function teamStrength(club,lineup,formation,mentality){
@@ -599,13 +622,15 @@ function simRound(d,preMy,hasUser){
     const userMatch=hasUser&&(h===G.myId||a===G.myId);
     if(preMy&&userMatch){ r=preMy; userLine=preMy.userLine; }
     else {
-      const hLine=(hasUser&&h===G.myId)?availableLineup(home,G.lineup,G.formation):autoPickLineup(home,"4-4-2",home.susp);
-      const aLine=(hasUser&&a===G.myId)?availableLineup(away,G.lineup,G.formation):autoPickLineup(away,"4-4-2",away.susp);
-      let eH=1,eA=1;
-      if(hasUser&&h===G.myId){eH=energyFactor(home,hLine);userLine=hLine;}
-      if(hasUser&&a===G.myId){eA=energyFactor(away,aLine);userLine=aLine;}
+      const hUser=hasUser&&h===G.myId, aUser=hasUser&&a===G.myId;
+      const hLine=hUser?availableLineup(home,G.lineup,G.formation):aiPickLineup(home,"4-4-2");   // IA: onze por energia (descansa cansados, exclui lesionados)
+      const aLine=aUser?availableLineup(away,G.lineup,G.formation):aiPickLineup(away,"4-4-2");
+      const eH=energyFactor(home,hLine), eA=energyFactor(away,aLine);   // energia afeta a força de ambos (IA incluída)
+      if(hUser)userLine=hLine; if(aUser)userLine=aLine;
       r=simulate(home,away,hLine,aLine,eH,eA);
       [[home,hLine],[away,aLine]].forEach(([cl,ln])=>ln.forEach(id=>{const p=cl.squad.find(x=>x.id===id); if(p)p.apps=(p.apps||0)+1;})); // presenças (IA e simulados)
+      if(!hUser)aiEnergyTick(home,hLine);   // desgaste/recuperação de energia dos clubes CPU
+      if(!aUser)aiEnergyTick(away,aLine);
     }
     applyResult(home,away,r.hg,r.ag,r.events);
     applyMatchSuspensions(home,(r.events||[]).filter(e=>e.side==="H"));
@@ -1388,8 +1413,8 @@ function cupResolveTie(t){
   if(!t.b){ t.w=t.a; return; }
   const ms=me().gid, involvesUser=(t.a===ms||t.b===ms);
   const ca=clubByGid(t.a), cb=clubByGid(t.b);
-  const aLine=(involvesUser&&t.a===ms)?availableLineup(ca,G.lineup,G.formation):autoPickLineup(ca,"4-4-2",ca.susp);
-  const bLine=(involvesUser&&t.b===ms)?availableLineup(cb,G.lineup,G.formation):autoPickLineup(cb,"4-4-2",cb.susp);
+  const aLine=(involvesUser&&t.a===ms)?availableLineup(ca,G.lineup,G.formation):aiPickLineup(ca,"4-4-2");
+  const bLine=(involvesUser&&t.b===ms)?availableLineup(cb,G.lineup,G.formation):aiPickLineup(cb,"4-4-2");
   const eA=(involvesUser&&t.a===ms)?energyFactor(ca,aLine):1, eB=(involvesUser&&t.b===ms)?energyFactor(cb,bLine):1;
   const r=simulate(ca,cb,aLine,bLine,eA,eB);
   let hg=r.hg, ag=r.ag;
@@ -1480,7 +1505,7 @@ function endSeasonAwards(meRank){
 if(typeof module!=="undefined"&&module.exports){
   module.exports={ POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
     rnd,ri,pick,clamp,money,roleRating,ability,effAt,fam,makePlayer,makeSquad,clubFromDef,
-    buildFixtures,autoPickLineup,availableLineup,teamStrength,simulate,applyResult,pickGoal,pickFoul,
+    buildFixtures,autoPickLineup,availableLineup,aiPickLineup,aiEnergyTick,teamStrength,simulate,applyResult,pickGoal,pickFoul,
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     buyAsk,makeBid,completeBuy,
