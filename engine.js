@@ -301,7 +301,7 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
-     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null, finalissima:null, event:null, eventCd:ri(1,2),
+     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null, finalissima:null, event:null, eventCd:ri(1,2), rival:null,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -309,7 +309,7 @@ function newGame(divIdx,clubIdx,managerName){
   me().budget=budgetForObjective(G.myTier,me().objective); G.seasonStartBudget=me().budget; G.budgetGranted=0; G.pendingPrize=0;
   cupCreate();
   academyIntake();
-  seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me()); ensureRivals();
+  seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me()); ensureRivals(); pickRival();
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
@@ -639,8 +639,9 @@ function simRound(d,preMy,hasUser){
       recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg);
       updateRecordsMatch(isH?r.hg:r.ag, isH?r.ag:r.hg, (h===G.myId?away:home).name);
       if(!r.liveUser)processEnergyInjuries(uc,userLine);   // no jogo ao vivo a energia já foi tratada
-      const derby=isDerby(me().gid,(h===G.myId?away:home).gid);
-      rateUserMatch(uc,played,r,isH); updateForm(uc,played); updateChem(userLine); trainTick(uc,played); updateMorale(uc,played,isH?r.hg:r.ag,isH?r.ag:r.hg,derby); }
+      const opp=(h===G.myId?away:home), derby=isDerby(me().gid,opp.gid);
+      rateUserMatch(uc,played,r,isH); updateForm(uc,played); updateChem(userLine); trainTick(uc,played); updateMorale(uc,played,isH?r.hg:r.ag,isH?r.ag:r.hg,derby);
+      if(G.rival&&opp.gid===G.rival.gid)rivalReact(isH?r.hg:r.ag,isH?r.ag:r.hg); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -744,6 +745,7 @@ function endSeason(){
   me().budget=Math.round((me().budget+prize)*100)/100;
   addNews("Prémio de classificação: +"+money(prize)+".");
   endSeasonAwards(meRank);
+  resolveRivalDuel(table,meRank);
   evaluateBoard(meRank);
   while(G.cup&&G.cup.active)cupAdvanceRound();
   finalissimaSetup();      // Divisão de Honra: vencedores Série A vs Série B (troféu)
@@ -818,7 +820,7 @@ function newSeason(){
   let myMove = G.myTier<oldTier ? "up" : (G.myTier>oldTier ? "down" : null);
   G.season++; G.week=0; G.seasonDone=false; G.date="Set"; G.midWindowDone=false; G.budgetAsked=false;
   G.lineup=autoPickLineup(me(),G.formation);
-  G.manager.seasons=(G.manager.seasons||0)+1; setObjectives();
+  G.manager.seasons=(G.manager.seasons||0)+1; setObjectives(); pickRival(true);
   const kitty=budgetForObjective(G.myTier,me().objective);            // verba nova conforme aspiração desta época
   me().budget=Math.round((me().budget+kitty)*100)/100;              // soma à que transitou (incl. prémios)
   G.seasonStartBudget=me().budget; G.budgetGranted=0;
@@ -1552,8 +1554,8 @@ const DEFAULT_EVENTS=[
    text:"O autocarro do {clube} furou um pneu a caminho do jogo.",
    choices:[{label:"Ir a pé para aquecer",result:"Chegaram a suar mas inspirados. História para contar aos netos.",fx:{morale:3}},
             {label:"Esperar pelo reboque",result:"Esperaram com calma. Sem drama.",fx:{}}]},
-  {tone:"bizarro",cond:"any",icon:"rival",title:"Provocação do {rival}",
-   text:"O treinador do {rival} gozou com o {clube} numa entrevista.",
+  {tone:"bizarro",cond:"any",icon:"rival",title:"Provocação do rival",
+   text:"O {rivaltreinador}, do {rival}, gozou com o {clube} numa entrevista.",
    choices:[{label:"Responder à letra",result:"Não deixaste passar. Os adeptos vibraram com a picardia.",fx:{rep:2,morale:3}},
             {label:"Ficar calado e trabalhar",result:"Guardaste a resposta para o campo. A direção gostou da classe.",fx:{board:3}}]}
 ];
@@ -1564,7 +1566,8 @@ function buildEvent(tmpl){
   const young=sq.slice().filter(p=>p.age<=21).sort((a,b)=>(b.potential||0)-(a.potential||0))[0];
   const player=tmpl.young ? (young||sq.reduce((a,b)=>a.age<b.age?a:b)) : (pick(sq.filter(p=>GROUP[p.pos]!=="GK"))||pick(sq));
   const rc=clubByGid(rivalOf(me().gid)); const rivalName=rc?rc.name:"clube rival";
-  const fill=s=>String(s).replace(/\{clube\}/g,me().name).replace(/\{jogador\}/g,player?player.name:"um jogador").replace(/\{rival\}/g,rivalName).replace(/\{treinador\}/g,(G.manager&&G.manager.name)||"Treinador").replace(/\{epoca\}/g,G.season);
+  const rmn=(G.rival&&G.rival.name)||"o treinador rival";
+  const fill=s=>String(s).replace(/\{clube\}/g,me().name).replace(/\{jogador\}/g,player?player.name:"um jogador").replace(/\{rivaltreinador\}/g,rmn).replace(/\{rival\}/g,rivalName).replace(/\{treinador\}/g,(G.manager&&G.manager.name)||"Treinador").replace(/\{epoca\}/g,G.season);
   return {icon:tmpl.icon||"bizarro", tone:tmpl.tone||"serio", title:fill(tmpl.title), text:fill(tmpl.text),
     choices:(tmpl.choices||[]).map(c=>({label:c.label, result:fill(c.result), fx:c.fx||{}})), done:false, result:null};
 }
@@ -1593,6 +1596,36 @@ function applyEventEffects(fx){ if(!fx)return;
 function resolveEvent(i){ const e=G.event; if(!e||e.done)return null; const c=e.choices[i]; if(!c)return null;
   applyEventEffects(c.fx); e.result=c.result; e.done=true; addNews("📎 "+e.title+" — "+c.result); save(); return c.result; }
 function dismissEvent(){ G.event=null; save(); }
+/* ---------- Rival recorrente (personagem + duelo de época + reações no feed) ---------- */
+const RIVAL_NAMES=["Zé Mourão","Toni Brandão","Quim Sequeira","Nando Peixoto","Mário Basílio","Vítor Canário","Cátia Nogueira","Rui Bastos","Paulo Trovão","Nuno Vinagre","Dídio Faria","Sérgio Cunha"];
+const RIVAL_WON=["Ganhar-vos a vocês sabe sempre melhor.","O {clube}? Nem nos aqueceu.","Escrevam lá: quem manda aqui somos nós.","Foi fácil. Para a próxima tragam mais gente."];
+const RIVAL_LOST=["Tiveram sorte, não se habituem.","Um dia mau acontece. Voltamos mais fortes.","Aproveitem, que não se repete.","Parabéns ao {clube}... desta vez."];
+const RIVAL_DREW=["Empate? Fugiram foi à derrota.","Guardo a vitória para o próximo.","Nada mau, para o que costuma ser o {clube}."];
+function fillRival(s){ const rc=G.rival?clubByGid(G.rival.gid):null;
+  return String(s).replace(/\{rivaltreinador\}/g,(G.rival&&G.rival.name)||"o rival").replace(/\{rivalclube\}/g,rc?rc.name:"o rival").replace(/\{clube\}/g,me().name); }
+function pickRival(keepNameIfSame){
+  const d=myDivObj(); const cands=d.clubs.filter(c=>c.gid!==me().gid); if(!cands.length){G.rival=null;return;}
+  let rc=null; const rg=rivalOf(me().gid); if(rg)rc=cands.find(c=>c.gid===rg);      // preferir o par de dérbi, se estiver na série
+  if(!rc){ const my=me().strength||60; rc=cands.slice().sort((a,b)=>Math.abs((a.strength||60)-my)-Math.abs((b.strength||60)-my))[0]; }
+  const same=G.rival&&keepNameIfSame&&G.rival.gid===rc.gid;
+  G.rival={ gid:rc.gid, name: same?G.rival.name:(pick(RIVAL_NAMES)||randName()), mood: same?G.rival.mood:0, h2h: same?G.rival.h2h:{w:0,d:0,l:0} };
+}
+function rivalReact(gf,ga){                        // reação do rival a um confronto direto
+  const r=G.rival; if(!r)return; const rc=clubByGid(r.gid);
+  let line;
+  if(gf>ga){ r.h2h.w++; r.mood=clamp(r.mood-2,-10,10); line=pick(RIVAL_LOST); }
+  else if(gf<ga){ r.h2h.l++; r.mood=clamp(r.mood+2,-10,10); line=pick(RIVAL_WON); }
+  else { r.h2h.d++; line=pick(RIVAL_DREW); }
+  addNews("🗣️ "+r.name+" ("+(rc?rc.name:"rival")+"): «"+fillRival(line)+"»");
+}
+function resolveRivalDuel(table,meRank){           // no fim da época: quem terminou mais acima
+  const r=G.rival; if(!r||!table)return; const rr=table.findIndex(c=>c.gid===r.gid)+1; if(!rr)return;
+  const rc=clubByGid(r.gid), rn=rc?rc.name:"o rival";
+  if(meRank<rr){ G.manager.reputation=clamp((G.manager.reputation||40)+2,0,100);
+    addNews("🏁 Duelo da época ganho! Terminaste à frente do "+rn+" ("+meRank+"º vs "+rr+"º). O "+r.name+" que se cale. (+reputação)"); }
+  else if(meRank>rr){ addNews("🏁 Duelo da época perdido: o "+rn+" ("+r.name+") ficou à tua frente ("+rr+"º vs "+meRank+"º). Para o ano acertas contas."); }
+  else { addNews("🏁 Duelo da época: tu e o "+rn+" lado a lado na tabela."); }
+}
 /* ---------- exports (para node/testes; ignorado no browser) ---------- */
 if(typeof module!=="undefined"&&module.exports){
   module.exports={ POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
@@ -1615,6 +1648,7 @@ if(typeof module!=="undefined"&&module.exports){
     poSimTie,simPlayoffWinner,playoffZoneInfo,setupPlayoff,resolvePlayoffOutcome,superCupSetup,superCupResolve,
     buildGroups,clubByGid,groupIndexOf,allClubGids,finalissimaSetup,finalissimaResolve,
     maybeEvent,buildEvent,resolveEvent,dismissEvent,applyEventEffects,allEvents,
+    pickRival,rivalReact,resolveRivalDuel,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };

@@ -150,6 +150,15 @@ function eventCardHtml(e){
   }
   return inner+`</div>`;
 }
+function rivalCardHtml(){
+  const r=G.rival; if(!r)return ""; const rc=clubByGid(r.gid); if(!rc)return "";
+  const mood=r.mood>=3?"confiante 😏":(r.mood<=-3?"em baixo 😰":"atento 👀"), h2h=r.h2h||{w:0,d:0,l:0};
+  return `<div class="card"><h2>🗣️ Rival da época</h2>
+    <div class="row between" style="align-items:center">
+      <div class="row" style="gap:8px">${swatch(rc,true)}<div><b>${rc.name}</b><div class="muted" style="font-size:11px">Treinador: ${r.name} · ${mood}</div></div></div>
+      <div style="text-align:right"><div class="muted" style="font-size:11px">Confrontos</div><b>${h2h.w}V · ${h2h.d}E · ${h2h.l}D</b></div>
+    </div></div>`;
+}
 function viewHome(){
   const c=me(), d=myDivObj(), table=sortedTable(d);
   const rank=table.findIndex(x=>x.id===G.myId)+1;
@@ -190,6 +199,7 @@ function viewHome(){
     h+=`<div class="card"><h2>${d.name} · Jornada ${d.week+1} · ${G.date}</h2>
       <div class="fx"><div class="t">${clubTagFull(home)}</div><div class="sc">${next.home?"CASA":"FORA"}</div><div class="t a">${clubTagFull(away)}</div></div>
       ${isDerby(c.gid,opp.gid)?`<div class="center" style="margin:4px 0 2px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:11px;padding:2px 10px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
+      ${(G.rival&&opp.gid===G.rival.gid)?`<div class="center" style="margin:2px 0"><span style="background:linear-gradient(180deg,#3b8cff,#1d4ed8);color:#fff;font-weight:800;font-size:11px;padding:2px 10px;border-radius:20px;letter-spacing:1px">🗣️ RIVAL DA ÉPOCA</span></div>`:""}
       ${(function(){const iss=lineupIssues(c);if(iss.ok)return "";const nm=c.squad.filter(p=>(c.susp||[]).includes(p.id)).map(p=>p.name);return `<div class="center" style="color:var(--red);font-size:12px;margin:6px 0">⚠ Onze inválido${iss.sus?` — suspenso(s): ${nm.join(", ")}`:""}${iss.vac?`${iss.sus?"; ":" — "}${iss.vac} vazio(s)`:""}. Corrige na Tática.</div>`;})()}
       <button class="btn" id="btnPlay" style="margin-top:4px">▶ Jogar jornada</button>
       <button class="btn sec small" id="btnSim" style="width:100%;margin-top:8px">⏩ Simular resto da época</button></div>`;
@@ -225,6 +235,7 @@ function viewHome(){
         <button class="btn small sec" data-counter="${i}">Pedir +20%</button>
         <button class="btn small warn" data-reject="${i}">Recusar</button></div>`).join("")+`</div>`;
   }
+  if(G.rival&&!G.seasonDone)h+=rivalCardHtml();
   if(G.cup){
     const cup=G.cup, ms=c.gid;
     if(!cup.active&&cup.winner){ const wc=clubByGid(cup.winner);
