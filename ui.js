@@ -150,6 +150,43 @@ function eventCardHtml(e){
   }
   return inner+`</div>`;
 }
+/* ---------- Cartão partilhável dos grandes momentos ---------- */
+function _hex(h){h=(h||"#1d4ed8").replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function mixHex(a,b,t){const A=_hex(a),B=_hex(b);return "#"+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,"0")).join("");}
+function _rrPath(x,X,Y,W,H,R){x.beginPath();x.moveTo(X+R,Y);x.arcTo(X+W,Y,X+W,Y+H,R);x.arcTo(X+W,Y+H,X,Y+H,R);x.arcTo(X,Y+H,X,Y,R);x.arcTo(X,Y,X+W,Y,R);x.closePath();}
+function shareCard(o){
+  const S=1080, cv=document.createElement("canvas");cv.width=cv.height=S;const x=cv.getContext("2d");
+  const c1=o.c1||"#1d4ed8", c2=o.c2||"#ffffff";
+  const g=x.createLinearGradient(0,0,S,S);g.addColorStop(0,mixHex(c1,"#0a0e14",0.55));g.addColorStop(1,"#070a10");x.fillStyle=g;x.fillRect(0,0,S,S);
+  x.fillStyle=c1;x.fillRect(0,0,S,16);
+  x.textAlign="center";
+  x.fillStyle="#ffcf33";x.font="800 42px Arial";x.fillText("GESTOR DE FUTEBOL",S/2,120);
+  _rrPath(x,S/2-95,175,190,190,26);x.fillStyle=c1;x.fill();                 // chip do clube (2 cores)
+  x.save();_rrPath(x,S/2-95,175,190,190,26);x.clip();x.fillStyle=c2;x.fillRect(S/2,175,95,190);x.restore();
+  x.fillStyle="#ffffff";x.strokeStyle="#0a0e14";x.lineWidth=6;x.font="800 66px Arial";x.strokeText(o.ini||"",S/2,295);x.fillText(o.ini||"",S/2,295);
+  const t=o.title||"";x.fillStyle="#eaf1f8";x.font="800 "+(t.length>11?76:118)+"px Arial";x.fillText(t,S/2,530);
+  if(o.sub){x.fillStyle="#cfe0f0";x.font="700 46px Arial";x.fillText(o.sub,S/2,608);}
+  if(o.detail){_rrPath(x,120,676,S-240,116,24);x.fillStyle="rgba(255,207,51,0.15)";x.fill();x.fillStyle="#ffe9a8";x.font="700 44px Arial";x.fillText(o.detail,S/2,748);}
+  x.fillStyle="#22c55e";x.font="800 62px Arial";x.fillText("gestorfutebol.pt",S/2,980);
+  x.fillStyle="#93a2b6";x.font="600 32px Arial";x.fillText("joga grátis no telemóvel",S/2,1030);
+  return cv.toDataURL("image/png");
+}
+function _dlImg(dataURL,filename){ try{const a=document.createElement("a");a.href=dataURL;a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);toast("Imagem guardada — partilha nos stories!");}catch(e){toast("Não foi possível gerar a imagem.");} }
+function doShare(dataURL,filename,text){
+  try{ if(navigator.canShare){ fetch(dataURL).then(r=>r.blob()).then(b=>{ const file=new File([b],filename,{type:"image/png"});
+        if(navigator.canShare({files:[file]}))return navigator.share({files:[file],text}).catch(()=>_dlImg(dataURL,filename));
+        _dlImg(dataURL,filename); }).catch(()=>_dlImg(dataURL,filename)); return; } }catch(e){}
+  _dlImg(dataURL,filename);
+}
+function shareTrophy(kind){
+  const c=me(); let title="GESTOR DE FUTEBOL", sub=c.name;
+  if(kind==="champ"){title="CAMPEÕES!";sub=myDivObj().name;}
+  else if(kind==="promo"){title="SUBIMOS!";sub=myDivObj().name;}
+  else if(kind==="cup"){title="TAÇA CONQUISTADA!";sub="Vencedor da Taça";}
+  else if(kind==="final"){title="CAMPEÃO DA HONRA!";sub="Finalíssima";}
+  else if(kind==="super"){title="SUPERTAÇA!";sub="Campeão da Supertaça";}
+  doShare(shareCard({c1:c.c1,c2:c.c2,ini:c.short,title,sub,detail:c.name+" · Época "+G.season}),"gestorfutebol.png","Gestor de Futebol — "+title+" · gestorfutebol.pt");
+}
 function rivalCardHtml(){
   const r=G.rival; if(!r)return ""; const rc=clubByGid(r.gid); if(!rc)return "";
   const mood=r.mood>=3?"confiante 😏":(r.mood<=-3?"em baixo 😰":"atento 👀"), h2h=r.h2h||{w:0,d:0,l:0};
@@ -212,6 +249,7 @@ function viewHome(){
         <div class="stat"><div class="v" style="font-size:14px">${bota?bota.player+" ("+bota.goals+")":"—"}</div><div class="l">🥇 Bota de Ouro${bota&&bota.mine?" · TEU":""}</div></div>
         <div class="stat"><div class="v" style="font-size:14px">${meScorer?meScorer.name+" ("+(meScorer.goals||0)+")":"—"}</div><div class="l">Teu melhor marcador</div></div></div>
       <button class="btn sec small" id="btnRecords" style="width:100%;margin-bottom:8px">🏅 Recordes & Prémios</button>
+      ${rank===1?'<button class="btn sec small" data-sharetrophy="champ" style="width:100%;margin-bottom:8px">📸 Partilhar o título</button>':(d.upSlots&&rank<=d.upSlots?'<button class="btn sec small" data-sharetrophy="promo" style="width:100%;margin-bottom:8px">📸 Partilhar a subida</button>':'')}
       ${(function(){ const sc=G.superCup; if(sc&&!sc.pending&&sc.winner&&!sc.userIn){ const wc=clubByGid(sc.winner); return `<div class="muted" style="font-size:12px;margin-bottom:2px">🏆 Supertaça: <b>${wc?wc.name:sc.winner}</b> venceu.</div>`; } return ""; })()}
       ${(G.finalissima&&G.finalissima.pending&&G.finalissima.userIn)||(G.superCup&&G.superCup.pending&&G.superCup.userIn)?"":`<button class="btn" id="btnNewSeason">▶ Começar época ${G.season+1}</button>`}</div>`;
     if(G.finalissima&&G.finalissima.pending&&G.finalissima.userIn){ h+=finalissimaCardHtml(); }
@@ -239,7 +277,7 @@ function viewHome(){
   if(G.cup){
     const cup=G.cup, ms=c.gid;
     if(!cup.active&&cup.winner){ const wc=clubByGid(cup.winner);
-      h+=`<div class="card center"><h2>🏆 Taça</h2><div class="muted">Vencedor: <b>${wc?wc.name:cup.winner}</b></div></div>`;
+      h+=`<div class="card center"><h2>🏆 Taça</h2><div class="muted">Vencedor: <b>${wc?wc.name:cup.winner}</b></div>${cup.winner===c.gid?'<button class="btn sec small" data-sharetrophy="cup" style="width:100%;margin-top:8px">📸 Partilhar a conquista</button>':''}</div>`;
     } else if(cup.active){
       const ut=cupUserTie(), avail=cupAvailable();
       h+=`<div class="card"><h2>🏆 Taça · ${cupRoundName()}</h2>`;
@@ -850,10 +888,24 @@ function showPostMatch(st, r, onClose){
     ${cardList.length?`<h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">🟥 Expulsões</h2>`+cardList.map(c=>`<div class="row between" style="font-size:13px;padding:3px 2px"><span>${c.m}' 🟥 ${c.txt}</span><span class="muted">${c.club}</span></div>`).join(""):""}
     <h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">As tuas notas</h2>
     ${yourR.map(p=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:4px 2px;font-size:13px"><span>${p.name} <span class="pill ${posClass(p.pos)}" style="font-size:9px">${p.pos}</span></span><b style="color:${rc(p.lastRating||6)}">${p.lastRating!=null?p.lastRating:"—"}</b></div>`).join("")}
-    <button class="btn" id="pmrOk" style="margin-top:12px">Continuar</button></div>`;
+    <button class="btn sec small" id="pmrShare" style="width:100%;margin-top:10px">📸 Partilhar resultado</button>
+    <button class="btn" id="pmrOk" style="margin-top:8px">Continuar</button></div>`;
   document.body.appendChild(mo);
   const done=()=>{ mo.remove(); if(onClose)onClose(); };
   mo.querySelector("#pmrOk").onclick=done; mo.onclick=e=>{if(e.target===mo)done();};
+  const bsh=mo.querySelector("#pmrShare");
+  if(bsh)bsh.onclick=()=>{
+    const uGF=userSide==="H"?r.hg:r.ag, uGA=userSide==="H"?r.ag:r.hg;
+    const word=uGF>uGA?(uGF-uGA>=3?"GOLEADA!":"VITÓRIA!"):uGF<uGA?"DERROTA":"EMPATE";
+    const us={}; (r.events||[]).forEach(e=>{ if(e.type==="goal"&&e.side===userSide&&e.gtype!=="own"&&e.scorer)us[e.scorer]=(us[e.scorer]||0)+1; });
+    let topId=null,tg=0; for(const id in us){ if(us[id]>tg){tg=us[id];topId=id;} }
+    const late=uGF>uGA&&(r.events||[]).some(e=>e.type==="goal"&&e.side===userSide&&e.m>=88);
+    let detail="";
+    if(tg>=3){ const p=uClub.squad.find(x=>x.id==topId); detail="⚽ HAT-TRICK de "+(p?p.name:"?"); }
+    else if(late)detail="⚽ Golo ao 90'!";
+    else if(motm&&motm.side===userSide)detail="⭐ "+motm.p.name;
+    doShare(shareCard({c1:uClub.c1,c2:uClub.c2,ini:uClub.short,title:word,sub:`${home.short} ${r.hg}–${r.ag} ${away.short}`,detail}),"gestorfutebol.png","Gestor de Futebol · gestorfutebol.pt");
+  };
 }
 function openPreMatch(next, startFn){
   const c=me(), opp=myClubs()[next.opp];
@@ -1098,6 +1150,7 @@ function bindView(){
   const bpo=$("#btnPlayoff");if(bpo)bpo.onclick=()=>{if(meetBlock())return;playPlayoff();};
   const bsc=$("#btnSuperCup");if(bsc)bsc.onclick=()=>{if(meetBlock())return;playSuperCup();};
   const bfi=$("#btnFinalissima");if(bfi)bfi.onclick=()=>{if(meetBlock())return;playFinalissima();};
+  document.querySelectorAll("[data-sharetrophy]").forEach(b=>b.onclick=()=>shareTrophy(b.dataset.sharetrophy));
   document.querySelectorAll("[data-evc]").forEach(b=>b.onclick=()=>{resolveEvent(+b.dataset.evc);render();});
   const bec=$("#btnEventCont");if(bec)bec.onclick=()=>{dismissEvent();render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
