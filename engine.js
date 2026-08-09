@@ -301,7 +301,7 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
-     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null, finalissima:null,
+     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null, finalissima:null, event:null, eventCd:ri(1,2),
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -651,6 +651,7 @@ function playWeek(preMy){
   boardAfterUserMatch();
   checkShortObjective();                    // período de prova acordado numa reunião
   if(!G.fired)maybeBoardMeeting();           // maus resultados podem gerar nova reunião
+  if(!G.fired)maybeEvent();                  // eventos de história (cartões com escolhas)
   if(G.grace>0)G.grace--;                    // margem após assumir um clube a meio da época
   if(!G.midWindowDone && myD.week===Math.floor(myD.fixtures.length/2)){ transferWindow(); G.midWindowDone=true; }
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
@@ -1501,6 +1502,97 @@ function endSeasonAwards(meRank){
   if(G.awards.length>60)G.awards.length=60;
   save();
 }
+/* ---------- Eventos de história (cartões com escolhas: sérios e bizarros) ----------
+   Efeitos possíveis em fx: morale (moral do balneário), board (confiança da direção),
+   budget (€M), rep (reputação), chem (química). Placeholders no texto: {clube} {jogador} {rival} {treinador} {epoca}.
+   cond: "any" | "win" | "loss" | "draw" | "bigwin" | "bigloss" | "derby". young:true → escolhe um jovem. */
+const DEFAULT_EVENTS=[
+  {tone:"serio",cond:"any",icon:"jovem",young:true,title:"Talento na academia",
+   text:"{jogador} está a brilhar nos treinos e o balneário só fala nele.",
+   choices:[{label:"Promover ao plantel",result:"Subiste {jogador} à equipa principal. O grupo aplaudiu a aposta.",fx:{morale:6,rep:1}},
+            {label:"Deixar amadurecer",result:"Preferiste ter calma com {jogador}.",fx:{}},
+            {label:"Ouvir propostas",result:"Abriste a porta a uma venda de {jogador}. Alguns torceram o nariz.",fx:{budget:0.2,morale:-5}}]},
+  {tone:"serio",cond:"loss",icon:"presidente",title:"Reação exigida",
+   text:"Depois da derrota, o presidente do {clube} quer ver garra na resposta.",
+   choices:[{label:"Assumir a culpa publicamente",result:"Protegeste o grupo. A direção valorizou a postura.",fx:{board:4,morale:3}},
+            {label:"Apontar o dedo aos jogadores",result:"Puseste pressão no plantel. A moral ressentiu-se.",fx:{board:2,morale:-6}}]},
+  {tone:"serio",cond:"win",icon:"adepto",title:"Onda de entusiasmo",
+   text:"A vitória encheu os adeptos do {clube} de esperança.",
+   choices:[{label:"Pedir os pés na terra",result:"Manténs o foco. Trabalho, trabalho, trabalho.",fx:{}},
+            {label:"Prometer lutar pelo topo",result:"Abraçaste o sonho. A moral disparou, a pressão também.",fx:{morale:6,board:2}}]},
+  {tone:"serio",cond:"any",icon:"presidente",title:"Sondagem por {jogador}",
+   text:"Um clube de escalão superior sondou {jogador}.",
+   choices:[{label:"Segurar a estrela",result:"Recusaste conversar. {jogador} sentiu-se valorizado.",fx:{morale:5}},
+            {label:"Negociar a saída",result:"Encaixaste uma verba com a saída de {jogador}.",fx:{budget:0.35,morale:-6}}]},
+  {tone:"serio",cond:"derby",icon:"rival",title:"Semana de dérbi",
+   text:"O confronto com o {rival} mexe com toda a gente.",
+   choices:[{label:"Focar o grupo no jogo",result:"Canalizaste a tensão para o campo.",fx:{morale:4}},
+            {label:"Alimentar a rivalidade",result:"Deste lenha à fogueira. Os adeptos adoraram, a direção nem tanto.",fx:{rep:2,board:-2,morale:3}}]},
+  {tone:"serio",cond:"any",icon:"adepto",title:"Adepto de sempre",
+   text:"Um sócio de 80 anos do {clube} nunca falhou um jogo em 50 épocas.",
+   choices:[{label:"Homenageá-lo no estádio",result:"O gesto emocionou a comunidade.",fx:{rep:2,morale:2}},
+            {label:"Enviar camisola assinada",result:"Um miminho que ficou na história do clube.",fx:{rep:1}}]},
+  {tone:"bizarro",cond:"any",icon:"bizarro",title:"Equipamentos cor-de-rosa",
+   text:"O roupeiro do {clube} lavou as camisolas com uma peça vermelha. Ficaram... cor-de-rosa.",
+   choices:[{label:"Jogar de rosa com orgulho",result:"Entraram de rosa e viraram tendência. Os adeptos aderiram!",fx:{rep:2,morale:4}},
+            {label:"Comprar equipamento à pressa",result:"Gastaste uns trocos para salvar a honra.",fx:{budget:-0.05}}]},
+  {tone:"bizarro",cond:"any",icon:"cabra",title:"Invasão no relvado",
+   text:"Uma cabra fugiu de um terreno vizinho e invadiu o treino do {clube}.",
+   choices:[{label:"Adotá-la como mascote",result:"A 'Cabritas' é agora mascote oficial. Virou fenómeno local!",fx:{rep:3,morale:5}},
+            {label:"Chamar o dono",result:"Devolveste a cabra. Pena, dava uma boa história.",fx:{}}]},
+  {tone:"bizarro",cond:"any",icon:"telemovel",title:"Viral nas redes",
+   text:"Um vídeo de {jogador} a dançar no balneário rebentou nas redes.",
+   choices:[{label:"Aproveitar a fama",result:"Deste palco à estrela. O {clube} ganhou seguidores.",fx:{rep:3}},
+            {label:"Mandar focar no futebol",result:"Puseste ordem na casa. {jogador} guardou a dança para os golos.",fx:{morale:-2,board:2}}]},
+  {tone:"bizarro",cond:"any",icon:"presidente",title:"Sonho do presidente",
+   text:"O presidente do {clube} sonhou que eram campeões e quer festa já.",
+   choices:[{label:"Alinhar na festa",result:"Houve arraial. A moral subiu, a carteira encolheu.",fx:{morale:6,budget:-0.08,board:2}},
+            {label:"Travar o entusiasmo",result:"Puseste os pés na terra. O presidente ficou de trombas.",fx:{board:-3}}]},
+  {tone:"bizarro",cond:"any",icon:"bizarro",title:"Autocarro furado",
+   text:"O autocarro do {clube} furou um pneu a caminho do jogo.",
+   choices:[{label:"Ir a pé para aquecer",result:"Chegaram a suar mas inspirados. História para contar aos netos.",fx:{morale:3}},
+            {label:"Esperar pelo reboque",result:"Esperaram com calma. Sem drama.",fx:{}}]},
+  {tone:"bizarro",cond:"any",icon:"rival",title:"Provocação do {rival}",
+   text:"O treinador do {rival} gozou com o {clube} numa entrevista.",
+   choices:[{label:"Responder à letra",result:"Não deixaste passar. Os adeptos vibraram com a picardia.",fx:{rep:2,morale:3}},
+            {label:"Ficar calado e trabalhar",result:"Guardaste a resposta para o campo. A direção gostou da classe.",fx:{board:3}}]}
+];
+function allEvents(){ return DEFAULT_EVENTS.concat((typeof CFG!=="undefined"&&CFG.eventos)||[]); }
+function weightedPick(arr){ const tot=arr.reduce((s,e)=>s+(e.w||1),0); let r=Math.random()*tot; for(const e of arr){ r-=(e.w||1); if(r<=0)return e; } return arr[arr.length-1]; }
+function buildEvent(tmpl){
+  const sq=me().squad;
+  const young=sq.slice().filter(p=>p.age<=21).sort((a,b)=>(b.potential||0)-(a.potential||0))[0];
+  const player=tmpl.young ? (young||sq.reduce((a,b)=>a.age<b.age?a:b)) : (pick(sq.filter(p=>GROUP[p.pos]!=="GK"))||pick(sq));
+  const rc=clubByGid(rivalOf(me().gid)); const rivalName=rc?rc.name:"clube rival";
+  const fill=s=>String(s).replace(/\{clube\}/g,me().name).replace(/\{jogador\}/g,player?player.name:"um jogador").replace(/\{rival\}/g,rivalName).replace(/\{treinador\}/g,(G.manager&&G.manager.name)||"Treinador").replace(/\{epoca\}/g,G.season);
+  return {icon:tmpl.icon||"bizarro", tone:tmpl.tone||"serio", title:fill(tmpl.title), text:fill(tmpl.text),
+    choices:(tmpl.choices||[]).map(c=>({label:c.label, result:fill(c.result), fx:c.fx||{}})), done:false, result:null};
+}
+function maybeEvent(){
+  if(G.event||(G.meeting&&G.meeting.active)||G.fired)return;
+  if((G.eventCd||0)>0){ G.eventCd--; return; }
+  const d=myDivObj(); if(d.week<2)return;
+  const res=d.results[d.results.length-1]||[]; const my=res.find(x=>x.h===G.myId||x.a===G.myId);
+  const flags=["any"];
+  if(my){ const isH=my.h===G.myId, gf=isH?my.hg:my.ag, ga=isH?my.ag:my.hg;
+    flags.push(gf>ga?"win":gf<ga?"loss":"draw");
+    if(gf-ga>=3)flags.push("bigwin"); if(ga-gf>=3)flags.push("bigloss");
+    const opp=(my.h===G.myId?d.clubs[my.a]:d.clubs[my.h]); if(opp&&isDerby(me().gid,opp.gid))flags.push("derby"); }
+  if(Math.random()>0.42)return;
+  const pool=allEvents().filter(e=>flags.includes(e.cond||"any"));
+  if(!pool.length)return;
+  G.event=buildEvent(weightedPick(pool)); G.eventCd=ri(2,4); save();
+}
+function applyEventEffects(fx){ if(!fx)return;
+  if(fx.morale)me().squad.forEach(p=>p.morale=clamp((p.morale==null?65:p.morale)+fx.morale,0,100));
+  if(fx.board&&G.board)G.board.confidence=clamp(G.board.confidence+fx.board,0,100);
+  if(fx.budget)me().budget=Math.round((me().budget+fx.budget)*100)/100;
+  if(fx.rep&&G.manager)G.manager.reputation=clamp((G.manager.reputation||40)+fx.rep,0,100);
+  if(fx.chem&&G.chem!=null)G.chem=clamp(G.chem+fx.chem,30,100);
+}
+function resolveEvent(i){ const e=G.event; if(!e||e.done)return null; const c=e.choices[i]; if(!c)return null;
+  applyEventEffects(c.fx); e.result=c.result; e.done=true; addNews("📎 "+e.title+" — "+c.result); save(); return c.result; }
+function dismissEvent(){ G.event=null; save(); }
 /* ---------- exports (para node/testes; ignorado no browser) ---------- */
 if(typeof module!=="undefined"&&module.exports){
   module.exports={ POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
@@ -1522,6 +1614,7 @@ if(typeof module!=="undefined"&&module.exports){
     ensureRivals,rivalOf,isDerby,
     poSimTie,simPlayoffWinner,playoffZoneInfo,setupPlayoff,resolvePlayoffOutcome,superCupSetup,superCupResolve,
     buildGroups,clubByGid,groupIndexOf,allClubGids,finalissimaSetup,finalissimaResolve,
+    maybeEvent,buildEvent,resolveEvent,dismissEvent,applyEventEffects,allEvents,
     cupCreate,cupAdvanceRound,cupUserTie,clubByShort,cupRoundName,cupRoundDue,cupAvailable,simulateET,divDefs,firingReasons,requestBudget,budgetForObjective,budgetCapRoom,divOfShort,penaltyShootout,PRONAC,DIV2,
     curSlot,setSlot,loadSlot,wipeSlot,slotInfo,exportSave,importSave,requestPersist,
     myDivObj,myClubs,me, getG:()=>G, setG:x=>{G=x}, getPID:()=>PID };

@@ -133,6 +133,21 @@ const GAME_DATA = {
     // "CAC":"FER"
   },
 
+  /* ---- EVENTOS DE HISTÓRIA (juntam-se aos do jogo) ----
+     Cartões com escolhas que aparecem durante a época. Tom livre (sérios ou bizarros).
+       tone: "serio" | "bizarro"
+       cond: "any" | "win" | "loss" | "draw" | "bigwin" | "bigloss" | "derby"   (quando aparece)
+       young: true  → o {jogador} escolhido é um jovem do plantel
+       text/result: podes usar {clube} {jogador} {rival} {treinador} {epoca}
+       fx (efeitos da escolha): morale (moral), board (confiança direção), budget (€M), rep (reputação), chem (química)
+     Exemplo:
+       { tone:"bizarro", cond:"win", icon:"telemovel", title:"Desafio de dança viral",
+         text:"O balneário do {clube} inventou uma dança de vitória.",
+         choices:[ {label:"Gravar e publicar", result:"Virou febre nas redes!", fx:{rep:2, morale:3}},
+                   {label:"Manter o foco",     result:"Trabalho primeiro.",     fx:{board:2}} ] } */
+  eventos: [
+  ],
+
   /* ---- RAZÕES de despedimento (juntam-se às do jogo) ---- */
   firingReasons: [
     // "A tua razão personalizada aqui."

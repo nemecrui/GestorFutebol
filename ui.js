@@ -125,11 +125,37 @@ function openTalk(p){
   mo.querySelectorAll("[data-opt]").forEach(b=>b.onclick=()=>{const r=playerMeetingResolve(p.id,b.dataset.opt);toast(r.msg);close();render();});
 }
 /* ---------- INÍCIO ---------- */
+function eventIcon(key,tone){
+  const bg=tone==="bizarro"?"#3b2f00":"#12233f", ac=tone==="bizarro"?"#ffcf33":"#3b8cff";
+  let g="";
+  if(key==="jovem")g=`<polygon points="24,10 28,20 39,20 30,27 33,38 24,31 15,38 18,27 9,20 20,20" fill="${ac}"/>`;
+  else if(key==="presidente")g=`<rect x="19" y="12" width="10" height="6" rx="2" fill="${ac}"/><polygon points="24,18 28,22 24,38 20,22" fill="${ac}"/>`;
+  else if(key==="adepto")g=`<rect x="12" y="20" width="24" height="7" rx="3" fill="${ac}"/><rect x="20" y="24" width="7" height="14" rx="3" fill="${ac}"/><rect x="14" y="20" width="4" height="9" fill="#ffffff" opacity=".5"/>`;
+  else if(key==="rival")g=`<circle cx="24" cy="24" r="13" fill="none" stroke="${ac}" stroke-width="3"/><line x1="17" y1="19" x2="22" y2="21" stroke="${ac}" stroke-width="3" stroke-linecap="round"/><line x1="31" y1="19" x2="26" y2="21" stroke="${ac}" stroke-width="3" stroke-linecap="round"/><path d="M19 31 Q24 27 29 31" stroke="${ac}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  else if(key==="telemovel")g=`<rect x="17" y="10" width="14" height="28" rx="3" fill="none" stroke="${ac}" stroke-width="3"/><circle cx="24" cy="33" r="1.6" fill="${ac}"/>`;
+  else g=`<circle cx="24" cy="24" r="3" fill="${ac}"/><line x1="24" y1="9" x2="24" y2="16" stroke="${ac}" stroke-width="3" stroke-linecap="round"/><line x1="24" y1="32" x2="24" y2="39" stroke="${ac}" stroke-width="3" stroke-linecap="round"/><line x1="9" y1="24" x2="16" y2="24" stroke="${ac}" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="24" x2="39" y2="24" stroke="${ac}" stroke-width="3" stroke-linecap="round"/><line x1="14" y1="14" x2="18" y2="18" stroke="${ac}" stroke-width="3" stroke-linecap="round"/><line x1="34" y1="14" x2="30" y2="18" stroke="${ac}" stroke-width="3" stroke-linecap="round"/>`;
+  return `<span style="display:inline-flex;width:48px;height:48px;border-radius:12px;background:${bg};align-items:center;justify-content:center;flex:0 0 auto"><svg width="48" height="48" viewBox="0 0 48 48">${g}</svg></span>`;
+}
+function eventCardHtml(e){
+  const toneTag=e.tone==="bizarro"?'<span class="tag" style="color:#ffcf33;font-weight:800;font-size:10px">😜 BIZARRO</span>':'<span class="tag" style="color:#3b8cff;font-weight:800;font-size:10px">📌 HISTÓRIA</span>';
+  let inner=`<div class="card" style="border-color:${e.tone==="bizarro"?"rgba(255,207,51,.4)":"rgba(59,140,255,.4)"}">
+    <div class="row" style="gap:10px;align-items:flex-start;margin-bottom:8px">${eventIcon(e.icon,e.tone)}
+      <div><div style="font-weight:800;font-size:15px">${e.title}</div><div style="margin-top:1px">${toneTag}</div></div></div>
+    <div style="font-size:13px;line-height:1.5;margin-bottom:10px">${e.text}</div>`;
+  if(!e.done){
+    inner+=e.choices.map((c,i)=>`<button class="btn sec small" data-evc="${i}" style="width:100%;margin-bottom:8px;text-align:left">${c.label}</button>`).join("");
+  } else {
+    inner+=`<div style="font-size:13px;line-height:1.5;color:var(--accent);margin-bottom:10px">${e.result}</div>
+      <button class="btn" id="btnEventCont">Continuar</button>`;
+  }
+  return inner+`</div>`;
+}
 function viewHome(){
   const c=me(), d=myDivObj(), table=sortedTable(d);
   const rank=table.findIndex(x=>x.id===G.myId)+1;
   const next=nextFixture(), done=d.week>=d.fixtures.length;
   let h="";
+  if(G.event && !G.fired) h+=eventCardHtml(G.event);
   if(G.fired){
     let fh=`<div class="card center"><h2 style="color:var(--red);justify-content:center">Foste despedido</h2>
       <div class="muted" style="margin:6px 0 4px">A direção do ${c.name} dispensou-te.</div>
@@ -1061,6 +1087,8 @@ function bindView(){
   const bpo=$("#btnPlayoff");if(bpo)bpo.onclick=()=>{if(meetBlock())return;playPlayoff();};
   const bsc=$("#btnSuperCup");if(bsc)bsc.onclick=()=>{if(meetBlock())return;playSuperCup();};
   const bfi=$("#btnFinalissima");if(bfi)bfi.onclick=()=>{if(meetBlock())return;playFinalissima();};
+  document.querySelectorAll("[data-evc]").forEach(b=>b.onclick=()=>{resolveEvent(+b.dataset.evc);render();});
+  const bec=$("#btnEventCont");if(bec)bec.onclick=()=>{dismissEvent();render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
   const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();
