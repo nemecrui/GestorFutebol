@@ -24,6 +24,9 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-11", texto:"🔁 Janelas de transferências a sério: só contratas de outros clubes no início da época (até fim de setembro) e em janeiro. Fora das janelas só assinas jogadores sem clube. As propostas chegam aos poucos, não todas de uma vez." },
+    { data:"2026-08-11", texto:"🤝 Empréstimos: podes disponibilizar um jogador (ou jovem) só para empréstimo ou para venda + empréstimo. O emprestado não paga transferência e regressa no fim da época; o salário pode ser pago 100% pelo clube que recebe ou dividido 50/50." },
+    { data:"2026-08-11", texto:"📈 Evolução por minutos: quem joga evolui mais (mesmo com poucos minutos). Jovens evoluem mais depressa; ao banco cresce-se pouco. 🤕 Passam a existir lesões esporádicas nos treinos, mesmo com energia alta." },
     { data:"2026-08-02", texto:"🏟️ GRANDE ATUALIZAÇÃO — competições reformuladas! Agora com os clubes reais da AF Braga: Pró-Nacional (18), Divisão de Honra em 2 séries, 1ª Divisão em 6 séries e 2ª Divisão. Jogas na tua série e sobes/desces entre elas. Nova carreira obrigatória (a estrutura mudou)." },
     { data:"2026-08-02", texto:"🏆 Finalíssima da Divisão de Honra (vencedor da Série A vs Série B pelo título) e Supertaça (campeão do Pró-Nacional vs vencedor da Taça) — jogáveis quando estás envolvido." },
     { data:"2026-08-02", texto:"📲 Novo símbolo da app (prancheta tática) e instalação como aplicação a sério no telemóvel (Adicionar ao ecrã inicial), com ícone próprio." },

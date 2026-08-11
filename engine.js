@@ -301,7 +301,7 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
-     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null, finalissima:null, event:null, eventCd:ri(1,2), rival:null,
+     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null, finalissima:null, event:null, eventCd:ri(1,2), rival:null, loans:[], windowOpen:false,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -367,6 +367,7 @@ function aiEnergyTick(club,playedIds){                          // energia do CP
       if(Math.random()<risk)p.injuredWeeks=rollInjury(); }
     else p.energy=clamp(p.energy+Math.round(recovery(p.age)*2.5),0,100);
   });
+  trainingInjuryTick(club,true);              // lesões de treino também no CPU
 }
 
 /* ---------- força da equipa (a partir de atributos/posições) ---------- */
@@ -639,6 +640,7 @@ function simRound(d,preMy,hasUser){
       recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg);
       updateRecordsMatch(isH?r.hg:r.ag, isH?r.ag:r.hg, (h===G.myId?away:home).name);
       if(!r.liveUser)processEnergyInjuries(uc,userLine);   // no jogo ao vivo a energia já foi tratada
+      trainingInjuryTick(uc,false);                         // lesões de treino podem acontecer em qualquer jornada
       const opp=(h===G.myId?away:home), derby=isDerby(me().gid,opp.gid);
       rateUserMatch(uc,played,r,isH); updateForm(uc,played); updateChem(userLine); trainTick(uc,played); updateMorale(uc,played,isH?r.hg:r.ag,isH?r.ag:r.hg,derby);
       if(G.rival&&opp.gid===G.rival.gid)rivalReact(isH?r.hg:r.ag,isH?r.ag:r.hg); }
@@ -654,9 +656,9 @@ function playWeek(preMy){
   if(!G.fired)maybeBoardMeeting();           // maus resultados podem gerar nova reunião
   if(!G.fired)maybeEvent();                  // eventos de história (cartões com escolhas)
   if(G.grace>0)G.grace--;                    // margem após assumir um clube a meio da época
-  if(!G.midWindowDone && myD.week===Math.floor(myD.fixtures.length/2)){ transferWindow(); G.midWindowDone=true; }
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
   G.week=myD.week; advanceMonth();
+  transferTick();                            // janelas: set (até fim de setembro) e janeiro; propostas graduais
   if(myD.week>=myD.fixtures.length){
     G.divisions.forEach((d,di)=>{ if(di!==G.myDiv){ while(d.week<d.fixtures.length)simRound(d,null,false); } });
     endSeason();
@@ -773,6 +775,7 @@ function finalissimaResolve(userResult){
   return {w,sa,sb,pens};
 }
 function newSeason(){
+  returnLoans();                                     // emprestados regressam antes de acertar a época
   const mineGid=me().gid, oldTier=me().tier;
   const tables=G.divisions.map(d=>sortedTable(d));
   const T=i=>tables[i], top=(i,n)=>T(i).slice(0,n), bottom=(i,n)=>T(i).slice(Math.max(0,T(i).length-n));
@@ -818,7 +821,7 @@ function newSeason(){
   for(let di=0;di<G.divisions.length;di++){ const idx=G.divisions[di].clubs.findIndex(c=>c.gid===mineGid); if(idx>=0){G.myDiv=di;G.myId=idx;break;} }
   G.myTier=myDivObj().tier;
   let myMove = G.myTier<oldTier ? "up" : (G.myTier>oldTier ? "down" : null);
-  G.season++; G.week=0; G.seasonDone=false; G.date="Set"; G.midWindowDone=false; G.budgetAsked=false;
+  G.season++; G.week=0; G.seasonDone=false; G.date="Set"; G.windowOpen=false; G.budgetAsked=false;
   G.lineup=autoPickLineup(me(),G.formation);
   G.manager.seasons=(G.manager.seasons||0)+1; setObjectives(); pickRival(true);
   const kitty=budgetForObjective(G.myTier,me().objective);            // verba nova conforme aspiração desta época
@@ -873,6 +876,7 @@ function completeBuy(fromClubId,playerId,fee){
   return {ok:true,msg:"Contratado: "+p.name};
 }
 function makeBid(fromClubId,playerId,offerFee){
+  if(!transferWindowOpen())return {status:"closed", msg:"Janela de transferências fechada. Fora das janelas só podes assinar jogadores sem clube."};
   const meC=me(), from=myClubs()[fromClubId]; if(!from)return {status:"gone"};
   const p=from.squad.find(x=>x.id===playerId); if(!p)return {status:"gone"};
   offerFee=Math.round(offerFee*100)/100;
@@ -1072,16 +1076,72 @@ function releasePlayer(pid){
 function toggleTransferList(pid){
   const c=me(); const p=c.squad.find(x=>x.id===pid); if(!p)return false;
   p.transferListed=!p.transferListed;
-  addNews(p.transferListed?("Colocaste "+p.name+" na lista de transferências."):("Retiraste "+p.name+" da lista de transferências."));
+  addNews(p.transferListed?("Colocaste "+p.name+" na lista de transferências (venda)."):("Retiraste "+p.name+" da lista de vendas."));
   save(); return p.transferListed;
 }
-function transferWindow(){
+function toggleLoanList(pid){
+  const c=me(); const p=c.squad.find(x=>x.id===pid); if(!p)return false;
+  p.loanListed=!p.loanListed;
+  addNews(p.loanListed?("Disponibilizaste "+p.name+" para empréstimo."):("Retiraste "+p.name+" da lista de empréstimos."));
+  save(); return p.loanListed;
+}
+function acceptLoanOffer(i,userShare){                    // userShare: 0 = clube que recebe paga tudo · 0.5 = dividido
+  const o=G.transferOffers&&G.transferOffers[i]; if(!o||o.type!=="loan")return {ok:false,msg:""};
+  const meC=me(); const p=meC.squad.find(x=>x.id===o.playerId); if(!p)return {ok:false,msg:"Jogador já não está no plantel."};
+  if(meC.squad.length<=14)return {ok:false,msg:"Plantel demasiado pequeno para emprestar."};
+  const borrower=G.divisions[o.divIdx].clubs.find(c=>c.short===o.clubShort); if(!borrower)return {ok:false,msg:""};
+  meC.squad=meC.squad.filter(x=>x.id!==o.playerId); borrower.squad.push(p); p.onLoanOut=true;
+  if(!G.loans)G.loans=[];
+  G.loans.push({pid:p.id, player:p, name:p.name, fromGid:meC.gid, toGid:borrower.gid, toShort:borrower.short, wage:(p.wage!=null?p.wage:wageFor(p)), userShare:(userShare||0), season:G.season});
+  addNews("🔁 Emprestaste "+p.name+" ao "+o.clubName+((userShare||0)>0?" (dividem o salário)":" (pagam o salário todo)")+". Regressa no fim da época.");
+  G.transferOffers=G.transferOffers.filter((_,j)=>j!==i);
+  G.lineup=autoPickLineup(meC,G.formation); save();
+  return {ok:true,msg:"Emprestado: "+p.name};
+}
+function transferWindowOpen(){ return G.date==="Set"||G.date==="Jan"; }   // janela 1: até fim de setembro · janela 2: janeiro
+function transferWindow(){   // reformulação de plantéis da IA (pré-época) — as propostas chegam depois, graduais
   G.divisions.forEach(()=>{const n=ri(2,5);for(let k=0;k<n;k++)aiTransfer();});
-  G.transferOffers=makePlayerOffers();
-  if(G.transferOffers.length)addNews(G.transferOffers.length+" proposta(s) recebida(s) por jogadores teus.");
+  if(!G.transferOffers)G.transferOffers=[];
+}
+function makeOneOffer(){
+  const meC=me(); if(meC.squad.length<=14)return null;
+  const listedSale=meC.squad.filter(p=>p.transferListed), listedLoan=meC.squad.filter(p=>p.loanListed);
+  const best=meC.squad.slice().sort((a,b)=>ability(b)-ability(a)).slice(0,8);
+  const wantLoan = listedLoan.length && (!listedSale.length || Math.random()<0.5);
+  if(wantLoan){
+    const p=pick(listedLoan); if(!p)return null;
+    const cl=pick(allClubsFlat().filter(o=>!isMine(o.c,o.di))); if(!cl)return null;
+    return {type:"loan",clubShort:cl.c.short,clubName:cl.c.name,divIdx:cl.di,playerId:p.id,playerName:p.name,wage:(p.wage!=null?p.wage:wageFor(p))};
+  }
+  const pool=listedSale.length?listedSale.concat(best):best; const p=pick(pool); if(!p)return null;
+  const base=transferFee(p);
+  const buyers=allClubsFlat().filter(o=>!isMine(o.c,o.di)&&o.c.budget>=base*0.8); if(!buyers.length)return null;
+  const cl=pick(buyers);
+  return {type:"sale",clubShort:cl.c.short,clubName:cl.c.name,divIdx:cl.di,playerId:p.id,playerName:p.name,
+    fee:Math.max(0.02,Math.round(base*rnd(0.8,1.05)*100)/100),maxFee:Math.round(base*rnd(1.1,1.6)*100)/100,round:0};
+}
+function transferTick(){                                  // corre a cada jornada: atividade e propostas graduais nas janelas
+  const open=transferWindowOpen();
+  if(open){
+    if(!G.windowOpen){ G.windowOpen=true; addNews("🔁 Abriu a janela de transferências."); }
+    for(let k=0;k<ri(0,2);k++)aiTransfer();
+    if((G.transferOffers||[]).length<7 && Math.random()<0.5){ const o=makeOneOffer(); if(o){ G.transferOffers.push(o); addNews("📩 "+o.clubName+" fez uma proposta"+(o.type==="loan"?" de empréstimo":"")+" por "+o.playerName+"."); } }
+  } else if(G.windowOpen){
+    G.windowOpen=false;
+    if((G.transferOffers||[]).length)addNews("🔁 Fechou a janela — as propostas pendentes caducaram.");
+    G.transferOffers=[];
+  }
+}
+function returnLoans(){                                   // no fim da época, os emprestados regressam ao clube de origem
+  (G.loans||[]).forEach(L=>{ const b=clubByGid(L.toGid), o=clubByGid(L.fromGid), p=L.player; if(!p)return;
+    if(b)b.squad=b.squad.filter(x=>x.id!==p.id); p.onLoanOut=false;
+    if(o&&o.squad.indexOf(p)<0)o.squad.push(p);
+    if(o&&G.myId!=null&&o===me())addNews("🔁 "+p.name+" regressou do empréstimo."); });
+  G.loans=[];
 }
 function acceptOffer(i){
   const o=G.transferOffers&&G.transferOffers[i]; if(!o)return {ok:false,msg:""};
+  if(o.type==="loan")return {ok:false,msg:"Usa a opção de empréstimo (aceitar com salário)."};
   const meC=me();
   if(meC.squad.length<=14)return {ok:false,msg:"Plantel demasiado pequeno para vender"};
   const p=meC.squad.find(x=>x.id===o.playerId); if(!p)return {ok:false,msg:"Jogador já não está no plantel"};
@@ -1163,6 +1223,10 @@ function processEnergyInjuries(club,playedIds){
     } else { p.energy=clamp(p.energy+Math.round(recovery(p.age)*2.5),0,100); } // suplente: recupera muito (menos com idade)
   });
 }
+function trainingInjuryTick(club,silent){    // lesões esporádicas nos treinos (acontecem mesmo com energia alta)
+  (club.squad||[]).forEach(p=>{ if((p.injuredWeeks||0)>0)return;
+    if(Math.random()<0.006){ p.injuredWeeks=rollInjury(); if(!silent)addNews("🤕 "+p.name+" lesionou-se no treino ("+injuryLabel(p.injuredWeeks)+") — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } });
+}
 function rateUserMatch(club,playedIds,r,isHome){
   if(!playedIds)return;
   const gf=isHome?r.hg:r.ag, ga=isHome?r.ag:r.hg, won=gf>ga, draw=gf===ga, side=isHome?"H":"A";
@@ -1232,14 +1296,14 @@ function developPlayer(p,played,isMine,focusOverride){
     ATTR_KEYS.forEach(k=>{ if(["vel","res","for","rea"].includes(k)&&Math.random()<0.4)p.attrs[k]=clamp(p.attrs[k]-1,1,20); });
   }
 }
-/* evolução a CADA jornada (equipa do utilizador): quem não joga evolui mais; mais novos evoluem mais */
+/* evolução a CADA jornada (equipa do utilizador): quem JOGA evolui mais; mais novos evoluem mais */
 function trainTick(club,playedIds){
   if(!club||!club.squad)return;
   const played=new Set(playedIds||[]);
   club.squad.forEach(p=>{
     if(roleRatingAttrs(p.attrs,p.pos)>=p.potential)return;                 // já atingiu o potencial
     const ageF=p.age<=19?1.5:p.age<=23?1.15:p.age<=27?0.7:p.age<=31?0.4:0.15; // mais novo => maior incremento
-    const playF=played.has(p.id)?0.55:1.4;                                 // quem não joga evolui mais
+    const playF=played.has(p.id)?1.35:0.35;                                // JOGAR (mesmo poucos minutos) evolui mais; no banco evolui pouco
     if(Math.random()<0.11*ageF*playF){
       const focus=p.trainFocus||"Equilibrado", foc=FOCUS_ATTRS[focus]||null, prof=PROFILES[p.pos]||{};
       let pool=ATTR_KEYS.filter(k=>prof[k]&&(!foc||foc.includes(k))); if(!pool.length)pool=ATTR_KEYS.filter(k=>prof[k]);
@@ -1345,7 +1409,9 @@ function negotiateOffer(i,counterFee){
   addNews(o.clubName+" retirou-se da negociação por "+o.playerName+"."); G.transferOffers=G.transferOffers.filter((_,j)=>j!==i); save(); return {status:"withdrawn"};
 }
 /* ---------- salários, teto salarial e mercado de livres ---------- */
-function wageBill(club){ return Math.round((club.squad||[]).reduce((s,p)=>s+(p.wage!=null?p.wage:wageFor(p)),0)*100)/100; }
+function wageBill(club){ let s=(club.squad||[]).reduce((a,p)=>a+(p.wage!=null?p.wage:wageFor(p)),0);
+  if(typeof G!=="undefined"&&G&&G.loans&&club&&club.gid!=null)G.loans.forEach(L=>{ if(L.fromGid===club.gid)s+=(L.userShare||0)*(L.wage||0); }); // parte do salário que continuas a pagar em empréstimos
+  return Math.round(s*100)/100; }
 function wageHead(){ const obj=me().objective||{};
   return {title:1.75,promo:1.60,top:1.48,mid:1.38,survive:1.25}[obj.type]||1.42;  // folga sobre a massa de arranque, conforme aspiração
 }
@@ -1628,14 +1694,16 @@ function resolveRivalDuel(table,meRank){           // no fim da época: quem ter
 }
 /* ---------- exports (para node/testes; ignorado no browser) ---------- */
 if(typeof module!=="undefined"&&module.exports){
-  module.exports={ POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
+  module.exports={ __state:()=>(typeof G!=="undefined"?G:null),
+    POSITIONS,POS_NAME,GROUP,ATTRS,ATTR_KEYS,PROFILES,FORMATIONS,MENTAL,CLUBS,DIV1,
     rnd,ri,pick,clamp,money,roleRating,ability,effAt,fam,makePlayer,makeSquad,clubFromDef,
     buildFixtures,autoPickLineup,availableLineup,aiPickLineup,aiEnergyTick,teamStrength,simulate,applyResult,pickGoal,pickFoul,
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     buyAsk,makeBid,completeBuy,
     offRateFrom,createLive,liveStep,liveSub,liveSetTactic,aiMaybeSub,liveBench,liveResult,liveApplyEnergy,liveMaxSubs,
-    transferFee,transferWindow,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
+    transferFee,transferWindow,transferWindowOpen,transferTick,makeOneOffer,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
+    toggleLoanList,acceptLoanOffer,returnLoans,trainingInjuryTick,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     rollInjury,injuryLabel,applyMatchSuspensions,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,

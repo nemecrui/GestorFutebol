@@ -266,12 +266,20 @@ function viewHome(){
       <div class="row between"><span class="muted">Reputação</span><b>${G.manager.reputation}</b></div></div>`;
   }
   if(G.transferOffers&&G.transferOffers.length){
-    h+=`<div class="card"><h2>Propostas recebidas</h2>`+G.transferOffers.map((o,i)=>
-      `<div class="pl" style="flex-wrap:wrap"><div class="info" style="flex:1 1 100%;margin-bottom:6px"><div class="nm">${o.playerName}</div>
+    h+=`<div class="card"><h2>Propostas recebidas</h2>`+G.transferOffers.map((o,i)=>{
+      if(o.type==="loan"){
+        return `<div class="pl" style="flex-wrap:wrap"><div class="info" style="flex:1 1 100%;margin-bottom:6px"><div class="nm">${o.playerName} <span class="pill" style="background:#7c3aed">EMPRÉSTIMO</span></div>
+        <div class="sub">${o.clubName} quer por empréstimo até ao fim da época · salário ${money(o.wage)}/época</div></div>
+        <button class="btn small" data-loan="${i}" data-share="0">Aceitar (pagam salário)</button>
+        <button class="btn small sec" data-loan="${i}" data-share="0.5">Aceitar (dividir 50/50)</button>
+        <button class="btn small warn" data-reject="${i}">Recusar</button></div>`;
+      }
+      return `<div class="pl" style="flex-wrap:wrap"><div class="info" style="flex:1 1 100%;margin-bottom:6px"><div class="nm">${o.playerName}</div>
         <div class="sub">${o.clubName} oferece <b style="color:var(--accent)">${money(o.fee)}</b></div></div>
         <button class="btn small" data-accept="${i}">Aceitar</button>
         <button class="btn small sec" data-counter="${i}">Pedir +20%</button>
-        <button class="btn small warn" data-reject="${i}">Recusar</button></div>`).join("")+`</div>`;
+        <button class="btn small warn" data-reject="${i}">Recusar</button></div>`;
+    }).join("")+`</div>`;
   }
   if(G.rival&&!G.seasonDone)h+=rivalCardHtml();
   if(G.cup){
@@ -432,6 +440,7 @@ function openPlayer(pid){
     <select id="pTrain" style="margin-bottom:8px">${["Equilibrado","Ataque","Defesa","Físico"].map(f=>`<option${(p.trainFocus||"Equilibrado")===f?" selected":""}>${f}</option>`).join("")}</select>
     <button class="btn sec small" id="pRenew" style="width:100%;margin-bottom:8px">📄 Renovar contrato (${money(Math.max(0.01,Math.round(p.value*0.08*100)/100))})</button>
     <button class="btn sec small" id="pList" style="width:100%;margin-bottom:8px">${p.transferListed?"⭐ Retirar da lista de transferências":"📋 Colocar na lista de transferências"}</button>
+    <button class="btn sec small" id="pLoan" style="width:100%;margin-bottom:8px">${p.loanListed?"⭐ Retirar da lista de empréstimos":"🤝 Disponibilizar para empréstimo"}</button>
     <button class="btn warn small" id="pRelease" style="width:100%;margin-bottom:8px">🚪 Dispensar (sem receita)</button>
     <h2 style="margin:10px 0 4px;color:var(--muted);font-size:12px">Atributos</h2>
     <div class="attrs">${attrRows}</div></div>`;
@@ -442,6 +451,7 @@ function openPlayer(pid){
   const ptk=mo.querySelector("#pTalk");if(ptk)ptk.onclick=()=>{close();openTalk(p);};
   mo.querySelector("#pRenew").onclick=()=>{const r=renewContract(p.id);if(r.msg)toast(r.msg);close();render();};
   mo.querySelector("#pList").onclick=()=>{const listed=toggleTransferList(p.id);toast(listed?"Colocado na lista de transferências":"Retirado da lista");close();render();};
+  mo.querySelector("#pLoan").onclick=()=>{const listed=toggleLoanList(p.id);toast(listed?"Disponível para empréstimo":"Retirado da lista de empréstimos");close();render();};
   mo.querySelector("#pRelease").onclick=()=>{if(confirm("Dispensar "+p.name+"? Sai sem qualquer receita.")){const r=releasePlayer(p.id);if(r.msg)toast(r.msg);close();render();}};
   mo.onclick=e=>{if(e.target===mo)close();};
 }
@@ -615,6 +625,10 @@ function viewMarket(){
   const room=budgetCapRoom(), askDis=room<=0.005;
   h+=`<div class="card" style="padding:8px"><button class="btn sec small" id="btnAskBudget" style="width:100%${askDis?';opacity:.45':''}"${askDis?' disabled':''}>🏦 ${askDis?'Teto de reforço atingido (30%)':'Pedir reforço de verba à direção'}</button>
     <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">Reforço disponível esta época: até ${money(room)}.</div></div>`;
+  const winOpen=(typeof transferWindowOpen==="function")&&transferWindowOpen();
+  h+=`<div class="card" style="padding:9px 12px;border-left:3px solid ${winOpen?'var(--accent)':'var(--red)'}">
+    <b>${winOpen?"🟢 Janela de transferências ABERTA":"🔴 Janela fechada"}</b>
+    <div class="muted" style="font-size:11px;margin-top:3px">${winOpen?"Podes contratar de outros clubes e assinar livres.":"Só podes assinar jogadores sem clube (livres). As janelas abrem no início da época (até fim de setembro) e em janeiro."}</div></div>`;
   const nFree=(G.freeAgents||[]).length;
   h+=`<div class="seg" id="segMktTab"><button data-mt="clubs" class="${marketTab==='clubs'?'active':''}">Clubes</button><button data-mt="free" class="${marketTab==='free'?'active':''}">Livres${nFree?" ("+nFree+")":""}</button></div>`;
   if(marketTab==="free"){
@@ -1167,6 +1181,7 @@ function bindView(){
   const bjr=$("#btnJobRestart");if(bjr)bjr.onclick=()=>{if(confirm("Recomeçar carreira do zero?")){wipe();boot();}};
   document.querySelectorAll("[data-accept]").forEach(b=>b.onclick=()=>{const r=acceptOffer(+b.dataset.accept);if(r.msg)toast(r.msg);render();});
   document.querySelectorAll("[data-reject]").forEach(b=>b.onclick=()=>{rejectOffer(+b.dataset.reject);render();});
+  document.querySelectorAll("[data-loan]").forEach(b=>b.onclick=()=>{const r=acceptLoanOffer(+b.dataset.loan,+b.dataset.share);if(r&&r.msg)toast(r.msg);render();});
   document.querySelectorAll("[data-counter]").forEach(b=>b.onclick=()=>{const i=+b.dataset.counter;const o=G.transferOffers[i];if(!o)return;const r=negotiateOffer(i,Math.round(o.fee*1.2*100)/100);if(r.status==="accepted")toast((r.res&&r.res.msg)||"Vendido");else if(r.status==="counter")toast("Contraproposta do clube: "+money(r.fee));else if(r.status==="withdrawn")toast("O clube retirou-se da negociação");render();});
   const sst=$("#segSquadTab");if(sst)sst.querySelectorAll("button").forEach(b=>b.onclick=()=>{squadTab=b.dataset.st;render();});
   const acu=$("#acUpgrade");if(acu)acu.onclick=()=>{const r=upgradeAcademy();toast(r.msg);render();};
