@@ -783,10 +783,16 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
         ? `<div class="muted" style="font-size:12px;margin-bottom:10px">🗣️ ${talkMsg}</div>`
         : `<div class="muted" style="font-size:11px;margin-bottom:4px">🗣️ Conversa ao intervalo:</div><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">${["Confiante","Exigente","Calmo","Motivador"].map(t=>`<button class="btn sec small" data-htone="${t}" style="flex:1;min-width:44%">${t}</button>`).join("")}</div>`; }
       const onRows=S.line.map(id=>{const p=club.squad.find(x=>x.id===id);if(!p)return"";const fit=Math.round(st.fit[id]==null?100:st.fit[id]);
-        return `<div class="pl" data-out="${id}" style="${sel===id?'outline:2px solid var(--accent)':''}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div><div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${enHtml(fit)}</div></div></div>`;}).join("");
-      const bench=liveBench(st,userSide).filter(p=>!S.line.includes(p.id));
-      const benchRows=bench.length?bench.map(p=>{const fit=Math.round(st.fit[p.id]==null?(p.energy==null?100:p.energy):st.fit[p.id]);
-        return `<div class="pl" data-in="${p.id}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div><div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${enHtml(fit)}</div></div></div>`;}).join(""):`<div class="muted" style="font-size:12px">Sem suplentes disponíveis.</div>`;
+        const m=mk[id]||{}; let ic=""; for(let k=0;k<(m.g||0);k++)ic+="⚽"; if(m.yc)ic+="🟨"; if(m.red)ic+="🟥";
+        const rv=liveR[id]!=null?liveR[id]:6, rcol=rv>=7?"#16a34a":rv>=5?"#d9a400":"#e5484d";
+        return `<div class="pl" data-out="${id}" style="${sel===id?'outline:2px solid var(--accent)':''}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div><div class="info"><div class="nm">${p.name}${ic?' '+ic:''}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${enHtml(fit)}</div></div><b style="color:${rcol};font-size:15px;margin-left:6px">${(+rv).toFixed(1)}</b></div>`;}).join("");
+      // suplentes ordenados da melhor para a pior opção para o lugar de quem sai
+      let sortPos=null; if(sel!=null){ const idx=S.line.indexOf(sel), slots=FORMATIONS[S.form].slots; sortPos=(idx>=0&&slots[idx])?slots[idx].pos:((club.squad.find(x=>x.id===sel)||{}).pos); }
+      let bench=liveBench(st,userSide).filter(p=>!S.line.includes(p.id));
+      if(sortPos)bench.sort((a,b)=>effAt(b,sortPos)-effAt(a,sortPos) || ((st.fit[b.id]==null?100:st.fit[b.id])-(st.fit[a.id]==null?100:st.fit[a.id])));
+      const benchRows=bench.length?bench.map((p,i)=>{const fit=Math.round(st.fit[p.id]==null?(p.energy==null?100:p.energy):st.fit[p.id]);
+        const rr=sortPos?effAt(p,sortPos):ability(p), tag=(sortPos&&i===0)?' <span class="tag" style="color:var(--green2);font-weight:800;font-size:10px">melhor p/ '+sortPos+'</span>':'';
+        return `<div class="pl" data-in="${p.id}"><div class="rating ${ratingClass(rr)}">${rr}</div><div class="info"><div class="nm">${p.name}${tag}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${enHtml(fit)}</div></div></div>`;}).join(""):`<div class="muted" style="font-size:12px">Sem suplentes disponíveis.</div>`;
       cm.innerHTML=`<div class="box"><button class="close" id="cgClose">✕</button>
         <div style="font-weight:800;font-size:16px;margin-bottom:6px">${atHT?"Intervalo · "+st.hg+"–"+st.ag:"Alterações · "+st.minute+"'"}</div>
         ${talkBlock}
