@@ -477,6 +477,48 @@ function resolveCaptainMeeting(choice){
   M.met=true; G.capMeeting=null; save();
   return {ok:true};
 }
+/* ---------- Indisciplina (cartões de decisão) ---------- */
+function _disPools(){
+  if(typeof RELATO!=="undefined" && RELATO && RELATO.disciplina)return RELATO.disciplina;
+  return { situacoes:["chegou atrasado ao treino","faltou ao treino sem avisar","foi apanhado num bar na véspera do jogo"],
+    justSeria:["explicou que teve uma emergência familiar","disse que o carro se avariou","estava doente e não avisou a tempo"],
+    justComica:["jurou que o despertador mudou de fuso sozinho","disse que o cão comeu as chuteiras","garantiu que fazia 'recuperação ativa' no bar"],
+    multas:["uma grade de cerveja para o balneário","limpar o balneário depois do jogo","pagar o lanche à equipa uma semana"] };
+}
+function teamMoraleDelta(c,dv,exceptId){ c.squad.forEach(p=>{ if(exceptId!=null&&p.id===exceptId)return; if(p.morale!=null)p.morale=clamp(p.morale+dv,0,100); }); }
+function maybeDiscipline(){
+  if(G.discipline&&G.discipline.active)return;
+  if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||G.event)return;   // não empilhar cartões
+  if(Math.random()>=0.10)return;                                     // ~10% por jornada
+  const c=me(); const pool=(c.squad||[]).filter(p=>(p.injuredWeeks||0)<=0); if(!pool.length)return;
+  const p=pick(pool), D=_disPools();
+  const serious=Math.random()<0.4;
+  G.discipline={active:true, pid:p.id, name:p.name,
+    situation:pick(D.situacoes), justification:serious?pick(D.justSeria):pick(D.justComica), serious, multa:pick(D.multas)};
+  addNews("⚠️ Indisciplina: "+p.name+" "+G.discipline.situation+".");
+}
+function resolveDiscipline(choice){
+  const D=G.discipline; if(!D||!D.active)return {ok:false};
+  const c=me(), p=c.squad.find(x=>x.id===D.pid);
+  const setMor=(pl,dv)=>{ if(!pl)return; pl.morale=clamp((pl.morale==null?70:pl.morale)+dv,0,100); };
+  if(choice==="suspender"){
+    if(p){ p.banMatches=(p.banMatches||0)+1; c.susp=c.squad.filter(x=>(x.banMatches||0)>0).map(x=>x.id); setMor(p,-12); }
+    G.manager.reputation=(G.manager.reputation||40)+1; teamMoraleDelta(c,1,D.pid);
+    addNews("🚫 Suspendeste "+D.name+" do próximo jogo por indisciplina.");
+  } else if(choice==="multa"){
+    setMor(p,-6); teamMoraleDelta(c,1,D.pid);
+    addNews("💶 "+D.name+" foi multado: "+D.multa+".");
+  } else if(choice==="moral"){
+    setMor(p,-3);
+    addNews("🗣️ Repreendeste "+D.name+" em privado.");
+  } else {   // ilibar
+    setMor(p,5);
+    if(!D.serious){ teamMoraleDelta(c,-3,D.pid); if(G.board)G.board.confidence=clamp(G.board.confidence-2,0,100); G.manager.reputation=Math.max(0,(G.manager.reputation||40)-1);
+      addNews("🤷 Ilibaste "+D.name+" — o balneário achou a desculpa fraca e não gostou."); }
+    else { addNews("✅ Ilibaste "+D.name+" — a justificação parecia legítima."); }
+  }
+  G.discipline=null; save(); return {ok:true};
+}
 function pickGoal(club,lineup,formation,gone){
   const slots=FORMATIONS[formation].slots;
   const cands=lineup.map((id,i)=>({p:club.squad.find(x=>x.id===id),pos:slots[i]?slots[i].pos:"MC"}))
@@ -749,6 +791,7 @@ function playWeek(preMy){
   if(!G.fired)maybeBoardMeeting();           // maus resultados podem gerar nova reunião
   if(!G.fired)maybeEvent();                  // eventos de história (cartões com escolhas)
   if(!G.fired)captainMoodTick(preMy);        // descontentamento do capitão (banco/substituições)
+  if(!G.fired)maybeDiscipline();             // cartões de indisciplina (chegar tarde, faltar, bar...)
   if(G.grace>0)G.grace--;                    // margem após assumir um clube a meio da época
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
   G.week=myD.week; advanceMonth();
@@ -1828,7 +1871,7 @@ if(typeof module!=="undefined"&&module.exports){
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     ensureRecords,updateRecordsMatch,endSeasonAwards,ensureCareer,careerNewSpell,recordCareerSeason,
     ensureRoles,setRole,roleTakerId,penMissChance,fkMissChance,captainFactor,cornerBoost,bestFieldByAttr,
-    ensureCapMood,captainMoodTick,resolveCaptainMeeting,
+    ensureCapMood,captainMoodTick,resolveCaptainMeeting,maybeDiscipline,resolveDiscipline,teamMoraleDelta,
     talkResolve,applyTeamTalkMorale,liveApplyTalk,favTier,clubRecentForm,
     wageFor,wageBill,wageCapFor,ensureWageCap,wageRoom,ensureFreeAgents,signFreeAgent,refreshFreeAgents,
     ensureRivals,rivalOf,isDerby,

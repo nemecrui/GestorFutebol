@@ -287,6 +287,17 @@ function viewHome(){
       <button class="btn warn small" data-capmeet="firme" style="width:100%">Ele joga quando merecer</button>
       <div class="muted" style="font-size:11px;margin-top:8px">Tens de responder antes do próximo jogo.</div></div>`;
   }
+  if(G.discipline&&G.discipline.active){
+    const D=G.discipline;
+    h+=`<div class="card" style="border-color:#e5484d"><h2 style="color:#e5484d">⚠️ Caso de indisciplina</h2>
+      <div style="font-size:13px;margin-bottom:6px"><b>${D.name}</b> ${D.situation}.</div>
+      <div class="muted" style="font-size:12px;margin-bottom:10px">Na conversa contigo, ${D.justification}.</div>
+      <button class="btn warn small" data-disc="suspender" style="width:100%;margin-bottom:6px">🚫 Suspender do próximo jogo (mais grave)</button>
+      <button class="btn sec small" data-disc="multa" style="width:100%;margin-bottom:6px">💶 Multa: ${D.multa}</button>
+      <button class="btn sec small" data-disc="moral" style="width:100%;margin-bottom:6px">🗣️ Repreensão em privado (leve)</button>
+      <button class="btn sec small" data-disc="ilibar" style="width:100%">🤝 Ilibar (perdoar)</button>
+      <div class="muted" style="font-size:11px;margin-top:8px">Decide antes do próximo jogo. Ilibar uma desculpa fraca pode desagradar ao balneário.</div></div>`;
+  }
   if(G.shortObjective&&G.shortObjective.active){
     const so=G.shortObjective;
     h+=`<div class="card" style="border-color:var(--accent)"><h2 style="color:var(--accent)">Objetivo de curto prazo</h2>
@@ -1338,10 +1349,11 @@ function cupBlocksLeague(){
 function bindView(){
   document.querySelectorAll("[data-meet]").forEach(b=>b.onclick=()=>{const r=resolveBoardMeeting(b.dataset.meet);toast(r.msg);TAB="home";render();});
   document.querySelectorAll("[data-capmeet]").forEach(b=>b.onclick=()=>{if(typeof resolveCaptainMeeting==="function")resolveCaptainMeeting(b.dataset.capmeet);TAB="home";render();});
-  const meetBlock=()=>{ if(G.meeting&&G.meeting.active){ toast("Responde primeiro à reunião com a direção.");TAB="home";render();return true; } if(G.capMeeting&&G.capMeeting.active){ toast("Responde primeiro à reunião sobre o capitão.");TAB="home";render();return true; } return false; };
+  document.querySelectorAll("[data-disc]").forEach(b=>b.onclick=()=>{if(typeof resolveDiscipline==="function")resolveDiscipline(b.dataset.disc);TAB="home";render();});
+  const meetBlock=()=>{ if(G.meeting&&G.meeting.active){ toast("Responde primeiro à reunião com a direção.");TAB="home";render();return true; } if(G.capMeeting&&G.capMeeting.active){ toast("Responde primeiro à reunião sobre o capitão.");TAB="home";render();return true; } if(G.discipline&&G.discipline.active){ toast("Resolve primeiro o caso de indisciplina.");TAB="home";render();return true; } return false; };
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}openPreMatch(nx,(boost)=>playMatchAnimated(boost));};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
-  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();let n=0;while(d.week<d.fixtures.length){playWeek();n++;if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.event&&!G.fired)||G.fired||G.seasonDone)break;}toast(n+" jornada(s) simulada(s)");render();};
+  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();let n=0;while(d.week<d.fixtures.length){playWeek();n++;if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.discipline&&G.discipline.active)||(G.event&&!G.fired)||G.fired||G.seasonDone)break;}toast(n+" jornada(s) simulada(s)");render();};
   const bs1=$("#btnSim1");if(bs1)bs1.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}playWeek();toast("Resultado: "+lastUserResultTxt());render();};
   const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();
   const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();

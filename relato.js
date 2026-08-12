@@ -317,6 +317,42 @@ const RELATO = {
     }
   },
 
+  /* ---- INDISCIPLINA (cartões de decisão): situação + justificação + multa cómica ---- */
+  disciplina: {
+    situacoes: [
+      "chegou atrasado ao treino",
+      "faltou ao treino sem avisar",
+      "foi apanhado num bar na véspera do jogo",
+      "discutiu com um colega no balneário",
+      "publicou uma bocarra nas redes sociais",
+      "apareceu no treino sem uma das chuteiras",
+      "adormeceu na sala de vídeo a meio da preleção",
+      "chegou ao estádio com o equipamento trocado"
+    ],
+    justSeria: [
+      "explicou que teve uma emergência familiar",
+      "disse que o carro se avariou na estrada",
+      "estava com febre e não quis atrapalhar o grupo",
+      "teve de levar um filho às urgências",
+      "garantiu que houve um mal-entendido com os horários"
+    ],
+    justComica: [
+      "jurou que o despertador atualizou sozinho para o fuso do Japão",
+      "disse que o cão comeu as chuteiras e foi procurá-las",
+      "garantiu que estava a fazer 'recuperação ativa' no bar",
+      "afirmou que se perdeu a caminho de um treino que faz há dez anos",
+      "explicou que o GPS o mandou para outra cidade com o mesmo nome",
+      "disse que estava a 'estudar o adversário' na televisão do bar"
+    ],
+    multas: [
+      "uma grade de cerveja para o balneário",
+      "limpar o balneário depois do jogo",
+      "pagar o lanche a toda a equipa uma semana",
+      "lavar as botas do plantel inteiro",
+      "cantar o hino do clube em cima da marquesa"
+    ]
+  },
+
   /* ---- Reação caricata do CAPITÃO ao ser substituído (sem efeito na moral) ---- */
   captainSub: [
     "O capitão sai a resmungar e atira o colete para o banco.",
