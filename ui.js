@@ -736,7 +736,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   const evBox=mo.querySelector("#liveEv"),scoreEl=mo.querySelector("#liveScore"),minEl=mo.querySelector("#liveMin"),goalBanner=mo.querySelector("#goalBanner");
   const tlFill=mo.querySelector("#liveTLfill"),tlEl=mo.querySelector("#liveTL"),momH=mo.querySelector("#liveMomH"),momA=mo.querySelector("#liveMomA"),commentEl=mo.querySelector("#liveComment");
   let timer,pauseUntil=0,paused=false,htDone=false,mom=50,momSumH=0,momSumA=0,commentHold=0,windowsUsed=0;
-  let seqActive=false,seqTimer=null,seqSkip=null,evQueue=[],lastSeqAt=-99999;
+  let seqActive=false,seqTimer=null,seqSkip=null,evQueue=[],lastSeqAt=-99999,possSide=null;
   const aiSide = userSide==="H"?"A":userSide==="A"?"H":null;
   const aiWins=[46,63,74,84,105,115]; const aiWinUsed={};   // momentos em que a IA pondera substituir
   const stat={H:{sh:0,sot:0,cor:0},A:{sh:0,sot:0,cor:0}};
@@ -869,6 +869,13 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   function relAmb(key,side){ side=side||"H"; if(typeof relatoAmbient==="function"){const s=relatoAmbient(key,mkCtx(side,{}));if(s)return s;}
     return key==="balance"?pick(BAL):phrase(PRESS,side); }
   const dwell=t=>clamp(900+45*String(t).length,1400,3000);
+  function hexA(hex,a){ hex=String(hex||"#888888").replace("#",""); if(hex.length===3)hex=hex.split("").map(c=>c+c).join(""); const n=parseInt(hex,16)||0; return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")"; }
+  function setPossTint(side){ if(!side){commentEl.style.background="";commentEl.style.borderLeft="";commentEl.style.borderRight="";return;}
+    const cl=side==="H"?home:away, c=cl.c1||"#888";
+    commentEl.style.background="linear-gradient("+(side==="H"?"90deg":"270deg")+","+hexA(c,0.32)+","+hexA(c,0.04)+")";
+    commentEl.style.borderRadius="8px"; commentEl.style.padding="4px 10px";
+    commentEl.style.borderLeft=(side==="H"?"4px solid "+c:"none"); commentEl.style.borderRight=(side==="A"?"4px solid "+c:"none"); }
+  function fadeComment(){ if(commentEl.textContent){ commentEl.style.opacity="0"; setTimeout(()=>{ if(commentEl.style.opacity==="0")commentEl.textContent=""; },300); } }
   function playSeq(buildLines,onReveal){
     seqActive=true; paused=true; let i=0, done=false;
     function reveal(){ if(done)return; done=true; if(seqTimer){clearTimeout(seqTimer);seqTimer=null;} seqSkip=null;
@@ -893,8 +900,17 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     if(mp && e.type==="goal" && e.gtype!=="own" && typeof relatoLance==="function" && Math.random()<0.12){
       const l=relatoLance("goal", mp.ctx); if(l)seq=l;                    // ~12% dos golos são insólitos (gaivota, vento...)
     }
+    if(e.side)setPossTint(possSide=e.side);
     if(!seq){ processEvent(e); lastSeqAt=Date.now(); drainQueue(); return; }
-    playSeq(seq.build, ()=>{ processEvent(e); return seq.reveal; }); }
+    playSeq(seq.build, ()=>{
+      processEvent(e);
+      if(e.type==="goal"){                                               // deixa o festejo brilhar, mostra o relato quando desvanece
+        const rc=seq.reveal;
+        if(rc)setTimeout(()=>{ if(mo.parentNode && !seqActive){ setComment(rc,0); pauseUntil=Date.now()+Math.max(1700,dwell(rc)); } },1250);
+        return null;
+      }
+      return seq.reveal;
+    }); }
   function startFailedChance(side){ if(typeof relatoSeq!=="function")return false;
     const ctx=mkCtx(side,{}); let seq=null, isSave=false;
     if(typeof relatoLance==="function" && Math.random()<0.22){ seq=relatoLance("miss",ctx); }  // ocasião estragada pelo insólito
@@ -902,10 +918,11 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       const branch=pick(kind==="chance"?["save","post","out","cleared"]:["save","out"]);
       isSave=(branch==="save"); seq=relatoSeq(kind,branch,ctx); }
     if(!seq)return false;
-    stat[side].sh++; if(isSave)stat[side].sot++;
+    setPossTint(possSide=side); stat[side].sh++; if(isSave)stat[side].sot++;
     playSeq(seq.build, ()=>seq.reveal); return true; }
   function startFolclore(side){ if(typeof relatoFolclore!=="function")return false;
     const lines=relatoFolclore(mkCtx(side,{})); if(!lines||!lines.length)return false;
+    if(side)setPossTint(possSide=side);
     playSeq(lines, null); return true; }
   function drainQueue(){ if(seqActive)return;
     while(evQueue.length){ const e=evQueue.shift();
@@ -920,6 +937,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     const biasNow=clamp(50+((home.strength||60)-(away.strength||60))*0.3+((st.hg-st.ag)*6),20,80);
     mom=clamp(Math.round(mom+ri(-6,6)+(biasNow-mom)*0.2),8,92);momSumH+=mom;momSumA+=(100-mom);setW(momH,mom);setW(momA,100-mom);
     const pres=mom>=55?"H":mom<=45?"A":null;
+    if(pres)possSide=pres; if(!seqActive)setPossTint(possSide);           // fundo do relato com a cor de quem tem a bola
     let hadEvent=batch.length>0;
     if(batch.length){ evQueue.push(...batch); drainQueue(); }
     if(aiSide && !seqActive)aiWins.forEach(wm=>{ if(!aiWinUsed[wm] && minute>=wm && st.maxMin>=wm){ aiWinUsed[wm]=true; if(Math.random()<0.8)aiSubTry(aiSide); } });
@@ -928,11 +946,10 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     if(userSide)renderSquad(false);
     if(commentHold>0)commentHold--;
     else if(!hadEvent && !seqActive && evQueue.length===0 && st.minute<st.maxMin){
-      const roll=Math.random(), cool=(Date.now()-lastSeqAt)>6500;
-      if(cool && roll<0.05){ startFolclore(pres||(Math.random()<0.5?"H":"A")); }
-      else if(cool && pres && roll<0.17){ startFailedChance(pres); }
-      else if(pres && roll<0.24){ setComment(relAmb("defensive",pres),0); pauseUntil=Date.now()+900; }
-      else if(roll<0.6){ setComment(pres?relAmb("press",pres):relAmb("balance","H"),0); pauseUntil=Date.now()+750; }
+      const roll=Math.random(), cool=(Date.now()-lastSeqAt)>6000;
+      if(cool && roll<0.06){ startFolclore(pres||(Math.random()<0.5?"H":"A")); }
+      else if(cool && pres && roll<0.22){ startFailedChance(pres); }
+      else { fadeComment(); }                                            // entre momentos-chave o relato desaparece
     }
     updateStats();
     if(st.minute>=st.maxMin && !seqActive && evQueue.length===0){
