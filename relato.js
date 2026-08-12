@@ -281,7 +281,32 @@ const RELATO = {
     ["O altifalante toca o hino de golo... da equipa errada."],
     ["Nevoeiro cerrado desce sobre o estádio; mal se vê a outra baliza."],
     ["Uma rajada de vento leva o boné do {trein} para o meio do campo."]
-  ]
+  ],
+
+  /* ---- INSÓLITAS LIGADAS AO LANCE (mexem no resultado) ---- */
+  /* goal = sequências que TERMINAM em golo · miss = ocasião perdida pelo insólito */
+  folcloreLance: {
+    goal: [
+      { build:["Canto batido para a área do {adv}...","O {gr} distrai-se com uma gaivota pousada no travessão..."],
+        reveal:"...e {jog} aproveita a distração para marcar! Golo dos mais insólitos!" },
+      { build:["Sai o canto e levanta-se uma rajada de vento forte...","A bola ganha um efeito impossível a caminho da baliza..."],
+        reveal:"...e entra directa, sem ninguém lhe tocar! Golo olímpico à conta do vento!" },
+      { build:["{def} recebe tranquilo para atrasar ao seu guarda-redes...","...mas o relvado está encharcado e a bola trava..."],
+        reveal:"...escorrega e serve {jog} para o golo mais fácil da carreira!" },
+      { build:["Bola dividida à entrada da área, toda a gente a saltar...","...a bola bate num pé, bate noutro, ressalta três vezes..."],
+        reveal:"...e enfia-se na baliza pelo meio da confusão! Golo pastelão, mas conta na mesma!" }
+    ],
+    miss: [
+      { build:["{jog} ganha as costas à defesa e fica isolado...","...mas um cão entra a correr no relvado!"],
+        reveal:"...o árbitro pára tudo e a enorme ocasião do {clube} evapora-se na confusão." },
+      { build:["{jog} arma o remate em plena área do {adv}..."],
+        reveal:"...e a bola FURA mesmo no momento do disparo! O lance morre ali, desinchado." },
+      { build:["Contra-ataque perigoso do {clube}, {jog} conduz para a baliza...","...quando os aspersores disparam de repente!"],
+        reveal:"...a bola pára morta numa poça e a defesa alivia. Contra-ataque estragado pela rega." },
+      { build:["{jog} prepara-se para rematar à baliza aberta...","...e uma galinha atravessa-lhe a frente!"],
+        reveal:"...distrai-se, atira para as couves e fica a olhar para a galinha. Que desperdício." }
+    ]
+  }
 };
 
 /* ---- utilitários de escolha/preenchimento ---- */
@@ -303,7 +328,13 @@ function relatoSeq(kind, branch, ctx, opts){
 }
 function relatoFolclore(ctx){ const f=_relPick(RELATO.folclore)||[]; return f.map(s=>_relFill(s,ctx)); }
 function relatoAmbient(key, ctx){ const p=(RELATO.ambient||{})[key]; return p? _relFill(_relPick(p),ctx) : ""; }
+/* Insólita ligada ao lance: branch "goal" (termina em golo) ou "miss" (ocasião perdida). */
+function relatoLance(branch, ctx){
+  const pool=((RELATO.folcloreLance||{})[branch])||[]; if(!pool.length)return null;
+  const o=_relPick(pool);
+  return { build:(o.build||[]).map(s=>_relFill(s,ctx)), reveal:o.reveal?_relFill(o.reveal,ctx):null };
+}
 
 if(typeof module!=="undefined" && module.exports){
-  module.exports = { RELATO, relatoSeq, relatoFolclore, relatoAmbient, _relFill };
+  module.exports = { RELATO, relatoSeq, relatoFolclore, relatoAmbient, relatoLance, _relFill };
 }

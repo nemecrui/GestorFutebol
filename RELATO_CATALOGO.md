@@ -252,6 +252,9 @@ Interrompem o jogo, arrancam um sorriso e retomam. 1 a 3 frases cada.
 # PARTE 3 — INSÓLITAS LIGADAS AO LANCE (mexem no resultado)
 
 Poucas, mais controladas. A interrupção causa (ou tira) uma ocasião.
+**Já implementadas** em `relato.js` (`folcloreLance`): ~12% dos golos usam uma versão insólita
+(gaivota, vento, escorregão, pastelão) e ~22% das ocasiões falhadas são estragadas por um insólito
+(cão, bola que fura, aspersores, galinha).
 
 - [c] O cão entra em campo mesmo quando {jog} ia isolado — ocasião perdida no meio da confusão.
 - [c] A bola fura no exato momento do remate de {jog}; o lance morre ali.

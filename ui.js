@@ -889,14 +889,20 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     if(e.type==="disallowed"){ return {kind:"chance",branch:"disallowed",ctx}; }
     return null; }
   function startEventSeq(e){ const mp=(typeof relatoSeq==="function")?mapEvent(e):null;
-    const seq=mp?relatoSeq(mp.kind,mp.branch,mp.ctx):null;
+    let seq=mp?relatoSeq(mp.kind,mp.branch,mp.ctx):null;
+    if(mp && e.type==="goal" && e.gtype!=="own" && typeof relatoLance==="function" && Math.random()<0.12){
+      const l=relatoLance("goal", mp.ctx); if(l)seq=l;                    // ~12% dos golos são insólitos (gaivota, vento...)
+    }
     if(!seq){ processEvent(e); lastSeqAt=Date.now(); drainQueue(); return; }
     playSeq(seq.build, ()=>{ processEvent(e); return seq.reveal; }); }
   function startFailedChance(side){ if(typeof relatoSeq!=="function")return false;
-    const kind=pick(["chance","solo","header","counter"]);
-    const branch=pick(kind==="chance"?["save","post","out","cleared"]:["save","out"]);
-    const seq=relatoSeq(kind,branch,mkCtx(side,{})); if(!seq)return false;
-    stat[side].sh++; if(branch==="save")stat[side].sot++;
+    const ctx=mkCtx(side,{}); let seq=null, isSave=false;
+    if(typeof relatoLance==="function" && Math.random()<0.22){ seq=relatoLance("miss",ctx); }  // ocasião estragada pelo insólito
+    if(!seq){ const kind=pick(["chance","solo","header","counter"]);
+      const branch=pick(kind==="chance"?["save","post","out","cleared"]:["save","out"]);
+      isSave=(branch==="save"); seq=relatoSeq(kind,branch,ctx); }
+    if(!seq)return false;
+    stat[side].sh++; if(isSave)stat[side].sot++;
     playSeq(seq.build, ()=>seq.reveal); return true; }
   function startFolclore(side){ if(typeof relatoFolclore!=="function")return false;
     const lines=relatoFolclore(mkCtx(side,{})); if(!lines||!lines.length)return false;
