@@ -736,6 +736,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   const evBox=mo.querySelector("#liveEv"),scoreEl=mo.querySelector("#liveScore"),minEl=mo.querySelector("#liveMin"),goalBanner=mo.querySelector("#goalBanner");
   const tlFill=mo.querySelector("#liveTLfill"),tlEl=mo.querySelector("#liveTL"),momH=mo.querySelector("#liveMomH"),momA=mo.querySelector("#liveMomA"),commentEl=mo.querySelector("#liveComment");
   let timer,pauseUntil=0,paused=false,htDone=false,mom=50,momSumH=0,momSumA=0,commentHold=0,windowsUsed=0;
+  let seqActive=false,seqTimer=null,seqSkip=null,evQueue=[],lastSeqAt=-99999;
   const aiSide = userSide==="H"?"A":userSide==="A"?"H":null;
   const aiWins=[46,63,74,84,105,115]; const aiWinUsed={};   // momentos em que a IA pondera substituir
   const stat={H:{sh:0,sot:0,cor:0},A:{sh:0,sot:0,cor:0}};
@@ -747,7 +748,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   function nameByPid(side,pid){const club=side==="H"?home:away;const p=club.squad.find(x=>x.id===pid);return p?p.name:"jogador";}
   function gtypeSuffix(t){return t==="penalty"?" (g.p.)":t==="freekick"?" (livre)":t==="header"?" (cabeça)":"";}
   const lastName=n=>String(n).split(" ").slice(-1)[0];
-  function addEvLine(side,icon,txt){const d=document.createElement("div");d.className="ev ev-"+(side==="H"?"h":"a");d.innerHTML=`<b>${txt.m}'</b> ${icon} ${shortOf(side)} — ${txt.name}`;evBox.prepend(d);}
+  function addEvLine(side,icon,txt){const d=document.createElement("div");d.className="ev ev-"+(side==="H"?"h":"a");d.innerHTML=`<b>${liveDispMin(st,txt.m)}'</b> ${icon} ${shortOf(side)} — ${txt.name}`;evBox.prepend(d);}
   function tlDot(m,color){const s=document.createElement("span");s.className="tl-dot";s.style.left=clamp(m/st.maxMin*100,0,100)+"%";s.style.background=color;tlEl.appendChild(s);}
   function updateStats(){const tot=momSumH+momSumA||1,pH=Math.round(momSumH/tot*100);mo.querySelector("#posH").textContent=pH+"%";mo.querySelector("#posA").textContent=(100-pH)+"%";mo.querySelector("#shH").textContent=stat.H.sh;mo.querySelector("#shA").textContent=stat.A.sh;mo.querySelector("#sotH").textContent=stat.H.sot;mo.querySelector("#sotA").textContent=stat.A.sot;mo.querySelector("#corH").textContent=stat.H.cor;mo.querySelector("#corA").textContent=stat.A.cor;}
   function setComment(txt,hold){commentEl.style.opacity=0;setTimeout(()=>{commentEl.textContent=txt;commentEl.style.opacity=1;},110);commentHold=hold||0;}
@@ -759,7 +760,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   function phrase(pool,side){return pick(pool).replace("{T}",nameOf(side));}
   const scorers={H:[],A:[]}, liveR={}, mk={};
   if(userSide)(userLine||[]).forEach(id=>{liveR[id]=6.0;mk[id]={g:0,yc:false,red:false,on:false,off:false};});
-  function refreshScorers(){mo.querySelector("#scH").innerHTML=scorers.H.map(s=>s.n+" "+s.m+"'").join("<br>")||"—";mo.querySelector("#scA").innerHTML=scorers.A.map(s=>s.n+" "+s.m+"'").join("<br>")||"—";}
+  function refreshScorers(){mo.querySelector("#scH").innerHTML=scorers.H.map(s=>s.n+" "+liveDispMin(st,s.m)+"'").join("<br>")||"—";mo.querySelector("#scA").innerHTML=scorers.A.map(s=>s.n+" "+liveDispMin(st,s.m)+"'").join("<br>")||"—";}
   function bumpR(pid,d){if(liveR[pid]==null)return;liveR[pid]=clamp(liveR[pid]+d,1,10);}
   function concedePenalty(){(st[userSide].line||[]).forEach(id=>{const p=userClub.squad.find(x=>x.id===id);if(!p)return;const g=GROUP[p.pos];bumpR(id,g==="GK"?-0.3:g==="DEF"?-0.14:-0.04);});}
   function renderSquad(final){ if(!userSide)return; const rc=v=>v>=7?"#16a34a":v>=5?"#d9a400":"#e5484d"; const S=st[userSide];
@@ -839,7 +840,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     function fin(){ if(subsThisOpen>0 && !atHT)windowsUsed++; cm.remove(); paused=false; renderSquad(false); }
     draw(); document.body.appendChild(cm);
   }
-  function finish(){ clearInterval(timer);
+  function finish(){ clearInterval(timer); if(seqTimer){clearTimeout(seqTimer);seqTimer=null;} seqActive=false; seqSkip=null; evQueue=[];
     const r=liveResult(st); r.userLine=userLine; liveApplyEnergy(st);
     scoreEl.textContent=st.hg+" - "+st.ag;minEl.textContent="Final";setW(tlFill,100);showPhase("Final");sndWhistle(3);vib([40,50,40,50,80]);setComment("Apito final. "+home.name+" "+st.hg+"–"+st.ag+" "+away.name,0);
     if(userSide)renderSquad(true);
@@ -850,33 +851,86 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   }
   mo.querySelector("#liveSkip").onclick=()=>{ // saltar: simula o resto sem parar
     while(st.minute<st.maxMin)liveStep(st);
-    if(cup && st.maxMin===90 && st.hg===st.ag){ st.maxMin=120; while(st.minute<120)liveStep(st); }
+    if(cup && !st.et && st.hg===st.ag){ st.et=true; st.maxMin=liveReg(st)+30; while(st.minute<st.maxMin)liveStep(st); }
     finish();
   };
   const bchg=mo.querySelector("#liveChg"); if(bchg)bchg.onclick=()=>{ if(!paused)openChanges(false); };
   const sb=mo.querySelector("#sndBtn");if(sb){const upd=()=>sb.textContent=SND?"🔊":"🔇";upd();sb.onclick=()=>{setSound(!SND);upd();if(SND)sndWhistle(1);};}
+  // ---------- Relato com PAUSA nos momentos-chave ----------
+  const otherSide=s=>s==="H"?"A":"H";
+  function nmPid(side,pid){ return lastName(nameByPid(side,pid)); }
+  function oppGKName(side){ const opp=side==="H"?away:home, ol=st[otherSide(side)].line;
+    const gk=ol.map(id=>opp.squad.find(x=>x.id===id)).find(p=>p&&GROUP[p.pos]==="GK"); return gk?lastName(gk.name):"o guarda-redes"; }
+  function someAttacker(side){ const cl=side==="H"?home:away, ln=st[side].line;
+    const a=ln.map(id=>cl.squad.find(x=>x.id===id)).filter(p=>p&&GROUP[p.pos]!=="GK"); return a.length?lastName(pick(a).name):"o avançado"; }
+  function mkCtx(side,extra){ const o=otherSide(side);
+    const c={clube:nameOf(side),adv:nameOf(o),gr:oppGKName(side),trein:(side===userSide&&typeof G!=="undefined"&&G.manager?G.manager.name:"o treinador"),jog:someAttacker(side),jog2:someAttacker(side),def:"o defesa"};
+    if(extra)Object.assign(c,extra); return c; }
+  function relAmb(key,side){ side=side||"H"; if(typeof relatoAmbient==="function"){const s=relatoAmbient(key,mkCtx(side,{}));if(s)return s;}
+    return key==="balance"?pick(BAL):phrase(PRESS,side); }
+  const dwell=t=>clamp(900+45*String(t).length,1400,3000);
+  function playSeq(buildLines,onReveal){
+    seqActive=true; paused=true; let i=0, done=false;
+    function reveal(){ if(done)return; done=true; if(seqTimer){clearTimeout(seqTimer);seqTimer=null;} seqSkip=null;
+      let hold=1300; if(onReveal){const rc=onReveal(); if(rc){setComment(rc,0); hold=Math.max(hold,dwell(rc));}}
+      seqActive=false; paused=false; lastSeqAt=Date.now(); pauseUntil=Date.now()+hold; drainQueue(); }
+    function nextLine(){ if(done)return; if(i<buildLines.length){const t=buildLines[i++]; setComment(t,0); seqTimer=setTimeout(nextLine,dwell(t));} else reveal(); }
+    seqSkip=reveal; if(!buildLines||!buildLines.length){reveal();} else nextLine(); }
+  function isKeyMoment(e){ return e&&(e.type==="goal"||e.type==="penmiss"||e.type==="red"||e.type==="disallowed"); }
+  function mapEvent(e){ const side=e.side, ctx=mkCtx(side,{});
+    if(e.type==="goal"){
+      if(e.gtype==="own"){ ctx.def=nmPid(e.ogSide,e.ogPid); return {kind:"own",branch:"goal",ctx}; }
+      if(e.scorer)ctx.jog=nmPid(e.side,e.scorer);
+      if(st.minute>90+(st.stopH||0)) return {kind:"latedrama",branch:"goal",ctx};
+      const k=e.gtype==="penalty"?"penalty":e.gtype==="freekick"?"freekick":e.gtype==="header"?"header":pick(["chance","solo","counter"]);
+      return {kind:k,branch:"goal",ctx}; }
+    if(e.type==="penmiss"){ if(e.pid)ctx.jog=nmPid(e.side,e.pid); return {kind:"penalty",branch:(Math.random()<0.55?"miss":"save"),ctx}; }
+    if(e.type==="red"){ if(e.pid)ctx.jog=nmPid(e.side,e.pid); return {kind:"red",branch:(e.second?"second":"direct"),ctx}; }
+    if(e.type==="disallowed"){ return {kind:"chance",branch:"disallowed",ctx}; }
+    return null; }
+  function startEventSeq(e){ const mp=(typeof relatoSeq==="function")?mapEvent(e):null;
+    const seq=mp?relatoSeq(mp.kind,mp.branch,mp.ctx):null;
+    if(!seq){ processEvent(e); lastSeqAt=Date.now(); drainQueue(); return; }
+    playSeq(seq.build, ()=>{ processEvent(e); return seq.reveal; }); }
+  function startFailedChance(side){ if(typeof relatoSeq!=="function")return false;
+    const kind=pick(["chance","solo","header","counter"]);
+    const branch=pick(kind==="chance"?["save","post","out","cleared"]:["save","out"]);
+    const seq=relatoSeq(kind,branch,mkCtx(side,{})); if(!seq)return false;
+    stat[side].sh++; if(branch==="save")stat[side].sot++;
+    playSeq(seq.build, ()=>seq.reveal); return true; }
+  function startFolclore(side){ if(typeof relatoFolclore!=="function")return false;
+    const lines=relatoFolclore(mkCtx(side,{})); if(!lines||!lines.length)return false;
+    playSeq(lines, null); return true; }
+  function drainQueue(){ if(seqActive)return;
+    while(evQueue.length){ const e=evQueue.shift();
+      if(isKeyMoment(e)){ startEventSeq(e); return; } else processEvent(e); } }
+  commentEl.style.cursor="pointer"; commentEl.title="Tocar para avançar"; commentEl.onclick=()=>{ if(seqSkip)seqSkip(); };
   showPhase("Início");sndWhistle(1);vib([30]);pauseUntil=Date.now()+1100;
   timer=setInterval(()=>{
     if(Date.now()<pauseUntil||paused)return;
-    if(!htDone && st.maxMin>=90 && st.minute>=45){ htDone=true; minEl.textContent="Intervalo"; showPhase("Intervalo"); sndWhistle(2); vib([30,40,30]); setComment("Intervalo — "+home.name+" "+st.hg+"–"+st.ag+" "+away.name,3); updateStats(); if(userSide){pauseUntil=Date.now()+1400; setTimeout(()=>{ if(mo.parentNode)openChanges(true); },900);} else pauseUntil=Date.now()+2000; return; }
+    if(!htDone && st.minute>=liveHalftime(st)){ htDone=true; minEl.textContent="Intervalo"; showPhase("Intervalo"); sndWhistle(2); vib([30,40,30]); setComment("Intervalo — "+home.name+" "+st.hg+"–"+st.ag+" "+away.name,3); updateStats(); if(userSide){pauseUntil=Date.now()+1400; setTimeout(()=>{ if(mo.parentNode)openChanges(true); },900);} else pauseUntil=Date.now()+2000; return; }
     let batch=[]; for(let k=0;k<3 && st.minute<st.maxMin;k++)batch=batch.concat(liveStep(st));
-    const minute=st.minute; minEl.textContent=minute+"'"+(minute>90?" (prol.)":""); setW(tlFill,minute/st.maxMin*100);
+    const minute=st.minute; minEl.textContent=liveDispMin(st,minute)+"'"+((st.et&&minute>liveReg(st))?" (prol.)":""); setW(tlFill,minute/st.maxMin*100);
     const biasNow=clamp(50+((home.strength||60)-(away.strength||60))*0.3+((st.hg-st.ag)*6),20,80);
     mom=clamp(Math.round(mom+ri(-6,6)+(biasNow-mom)*0.2),8,92);momSumH+=mom;momSumA+=(100-mom);setW(momH,mom);setW(momA,100-mom);
     const pres=mom>=55?"H":mom<=45?"A":null;
     let hadEvent=batch.length>0;
-    batch.forEach(processEvent);
-    if(aiSide)aiWins.forEach(wm=>{ if(!aiWinUsed[wm] && minute>=wm && st.maxMin>=wm){ aiWinUsed[wm]=true; if(Math.random()<0.8)aiSubTry(aiSide); } });
+    if(batch.length){ evQueue.push(...batch); drainQueue(); }
+    if(aiSide && !seqActive)aiWins.forEach(wm=>{ if(!aiWinUsed[wm] && minute>=wm && st.maxMin>=wm){ aiWinUsed[wm]=true; if(Math.random()<0.8)aiSubTry(aiSide); } });
     if(pres){if(Math.random()<0.5)stat[pres].sh++;if(Math.random()<0.22)stat[pres].sot++;if(Math.random()<0.14)stat[pres].cor++;
       if(userSide&&pres===userSide){const ids=st[userSide].line.filter(id=>{const p=userClub.squad.find(x=>x.id===id);return p&&GROUP[p.pos]!=="GK";});if(ids.length)bumpR(pick(ids),0.05);}}
     if(userSide)renderSquad(false);
     if(commentHold>0)commentHold--;
-    else if(!hadEvent){const roll=Math.random();
-      if(roll<0.12&&pres){setComment(phrase(CHANCE,pres),1);stat[pres].sh++;if(Math.random()<0.5)stat[pres].sot++;pauseUntil=Date.now()+1000;}
-      else if(roll<0.5){setComment(pres?phrase(PRESS,pres):pick(BAL),0);pauseUntil=Date.now()+750;}}
+    else if(!hadEvent && !seqActive && evQueue.length===0 && st.minute<st.maxMin){
+      const roll=Math.random(), cool=(Date.now()-lastSeqAt)>6500;
+      if(cool && roll<0.05){ startFolclore(pres||(Math.random()<0.5?"H":"A")); }
+      else if(cool && pres && roll<0.17){ startFailedChance(pres); }
+      else if(pres && roll<0.24){ setComment(relAmb("defensive",pres),0); pauseUntil=Date.now()+900; }
+      else if(roll<0.6){ setComment(pres?relAmb("press",pres):relAmb("balance","H"),0); pauseUntil=Date.now()+750; }
+    }
     updateStats();
-    if(st.minute>=st.maxMin){
-      if(cup && st.maxMin===90 && st.hg===st.ag){ st.maxMin=120; showPhase("Prolongamento"); sndWhistle(2); vib([30,40,30]); setComment("Prolongamento! Mais 30 minutos.",3); pauseUntil=Date.now()+2200; return; }
+    if(st.minute>=st.maxMin && !seqActive && evQueue.length===0){
+      if(cup && !st.et && st.hg===st.ag){ st.et=true; st.maxMin=liveReg(st)+30; showPhase("Prolongamento"); sndWhistle(2); vib([30,40,30]); setComment("Prolongamento! Mais 30 minutos, sem tempo de compensação.",3); pauseUntil=Date.now()+2200; return; }
       finish();
     }
   },240);
@@ -904,8 +958,8 @@ function showPostMatch(st, r, onClose){
     ${r.hadET?`<div class="center muted" style="font-size:11px;margin-bottom:4px">após prolongamento</div>`:""}
     ${motm?`<div class="card" style="padding:10px;margin:8px 0;text-align:center;border-color:var(--accent)"><div class="muted" style="font-size:11px;letter-spacing:1px">⭐ HOMEM DO JOGO</div><div style="font-weight:800;font-size:16px">${motm.p.name}</div><div class="muted" style="font-size:12px"><span class="pill ${posClass(motm.p.pos)}">${motm.p.pos}</span> ${motm.club.short}${motm.g?" · "+motm.g+" golo"+(motm.g>1?"s":""):""}${motm.side===userSide&&motm.p.lastRating!=null?" · nota "+motm.p.lastRating:""}</div></div>`:""}
     <h2 style="color:var(--muted);font-size:12px;margin:8px 0 4px">⚽ Golos</h2>
-    ${goalList.length?goalList.map(g=>`<div class="row between" style="font-size:13px;padding:3px 2px"><span>${g.m}' ${g.txt}</span><span class="muted">${g.club}</span></div>`).join(""):`<div class="muted" style="font-size:13px">Sem golos.</div>`}
-    ${cardList.length?`<h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">🟥 Expulsões</h2>`+cardList.map(c=>`<div class="row between" style="font-size:13px;padding:3px 2px"><span>${c.m}' 🟥 ${c.txt}</span><span class="muted">${c.club}</span></div>`).join(""):""}
+    ${goalList.length?goalList.map(g=>`<div class="row between" style="font-size:13px;padding:3px 2px"><span>${liveDispMin(st,g.m)}' ${g.txt}</span><span class="muted">${g.club}</span></div>`).join(""):`<div class="muted" style="font-size:13px">Sem golos.</div>`}
+    ${cardList.length?`<h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">🟥 Expulsões</h2>`+cardList.map(c=>`<div class="row between" style="font-size:13px;padding:3px 2px"><span>${liveDispMin(st,c.m)}' 🟥 ${c.txt}</span><span class="muted">${c.club}</span></div>`).join(""):""}
     <h2 style="color:var(--muted);font-size:12px;margin:10px 0 4px">As tuas notas</h2>
     ${yourR.map(p=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:4px 2px;font-size:13px"><span>${p.name} <span class="pill ${posClass(p.pos)}" style="font-size:9px">${p.pos}</span></span><b style="color:${rc(p.lastRating||6)}">${p.lastRating!=null?p.lastRating:"—"}</b></div>`).join("")}
     <button class="btn sec small" id="pmrShare" style="width:100%;margin-top:10px">📸 Partilhar resultado</button>

@@ -94,8 +94,8 @@ const FORMATIONS={
 const MENTAL={"Defensivo":{atk:0.85,def:1.15},"Equilibrado":{atk:1.0,def:1.0},"Atacante":{atk:1.18,def:0.86}};
 
 /* ---------- nomes fictícios (portugueses) ---------- */
-const FIRST=["João","Rui","Nuno","Tomás","Diogo","Ivo","Marco","Rafael","Bruno","Hugo","Tiago","Miguel","André","Sérgio","Pedro","Luís","Vasco","Ricardo","Fábio","Dário","Gonçalo","Rúben","Gil","Duarte","José","Paulo","Hélder","Bernardo","Joel","Ivan","Artur","Cláudio","David","Filipe","Gustavo","Hélio","Jorge","Leandro","Márcio","Nélson","Válter"];
-const LAST=["Silva","Moreira","Costa","Fernandes","Gonçalves","Oliveira","Rodrigues","Pereira","Machado","Carvalho","Sousa","Martins","Ferreira","Ribeiro","Barbosa","Pinto","Lopes","Cardoso","Antunes","Cunha","Marques","Vieira","Faria","Nogueira","Azevedo","Teixeira","Gomes","Correia","Alves","Matos","Torres","Braga","Peixoto","Sampaio","Rocha","Dias","Cruz","Freitas","Vilela","Amorim","Guimarães","Loureiro"];
+const FIRST=["João","Rui","Nuno","Tomás","Diogo","Ivo","Marco","Rafael","Bruno","Hugo","Tiago","Miguel","André","Sérgio","Pedro","Luís","Vasco","Ricardo","Fábio","Dário","Gonçalo","Rúben","Gil","Duarte","José","Paulo","Hélder","Bernardo","Joel","Ivan","Artur","Cláudio","David","Filipe","Gustavo","Hélio","Jorge","Leandro","Márcio","Nélson","Válter","António","Lucas","César","Jorge","Manuel","Mário","Marco","Cláudio","Joca","Henrique","Pietro","Juan","Vicente","Vasco","Chico","Francisco","Nel","Manu","Duarte","Domingos","Mingos","Renato","Sandro","Sílvio","Humberto","Afonso","Tadeu","Adão"];
+const LAST=["Silva","Moreira","Costa","Fernandes","Gonçalves","Oliveira","Rodrigues","Pereira","Machado","Carvalho","Sousa","Martins","Ferreira","Ribeiro","Barbosa","Pinto","Lopes","Cardoso","Antunes","Cunha","Marques","Vieira","Faria","Nogueira","Azevedo","Teixeira","Gomes","Correia","Alves","Matos","Torres","Braga","Peixoto","Sampaio","Rocha","Dias","Cruz","Freitas","Vilela","Amorim","Guimarães","Loureiro","Xavier","Ferreira","Caldas","Rei","Lisboa","Macedo","Vilaça","Magalhães"];
 
 /* ---------- clubes reais (cores provisórias) ---------- */
 const CLUBS=[
@@ -158,7 +158,7 @@ const DIV2=[
     {n:"Alvaro Araújo",p:"LE"},{n:"Vicente Pereira",p:"LE"},{n:"Gabriel Teixeira",p:"DC"},{n:"Gonçalo Martins",p:"DC"},
     {n:"Leonardo Vitoria",p:"DC"},{n:"Tiago Veiga",p:"MDC"},{n:"Rui Francisco",p:"MDC"},{n:"João Lopes",p:"MC"},
     {n:"Domingos Barroso",p:"MC"},{n:"Ana Lopes",p:"MC"},{n:"Susana Feio",p:"MC"},{n:"Pedro Carvalho",p:"MD"},
-    {n:"Luís Ferreira",p:"ME"},{n:"Duarte Pinto",p:"ME"},{n:"Pedro Gonçalves",p:"MO"},{n:"André Calçada",p:"ED"},
+    {n:"Luís Ferreira",p:"ME"},{n:"Duarte Pinto",p:"ME"},{n:"Pedro Magalhães",p:"MO"},{n:"André Calçada",p:"ED"},
     {n:"Agostinho Costa",p:"EE"},{n:"Narciso Batista",p:"PL"},{n:"José Pereira",p:"PL"},{n:"António Miranda",p:"PL"}]},
   {n:"GDR Trandeiras",s:"TRA",str:47,c1:"#c1121f",c2:"#ffffff"},
   {n:"GD Sete Fontes",s:"SFT",str:46,c1:"#15803d",c2:"#ffffff"},
@@ -517,7 +517,8 @@ function applyMatchSuspensions(club, events){
 /* ---------- simulação AO VIVO (jogo animado com substituições/tática) ---------- */
 function createLive(home,away,hLine,aLine,cfg){
   cfg=cfg||{};
-  const st={ home,away, minute:0, maxMin:cfg.maxMin||90, hg:0, ag:0, events:[], userSide:cfg.userSide||null,
+  const sH=ri(1,7), sA=ri(1,7);                                          // compensação de cada parte (1-7 min)
+  const st={ home,away, minute:0, stopH:sH, stopA:sA, et:false, maxMin:(cfg.maxMin||90)+sH+sA, hg:0, ag:0, events:[], userSide:cfg.userSide||null,
     talkFactor:1, talkFrom:0, talkUntil:0,
     H:{line:hLine.slice(), form:cfg.hForm||"4-4-2", ment:cfg.hMent||"Equilibrado", subs:0, appeared:new Set(hLine), gone:[], off:new Set(), yc:{}},
     A:{line:aLine.slice(), form:cfg.aForm||"4-4-2", ment:cfg.aMent||"Equilibrado", subs:0, appeared:new Set(aLine), gone:[], off:new Set(), yc:{}},
@@ -526,7 +527,17 @@ function createLive(home,away,hLine,aLine,cfg){
   initFit(home,hLine); initFit(away,aLine);
   return st;
 }
-function liveMaxSubs(st){ return st.maxMin>90?6:5; }
+function liveMaxSubs(st){ return st.et?6:5; }
+function liveReg(st){ return 90+(st.stopH||0)+(st.stopA||0); }           // minuto absoluto do fim do tempo regulamentar
+function liveHalftime(st){ return 45+(st.stopH||0); }                    // minuto absoluto do intervalo
+function liveDispMin(st,m){                                              // etiqueta do relógio: 45+x na 1ª parte, 90+x na 2ª
+  const sH=st.stopH||0, sA=st.stopA||0, reg=90+sH+sA;
+  if(m<=45)return ""+m;
+  if(m<=45+sH)return "45+"+(m-45);
+  if(m<=90+sH)return ""+(m-sH);                                         // 46..90
+  if(m<=reg)return "90+"+(m-90-sH);                                     // 90+1..90+sA
+  return ""+(m-sH-sA);                                                   // prolongamento: 91..120
+}
 function liveRate(st){
   const hS=teamStrength(st.home,st.H.line,st.H.form,st.H.ment), aS=teamStrength(st.away,st.A.line,st.A.form,st.A.ment);
   const ff=(S)=>{ if(!S.line.length)return 0.85; let s=0; S.line.forEach(id=>s+=(st.fit[id]==null?100:st.fit[id])); return 0.82+0.18*((s/S.line.length)/100); };
@@ -598,7 +609,7 @@ function aiMaybeSub(st,side){
 }
 function liveBench(st,side){ const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away, gone=new Set(S.gone), susp=new Set(club.susp||[]);
   return club.squad.filter(p=>!S.line.includes(p.id)&&!gone.has(p.id)&&!(S.off&&S.off.has(p.id))&&(p.injuredWeeks||0)<=0&&!susp.has(p.id)); }
-function liveResult(st){ return {hg:st.hg, ag:st.ag, events:st.events, expelledH:st.H.gone.slice(), expelledA:st.A.gone.slice(), maxMinute:st.maxMin, hadET:st.maxMin>90, liveUser:true, userAppeared:[...(st.userSide==="H"?st.H.appeared:st.A.appeared)]}; }
+function liveResult(st){ return {hg:st.hg, ag:st.ag, events:st.events, expelledH:st.H.gone.slice(), expelledA:st.A.gone.slice(), maxMinute:st.maxMin, hadET:!!st.et, liveUser:true, userAppeared:[...(st.userSide==="H"?st.H.appeared:st.A.appeared)]}; }
 function liveApplyEnergy(st){
   const proc=(club,S,full)=>{ club.squad.forEach(p=>{
     if(S.appeared.has(p.id)){ p.apps=(p.apps||0)+1;
@@ -1701,7 +1712,7 @@ if(typeof module!=="undefined"&&module.exports){
     simRound,playWeek,endSeason,newSeason,sortedTable,newGame,buyPlayer,sellPlayer,
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     buyAsk,makeBid,completeBuy,
-    offRateFrom,createLive,liveStep,liveSub,liveSetTactic,aiMaybeSub,liveBench,liveResult,liveApplyEnergy,liveMaxSubs,
+    offRateFrom,createLive,liveStep,liveSub,liveSetTactic,aiMaybeSub,liveBench,liveResult,liveApplyEnergy,liveMaxSubs,liveReg,liveHalftime,liveDispMin,
     transferFee,transferWindow,transferWindowOpen,transferTick,makeOneOffer,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     toggleLoanList,acceptLoanOffer,returnLoans,trainingInjuryTick,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,

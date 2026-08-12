@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-12", texto:"🎙️ Relato ao vivo renovado: nos momentos-chave o tempo pára e o relato constrói a tensão frase a frase — o desfecho (golo, defesa, poste, falhanço...) só se revela no fim. Muitas situações novas, algumas caricatas (bichos em campo, frangos, bolas para as couves...). Toca no relato para avançar. E agora há tempo de compensação: 45+x e 90+x." },
     { data:"2026-08-11", texto:"🔁 Janelas de transferências a sério: só contratas de outros clubes no início da época (até fim de setembro) e em janeiro. Fora das janelas só assinas jogadores sem clube. As propostas chegam aos poucos, não todas de uma vez." },
     { data:"2026-08-11", texto:"🤝 Empréstimos: podes disponibilizar um jogador (ou jovem) só para empréstimo ou para venda + empréstimo. O emprestado não paga transferência e regressa no fim da época; o salário pode ser pago 100% pelo clube que recebe ou dividido 50/50." },
     { data:"2026-08-11", texto:"📈 Evolução por minutos: quem joga evolui mais (mesmo com poucos minutos). Jovens evoluem mais depressa; ao banco cresce-se pouco. 🤕 Passam a existir lesões esporádicas nos treinos, mesmo com energia alta." },
@@ -74,7 +75,7 @@ const GAME_DATA = {
       {n:"Luís Ferreira", p:"ME"},
       {n:"Duarte Pinto", p:"ME"},
       {n:"Filipa Rebelo", p:"MO"},
-      {n:"Pedro Gonçalves", p:"MO"},
+      {n:"Pedro Magalhães", p:"MO"},
       {n:"André Calçada", p:"ED"},
       {n:"Agostinho Costa", p:"EE"},
       {n:"Narciso Batista", p:"PL"},
