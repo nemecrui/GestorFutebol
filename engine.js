@@ -434,6 +434,49 @@ function cornerBoost(club,lineup,gone){                            // bom batedo
   const p=club.squad.find(x=>x.id===id); if(!p||!p.attrs)return 0;
   return clamp(((p.attrs.cru||10)-10)/400,0,0.03);
 }
+/* ---------- Descontentamento do capitão (Fase 2) ---------- */
+function ensureCapMood(){
+  const cid=G.roles?G.roles.captain:null;
+  if(!G.capMood || G.capMood.pid!==cid)G.capMood={pid:cid,discontent:0,benched:0,subbed:0,protest:false,warned:false,met:false};
+  return G.capMood;
+}
+function captainMoodTick(userRes){                                  // corre após o teu jogo da jornada
+  const cid=G.roles?G.roles.captain:null;
+  if(cid==null){ if(G.capMood)G.capMood.protest=false; return; }
+  const c=me(), cap=c.squad.find(p=>p.id===cid); if(!cap)return;
+  const M=ensureCapMood();
+  if(new Set(unavailable(c)).has(cid))return;                      // lesionado/suspenso: não é decisão tua
+  const started=(G.lineup||[]).indexOf(cid)>=0;
+  const subbedOff=!!(userRes && (userRes.events||[]).some(e=>e.type==="sub" && e.outId===cid));
+  if(!started){ M.discontent=clamp(M.discontent+14,0,100); M.benched++; }
+  else if(subbedOff){ M.discontent=clamp(M.discontent+8,0,100); M.subbed++; }  // a saída é do calor do jogo, mas acumula
+  else { M.discontent=clamp(M.discontent-12,0,100); }              // jogou o jogo todo: acalma
+  if(M.discontent<25)M.warned=false;
+  if(M.discontent<50)M.met=false;
+  if(M.discontent<70)M.protest=false;
+  captainMoodConsequences(M,cap,c);
+}
+function captainMoodConsequences(M,cap,c){
+  if(M.discontent>=30 && !M.warned){ M.warned=true;
+    cap.morale=clamp((cap.morale==null?70:cap.morale)-6,0,100);
+    c.squad.filter(p=>p.id!==cap.id&&p.morale!=null).sort((a,b)=>ability(b)-ability(a)).slice(0,5).forEach(p=>p.morale=clamp(p.morale-3,0,100));
+    addNews("🧢 O balneário está incomodado com o pouco uso do capitão "+cap.name+" — a moral ressente-se.");
+  }
+  if(M.discontent>=55 && !M.met && !(G.capMeeting&&G.capMeeting.active)){ M.met=true;
+    G.capMeeting={active:true, name:cap.name};
+    addNews("📋 A direção convocou-te para falar sobre o capitão "+cap.name+".");
+  }
+  if(M.discontent>=80 && !M.protest && Math.random()<0.6){ M.protest=true;
+    addNews("✊ O balneário ameaça protestar no próximo jogo por causa do capitão "+cap.name+".");
+  }
+}
+function resolveCaptainMeeting(choice){
+  const M=ensureCapMood(), c=me();
+  if(choice==="prometer"){ M.discontent=clamp(M.discontent-40,0,100); if(G.board)G.board.confidence=clamp(G.board.confidence+3,0,100); addNews("Prometeste à direção dar mais minutos ao capitão. O balneário acalma."); }
+  else { M.discontent=clamp(M.discontent-12,0,100); if(G.board)G.board.confidence=clamp(G.board.confidence-4,0,100); G.manager.reputation=(G.manager.reputation||40)+1; addNews("Disseste à direção que o capitão joga quando merecer. Firmeza registada."); }
+  M.met=true; G.capMeeting=null; save();
+  return {ok:true};
+}
 function pickGoal(club,lineup,formation,gone){
   const slots=FORMATIONS[formation].slots;
   const cands=lineup.map((id,i)=>({p:club.squad.find(x=>x.id===id),pos:slots[i]?slots[i].pos:"MC"}))
@@ -705,6 +748,7 @@ function playWeek(preMy){
   checkShortObjective();                    // período de prova acordado numa reunião
   if(!G.fired)maybeBoardMeeting();           // maus resultados podem gerar nova reunião
   if(!G.fired)maybeEvent();                  // eventos de história (cartões com escolhas)
+  if(!G.fired)captainMoodTick(preMy);        // descontentamento do capitão (banco/substituições)
   if(G.grace>0)G.grace--;                    // margem após assumir um clube a meio da época
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
   G.week=myD.week; advanceMonth();
@@ -1784,6 +1828,7 @@ if(typeof module!=="undefined"&&module.exports){
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     ensureRecords,updateRecordsMatch,endSeasonAwards,ensureCareer,careerNewSpell,recordCareerSeason,
     ensureRoles,setRole,roleTakerId,penMissChance,fkMissChance,captainFactor,cornerBoost,bestFieldByAttr,
+    ensureCapMood,captainMoodTick,resolveCaptainMeeting,
     talkResolve,applyTeamTalkMorale,liveApplyTalk,favTier,clubRecentForm,
     wageFor,wageBill,wageCapFor,ensureWageCap,wageRoom,ensureFreeAgents,signFreeAgent,refreshFreeAgents,
     ensureRivals,rivalOf,isDerby,

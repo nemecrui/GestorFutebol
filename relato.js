@@ -317,6 +317,16 @@ const RELATO = {
     }
   },
 
+  /* ---- Reação caricata do CAPITÃO ao ser substituído (sem efeito na moral) ---- */
+  captainSub: [
+    "O capitão sai a resmungar e atira o colete para o banco.",
+    "O capitão nem olha para o treinador ao sair — senta-se de braços cruzados.",
+    "O capitão sai visivelmente aziado e dá um pontapé numa garrafa de água.",
+    "O capitão abana a cabeça a caminho do banco. Não gostou nada de sair.",
+    "O capitão tira a braçadeira devagar e entrega-a sem uma palavra.",
+    "O capitão aponta para o próprio peito a protestar antes de se sentar."
+  ],
+
   /* ---- AMBIENTE (frases de contexto, sem pausa) ---- */
   ambient: {
     press: ["{clube} carrega para a frente", "grande pressão do {clube}", "{clube} instala-se no meio-campo adversário", "{clube} manda no jogo"],
@@ -397,6 +407,7 @@ function relatoSeq(kind, branch, ctx, opts){
 }
 function relatoFolclore(ctx){ const f=_relPick(RELATO.folclore)||[]; return f.map(s=>_relFill(s,ctx)); }
 function relatoAmbient(key, ctx){ const p=(RELATO.ambient||{})[key]; return p? _relFill(_relPick(p),ctx) : ""; }
+function relatoCaptainSub(){ const p=RELATO.captainSub||[]; return p.length?_relPick(p):""; }
 /* Insólita ligada ao lance: branch "goal" (termina em golo) ou "miss" (ocasião perdida). */
 function relatoLance(branch, ctx){
   const pool=((RELATO.folcloreLance||{})[branch])||[]; if(!pool.length)return null;
@@ -405,5 +416,5 @@ function relatoLance(branch, ctx){
 }
 
 if(typeof module!=="undefined" && module.exports){
-  module.exports = { RELATO, relatoSeq, relatoFolclore, relatoAmbient, relatoLance, _relFill };
+  module.exports = { RELATO, relatoSeq, relatoFolclore, relatoAmbient, relatoLance, relatoCaptainSub, _relFill };
 }
