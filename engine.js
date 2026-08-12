@@ -310,6 +310,7 @@ function newGame(divIdx,clubIdx,managerName){
   cupCreate();
   academyIntake();
   seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me()); ensureRivals(); pickRival();
+  ensureCareer();                                                    // inicia a história de carreira (1ª passagem)
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
@@ -758,6 +759,7 @@ function endSeason(){
   me().budget=Math.round((me().budget+prize)*100)/100;
   addNews("Prémio de classificação: +"+money(prize)+".");
   endSeasonAwards(meRank);
+  recordCareerSeason(meRank,d);
   resolveRivalDuel(table,meRank);
   evaluateBoard(meRank);
   while(G.cup&&G.cup.active)cupAdvanceRound();
@@ -1031,6 +1033,7 @@ function takeNewJob(i){
     addNews("Assumiste o comando do "+me().name+".");
     newSeason();
   }
+  careerNewSpell();                          // regista a passagem por este clube na história de carreira
   return true;
 }
 /* ---------- Fase 3: transferências ---------- */
@@ -1556,6 +1559,27 @@ function recordManagerMatch(gf,ga){ const s=G.manager&&G.manager.stats; if(!s)re
   if(typeof onManagerMatch==="function"){ try{ onManagerMatch(gf,ga); }catch(e){} } }   // hook opcional (a UI usa-o para analytics de jogos jogados)
 /* ---------- recordes de carreira + prémios de fim de época ---------- */
 function ensureRecords(){ if(!G.records)G.records={}; if(!G.awards)G.awards=[]; if(G.streakU==null)G.streakU=0; if(G.streakW==null)G.streakW=0; return G.records; }
+/* ---------- História de carreira do treinador ---------- */
+function ensureCareer(){
+  if(!G.career)G.career={spells:[],seasons:[]};
+  if((G.career.spells||[]).length===0 && G.manager){
+    try{ const c=me(); if(c)G.career.spells.push({gid:c.gid, name:c.name, tier:c.tier, tierName:myDivObj().name, from:G.season||1, to:null}); }catch(e){}
+  }
+  return G.career;
+}
+function careerNewSpell(){                                     // ao mudar de clube: fecha a passagem anterior e abre nova
+  const C=ensureCareer(); const c=me(); if(!c)return;
+  const open=C.spells.find(s=>s.to==null);
+  if(open){ if(open.gid===c.gid){ open.name=c.name; open.tierName=myDivObj().name; return; } open.to=G.season; }
+  C.spells.push({gid:c.gid, name:c.name, tier:c.tier, tierName:myDivObj().name, from:G.season||1, to:null});
+}
+function recordCareerSeason(meRank,d){                        // guarda o resumo da época terminada
+  const C=ensureCareer(), c=me();
+  const e={ season:G.season, name:c.name, gid:c.gid, div:d.name, tier:c.tier, pos:meRank, of:d.clubs.length,
+    W:c.W||0, D:c.D||0, L:c.L||0, GF:c.GF||0, GA:c.GA||0, pts:c.Pts||0 };
+  const i=C.seasons.findIndex(s=>s.season===e.season);
+  if(i>=0)C.seasons[i]=e; else C.seasons.push(e);
+}
 function updateRecordsMatch(gf,ga,oppName){
   const R=ensureRecords();
   if(gf>ga){ G.streakW++; G.streakU++; const m=gf-ga;
@@ -1720,7 +1744,7 @@ if(typeof module!=="undefined"&&module.exports){
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
-    ensureRecords,updateRecordsMatch,endSeasonAwards,
+    ensureRecords,updateRecordsMatch,endSeasonAwards,ensureCareer,careerNewSpell,recordCareerSeason,
     talkResolve,applyTeamTalkMorale,liveApplyTalk,favTier,clubRecentForm,
     wageFor,wageBill,wageCapFor,ensureWageCap,wageRoom,ensureFreeAgents,signFreeAgent,refreshFreeAgents,
     ensureRivals,rivalOf,isDerby,
