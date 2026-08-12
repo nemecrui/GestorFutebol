@@ -613,11 +613,33 @@ function viewTactics(){
   h+=`<div class="card"><h2>Suplentes ${iss.sus?'<span style="color:var(--red);font-size:11px">(há suspensos)</span>':''}</h2>${benchHTML(c)}</div>`;
   h+=`<div class="card"><h2>Formação</h2><select id="selForm">${Object.keys(FORMATIONS).map(f=>`<option ${f===G.formation?'selected':''}>${f}</option>`).join("")}</select></div>`;
   h+=`<div class="card"><h2>Mentalidade</h2><select id="selMent">${Object.keys(MENTAL).map(m=>`<option ${m===G.mentality?'selected':''}>${m}</option>`).join("")}</select></div>`;
+  h+=rolesCardHTML(c);
   h+=`<div class="card"><h2>Força do onze</h2>${bar("Defesa",s.def)}${bar("Meio-campo",s.mid)}${bar("Ataque",s.atk)}
     <div class="center" style="margin-top:10px"><span class="rating ${ratingClass(Math.round(s.overall))}" style="display:inline-flex">${Math.round(s.overall)}</span> <span class="muted">global</span></div></div>`;
   h+=`<div class="card"><button class="btn" id="btnAuto">✨ Escolher melhor onze automaticamente</button></div>`;
   return h;
 }
+function rolesCardHTML(c){
+  const R=(typeof ensureRoles==="function")?ensureRoles():(G.roles||{captain:null,penalty:null,freekick:null,corner:null});
+  const xi=(G.lineup||[]).map(id=>c.squad.find(p=>p.id===id)).filter(Boolean);
+  if(!xi.length)return `<div class="card"><h2>Papéis de equipa</h2><div class="muted" style="font-size:12px">Preenche o onze para escolher os papéis.</div></div>`;
+  const lead=p=>Math.round(ability(p)+Math.max(0,(p.age||24)-25)*0.8);
+  const defs=[
+    {role:"captain", label:"🧢 Capitão",  val:lead,               hint:"experiência/qualidade"},
+    {role:"penalty", label:"🎯 Penáltis", val:p=>p.attrs.pen||0,  hint:"Penáltis"},
+    {role:"freekick",label:"🅕 Livres",   val:p=>p.attrs.liv||0,  hint:"Livres"},
+    {role:"corner",  label:"🚩 Cantos",   val:p=>p.attrs.cru||0,  hint:"Cruzamento"}
+  ];
+  const rows=defs.map(d=>{
+    const ordered=xi.slice().sort((a,b)=>d.val(b)-d.val(a));
+    const cur=R[d.role];
+    const opts=`<option value="">— automático (melhor) —</option>`+ordered.map(p=>`<option value="${p.id}" ${cur===p.id?'selected':''}>${lastNameU(p.name)} (${d.val(p)})</option>`).join("");
+    return `<div class="row between" style="gap:8px;margin-bottom:6px;align-items:center"><span style="min-width:88px;font-size:13px">${d.label}</span><select class="roleSel" data-role="${d.role}" style="flex:1">${opts}</select></div>`;
+  }).join("");
+  return `<div class="card"><h2>Papéis de equipa</h2>
+    <div class="muted" style="font-size:11px;margin-bottom:8px">Restrito ao onze, ordenado do melhor para o pior. Vazio = o jogo escolhe o melhor. O capitão dá um pequeno empurrão à equipa; o penaltista/batedor de livres bons convertem mais.</div>${rows}</div>`;
+}
+function lastNameU(n){ return String(n).split(" ").slice(-1)[0]; }
 function pitchHTML(cl){
   const slots=FORMATIONS[G.formation].slots, tc=textOn(cl.c1), susp=new Set(cl.susp||[]);
   let spots="";
@@ -631,7 +653,7 @@ function pitchHTML(cl){
       spots+=`<div class="spot${isSel?' sel':''}${bad?' susp':''}" data-slot="${slot}" style="left:${s.x}%;top:${s.y}%">
         ${tag?`<div class="susp-tag">${tag}</div>`:''}
         <div class="dot" style="background:${cl.c1};color:${tc};border-color:${cl.c2}">${effAt(p,s.pos)}</div>
-        <div class="lbl">${p.name.split(" ").slice(-1)[0]}</div><div class="ppos">${s.pos} · ${enHtml(p.energy)} · ⭐${avg5(p)!=null?avg5(p):"—"}</div>${enBar(p.energy)}</div>`;
+        <div class="lbl">${p.name.split(" ").slice(-1)[0]}${(G.roles&&G.roles.captain===id)?' <span title="Capitão" style="color:#f5c518;font-weight:900">Ⓒ</span>':''}</div><div class="ppos">${s.pos} · ${enHtml(p.energy)} · ⭐${avg5(p)!=null?avg5(p):"—"}</div>${enBar(p.energy)}</div>`;
     }
   }
   return `<div class="pitch"><div class="lines">
@@ -840,6 +862,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     else if(e.type==="red"){ addEvLine(e.side,"🟥",{m,name:nameByPid(e.side,e.pid)+(e.second?" (2º amarelo)":"")});tlDot(m,"#ef4657"); if(userSide&&e.side===userSide){bumpR(e.pid,-1.3);if(mk[e.pid])mk[e.pid].red=true;} setComment("Vermelho para o "+nameOf(e.side)+"! "+nameByPid(e.side,e.pid),4);pauseUntil=Date.now()+2000; }
     else if(e.type==="disallowed"){ addEvLine(e.side,"🚫",{m,name:"golo anulado"});stat[e.side].sot++;setComment("Golo anulado ao "+nameOf(e.side)+"!",3);pauseUntil=Date.now()+1700; }
     else if(e.type==="penmiss"){ addEvLine(e.side,"❌",{m,name:nameByPid(e.side,e.pid)+" — penálti falhado"});stat[e.side].sh++;stat[e.side].sot++; if(userSide&&e.side===userSide)bumpR(e.pid,-0.8); setComment("Penálti falhado — "+nameOf(e.side)+" · "+nameByPid(e.side,e.pid),3);pauseUntil=Date.now()+1800; }
+    else if(e.type==="fkmiss"){ addEvLine(e.side,"🧱",{m,name:nameByPid(e.side,e.pid)+" — livre desperdiçado"});stat[e.side].sh++; setComment("Livre desperdiçado — "+nameOf(e.side)+" · "+nameByPid(e.side,e.pid),2);pauseUntil=Date.now()+1500; }
     else if(e.type==="sub"){ const outN=lastName(nameByPid(e.side,e.outId)), inN=lastName(nameByPid(e.side,e.inId));
       addEvLine(e.side,"🔁",{m,name:"sai "+outN+", entra "+inN});tlDot(m,"#3b8cff");
       if(userSide&&e.side===userSide){ if(mk[e.outId])mk[e.outId].off=true; mk[e.inId]={g:0,yc:false,red:false,on:true,off:false}; if(liveR[e.inId]==null)liveR[e.inId]=6.0; }
@@ -940,7 +963,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       seqActive=false; paused=false; lastSeqAt=Date.now(); pauseUntil=Date.now()+hold; drainQueue(); }
     function nextLine(){ if(done)return; if(i<buildLines.length){const t=buildLines[i++]; setComment(t,0); seqTimer=setTimeout(nextLine,dwell(t));} else reveal(); }
     seqSkip=reveal; if(!buildLines||!buildLines.length){reveal();} else nextLine(); }
-  function isKeyMoment(e){ return e&&(e.type==="goal"||e.type==="penmiss"||e.type==="red"||e.type==="disallowed"); }
+  function isKeyMoment(e){ return e&&(e.type==="goal"||e.type==="penmiss"||e.type==="fkmiss"||e.type==="red"||e.type==="disallowed"); }
   function mapEvent(e){ const side=e.side, ctx=mkCtx(side,{});
     if(e.type==="goal"){
       if(e.gtype==="own"){ ctx.def=nmPid(e.ogSide,e.ogPid); return {kind:"own",branch:"goal",ctx}; }
@@ -949,6 +972,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       const k=e.gtype==="penalty"?"penalty":e.gtype==="freekick"?"freekick":e.gtype==="header"?"header":pick(["chance","solo","counter"]);
       return {kind:k,branch:"goal",ctx}; }
     if(e.type==="penmiss"){ if(e.pid)ctx.jog=nmPid(e.side,e.pid); return {kind:"penalty",branch:(Math.random()<0.55?"miss":"save"),ctx}; }
+    if(e.type==="fkmiss"){ if(e.pid)ctx.jog=nmPid(e.side,e.pid); return {kind:"freekick",branch:pick(["wall","save","out"]),ctx}; }
     if(e.type==="red"){ if(e.pid)ctx.jog=nmPid(e.side,e.pid); return {kind:"red",branch:(e.second?"second":"direct"),ctx}; }
     if(e.type==="disallowed"){ return {kind:"chance",branch:"disallowed",ctx}; }
     return null; }
@@ -1332,6 +1356,7 @@ function bindView(){
   document.querySelectorAll("[data-detail]").forEach(el=>el.onclick=()=>openPlayer(+el.dataset.detail));
   const sf=$("#selForm");if(sf)sf.onchange=()=>{tacSel=null;G.formation=sf.value;G.lineup=autoPickLineup(me(),G.formation,[...unavailable(me())]);save();render();};
   const sm=$("#selMent");if(sm)sm.onchange=()=>{G.mentality=sm.value;save();render();};
+  document.querySelectorAll(".roleSel").forEach(sel=>sel.onchange=()=>{ if(typeof setRole==="function")setRole(sel.dataset.role, sel.value?+sel.value:null); render(); });
   const ba=$("#btnAuto");if(ba)ba.onclick=()=>{tacSel=null;G.lineup=autoPickLineup(me(),G.formation,[...unavailable(me())]);save();toast("Onze otimizado");render();};
   const bva=$("#btnVacate");if(bva)bva.onclick=()=>{if(tacSel&&tacSel.type==="slot"){G.lineup[tacSel.slot]=null;tacSel=null;save();render();}};
   const bcs=$("#btnCancelSel");if(bcs)bcs.onclick=()=>{tacSel=null;render();};
@@ -1400,7 +1425,7 @@ function splashScreen(){
 function boot(){
   document.getElementById("splash")?.remove();
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }

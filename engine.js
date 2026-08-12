@@ -311,6 +311,7 @@ function newGame(divIdx,clubIdx,managerName){
   academyIntake();
   seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me()); ensureRivals(); pickRival();
   ensureCareer();                                                    // inicia a história de carreira (1ª passagem)
+  ensureRoles();                                                      // papéis de equipa (capitão/penáltis/livres/cantos)
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
@@ -384,8 +385,11 @@ function teamStrength(club,lineup,formation,mentality){
   const def=defs.length?(avg(defs)*defs.length+gk*1.4)/(defs.length+1.4):(gk||55);
   const mid=avg(mids), atk=avg(atts);
   const men=MENTAL[mentality];
-  const cm=(typeof G!=="undefined"&&G&&G.myId!=null&&club===me())?chemFactor():1;  // química só afeta a tua equipa
-  return {def:def*men.def*cm, mid:mid*cm, atk:atk*men.atk*cm, overall:(def+mid+atk)/3*cm};
+  const mine=(typeof G!=="undefined"&&G&&G.myId!=null&&club===me());
+  const cm=mine?chemFactor():1;                                                     // química só afeta a tua equipa
+  const cap=mine?captainFactor():1;                                                 // capitão dá um pequeno empurrão
+  const f=cm*cap;
+  return {def:def*men.def*f, mid:mid*f, atk:atk*men.atk*f, overall:(def+mid+atk)/3*f};
 }
 
 /* ---------- escolha de marcador / infrator ---------- */
@@ -398,6 +402,38 @@ function bestFieldByAttr(club,lineup,attr,gone){
   lineup.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(p&&!(gone&&gone.has(p.id))&&p.attrs[attr]>bv){bv=p.attrs[attr];best=p;}});
   return best;
 }
+/* ---------- Papéis de equipa (capitão, penáltis, livres, cantos) ---------- */
+function ensureRoles(){
+  if(!G.roles)G.roles={captain:null,penalty:null,freekick:null,corner:null};
+  const ids=new Set(((typeof me==="function"&&G.myId!=null&&me())?me().squad:[]).map(p=>p.id));
+  ["captain","penalty","freekick","corner"].forEach(k=>{ if(G.roles[k]!=null && !ids.has(G.roles[k]))G.roles[k]=null; });
+  return G.roles;
+}
+function setRole(role,pid){ ensureRoles(); if(["captain","penalty","freekick","corner"].indexOf(role)<0)return G.roles; G.roles[role]=(pid==null?null:pid); save(); return G.roles; }
+function isUserClub(club){ return typeof me==="function" && G && G.myId!=null && club===me(); }
+function roleTakerId(club,lineup,gone,role,attr){                  // batedor escolhido (se estiver em campo) ou o melhor por atributo
+  if(isUserClub(club) && G.roles && G.roles[role]!=null){
+    const rid=G.roles[role];
+    if(lineup.indexOf(rid)>=0 && !(gone&&gone.has(rid)))return rid;
+  }
+  const b=bestFieldByAttr(club,lineup,attr,gone); return b?b.id:null;
+}
+function penMissChance(club,pid){ const p=club&&club.squad.find(x=>x.id===pid); const pen=(p&&p.attrs)?(p.attrs.pen||10):10; return clamp(0.32-(pen/20)*0.24,0.05,0.32); }
+function fkMissChance(club,pid){ const p=club&&club.squad.find(x=>x.id===pid); const liv=(p&&p.attrs)?(p.attrs.liv||10):10; return clamp(0.62-(liv/20)*0.42,0.20,0.62); }
+function captainFactor(){                                          // pequeno empurrão da tua equipa se o capitão jogar e estiver bem
+  if(typeof me!=="function"||!G||!G.roles)return 1;
+  const cid=G.roles.captain; if(cid==null)return 1;
+  if((G.lineup||[]).indexOf(cid)<0)return 1;                       // tem de estar no onze
+  const cap=me().squad.find(p=>p.id===cid); if(!cap)return 1;
+  const mor=cap.morale==null?70:cap.morale;
+  return mor>=70?1.03 : mor>=50?1.015 : 1.0;
+}
+function cornerBoost(club,lineup,gone){                            // bom batedor de cantos: pequeno reforço aos golos de cabeça
+  if(!isUserClub(club))return 0;
+  const id=roleTakerId(club,lineup,gone,"corner","cru"); if(id==null)return 0;
+  const p=club.squad.find(x=>x.id===id); if(!p||!p.attrs)return 0;
+  return clamp(((p.attrs.cru||10)-10)/400,0,0.03);
+}
 function pickGoal(club,lineup,formation,gone){
   const slots=FORMATIONS[formation].slots;
   const cands=lineup.map((id,i)=>({p:club.squad.find(x=>x.id===id),pos:slots[i]?slots[i].pos:"MC"}))
@@ -407,10 +443,10 @@ function pickGoal(club,lineup,formation,gone){
   const sel=weightedObj(cands,w); if(!sel)return null;
   let gtype="open"; const r=Math.random();
   if(r<0.07)gtype="penalty"; else if(r<0.12)gtype="freekick";
-  else if(Math.random()<0.12+sel.p.attrs.cab/70)gtype="header";
+  else if(Math.random()<0.12+sel.p.attrs.cab/70+cornerBoost(club,lineup,gone))gtype="header";
   let pid=sel.p.id;
-  if(gtype==="penalty"){const b=bestFieldByAttr(club,lineup,"pen",gone); if(b)pid=b.id;}
-  else if(gtype==="freekick"){const b=bestFieldByAttr(club,lineup,"liv",gone); if(b)pid=b.id;}
+  if(gtype==="penalty"){const id=roleTakerId(club,lineup,gone,"penalty","pen"); if(id!=null)pid=id;}
+  else if(gtype==="freekick"){const id=roleTakerId(club,lineup,gone,"freekick","liv"); if(id!=null)pid=id;}
   return {pid,gtype};
 }
 function pickFoul(club,lineup,gone){
@@ -454,7 +490,8 @@ function simulate(home,away,hLine,aLine,eHome,eAway){
       const og=defs.length?pick(defs):null;
       events.push({m,side,type:"goal",club,line,scorer:null,gtype:"own",ogPid:og?og.id:null,ogSide:oppSide}); return true; }
     const g=pickGoal(club,line,side==="H"?G.formation:"4-4-2",gone);
-    if(g&&g.gtype==="penalty"&&Math.random()<0.22){ events.push({m,side,type:"penmiss",pid:g.pid}); return false; }
+    if(g&&g.gtype==="penalty"&&Math.random()<penMissChance(club,g.pid)){ events.push({m,side,type:"penmiss",pid:g.pid}); return false; }
+    if(g&&g.gtype==="freekick"&&Math.random()<fkMissChance(club,g.pid)){ events.push({m,side,type:"fkmiss",pid:g.pid}); return false; }
     events.push({m,side,type:"goal",club,line,scorer:g?g.pid:null,gtype:g?g.gtype:"open"}); return true;
   }
   function sendOff(side,p,m,second){ events.push({m,side,type:"red",pid:p.id,second});
@@ -558,7 +595,8 @@ function liveGoal(st,side,m){
   if(roll<0.04){ const oppGone=new Set(oppS.gone); const defs=oppLine.map(id=>oppClub.squad.find(x=>x.id===id)).filter(p=>p&&!oppGone.has(p.id)&&GROUP[p.pos]!=="GK"); const og=defs.length?pick(defs):null;
     return {m,side,type:"goal",scorer:null,gtype:"own",ogPid:og?og.id:null,ogSide:(side==="H"?"A":"H")}; }
   const g=pickGoal(club,line,S.form,gone);
-  if(g&&g.gtype==="penalty"&&Math.random()<0.22)return {m,side,type:"penmiss",pid:g.pid};
+  if(g&&g.gtype==="penalty"&&Math.random()<penMissChance(club,g.pid))return {m,side,type:"penmiss",pid:g.pid};
+  if(g&&g.gtype==="freekick"&&Math.random()<fkMissChance(club,g.pid))return {m,side,type:"fkmiss",pid:g.pid};
   return {m,side,type:"goal",scorer:g?g.pid:null,gtype:g?g.gtype:"open"};
 }
 function liveFoul(st,side,m,out){
@@ -1745,6 +1783,7 @@ if(typeof module!=="undefined"&&module.exports){
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     ensureRecords,updateRecordsMatch,endSeasonAwards,ensureCareer,careerNewSpell,recordCareerSeason,
+    ensureRoles,setRole,roleTakerId,penMissChance,fkMissChance,captainFactor,cornerBoost,bestFieldByAttr,
     talkResolve,applyTeamTalkMorale,liveApplyTalk,favTier,clubRecentForm,
     wageFor,wageBill,wageCapFor,ensureWageCap,wageRoom,ensureFreeAgents,signFreeAgent,refreshFreeAgents,
     ensureRivals,rivalOf,isDerby,
