@@ -19,7 +19,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 ## Profundidade de gestão
 - ✅ 🔧 Academia de jovens — juniores separados, nível 1-5, intake por época, desenvolvimento com foco, potencial em estrelas, empréstimos, promover/dispensar.
 - ✅ 🔧 Contratos e salários — teto de massa salarial, salário por jogador, fim de contrato → livre, mercado de livres, renovações.
-- 🔄 🔧 Empréstimos — **ceder ✅** feito; **receber ⬜** (ir buscar jogadores emprestados a outros clubes) por fazer.
+- ✅ 🔧 Empréstimos — **ceder ✅** e **receber ✅** (separador Empréstimos no mercado, sem custo de transferência, salário 100% ou 50/50, regressa no fim da época; não pode ser vendido/cedido/dispensado).
 - ✅ ⚡ Suspensões por amarelos (5 = 1 jogo), vermelho direto = 2 jogos / 2º amarelo = 1 jogo; lesões com gravidade variável. Marcadores no plantel e na ficha.
 - ✅ 🔧 **Papéis de equipa** — **Fase 1 ✅**: seleção (capitão/penáltis/livres/cantos) restrita ao onze e ordenada; o atributo do batedor mexe na conversão de penáltis e livres; capitão dá empurrão à equipa; braçadeira e livre desperdiçado no relato. **Fase 2 ✅**: drama do capitão — medidor de descontentamento (banco/substituição), contágio de moral, reunião da direção, protesto raro no 1º minuto e saída aziada com relato caricato. **Fase 3 ✅**: cartões de indisciplina (chegar tarde/faltar ao treino, bar na véspera…) com justificação séria/cómica e castigo interno selecionável (suspensão › multa cómica › repreensão) ou ilibar, com consequências na moral e reputação.
 

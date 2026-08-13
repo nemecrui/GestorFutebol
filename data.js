@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-13", texto:"🤝 Já podes RECEBER jogadores por empréstimo: novo separador 'Empréstimos' no mercado (nas janelas). Sem custo de transferência, escolhes pagar o salário todo ou dividir 50/50, e o jogador regressa ao clube de origem no fim da época." },
     { data:"2026-08-13", texto:"🧢 Papéis de equipa: escolhe capitão, marcador de penáltis, livres e cantos (na Tática). Um bom penaltista/batedor de livres converte mais. O capitão dá um empurrão à equipa — mas se o deixares no banco cria mau ambiente, reunião com a direção e até protesto. E há casos de indisciplina para resolveres (com desculpas que às vezes são de rir), com castigo à tua escolha ou perdão." },
     { data:"2026-08-13", texto:"🎛️ Controlo de velocidade (1×/2×/3×) no jogo ao vivo, botão para simular só uma jornada, e 📖 História de carreira do treinador (palmarés, clubes e época a época)." },
     { data:"2026-08-12", texto:"🎙️ Relato ao vivo renovado: nos momentos-chave o tempo pára e o relato constrói a tensão frase a frase — o desfecho (golo, defesa, poste, falhanço...) só se revela no fim. Muitas situações novas, algumas caricatas (bichos em campo, frangos, bolas para as couves...). Toca no relato para avançar. E agora há tempo de compensação: 45+x e 90+x." },

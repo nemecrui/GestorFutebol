@@ -1033,6 +1033,7 @@ function sellPlayer(playerId){
   const meC=me();
   if(meC.squad.length<=14)return {ok:false,msg:"Plantel demasiado pequeno"};
   const p=meC.squad.find(x=>x.id===playerId); if(!p)return {ok:false,msg:""};
+  if(p.onLoanIn)return {ok:false,msg:"Não podes vender um jogador emprestado."};
   const price=Math.round(p.value*rnd(0.75,1.05)*100)/100;
   meC.budget=Math.round((meC.budget+price)*100)/100;
   meC.squad=meC.squad.filter(x=>x.id!==playerId);
@@ -1207,6 +1208,7 @@ function makePlayerOffers(){
 function releasePlayer(pid){
   const c=me(); if(c.squad.length<=14)return {ok:false,msg:"Plantel demasiado pequeno"};
   const p=c.squad.find(x=>x.id===pid); if(!p)return {ok:false,msg:""};
+  if(p.onLoanIn)return {ok:false,msg:"Não podes dispensar um jogador emprestado."};
   c.squad=c.squad.filter(x=>x.id!==pid);
   addNews("Dispensaste "+p.name+" (sem receita).");
   G.lineup=autoPickLineup(c,G.formation); save();
@@ -1220,6 +1222,7 @@ function toggleTransferList(pid){
 }
 function toggleLoanList(pid){
   const c=me(); const p=c.squad.find(x=>x.id===pid); if(!p)return false;
+  if(p.onLoanIn){ addNews("Não podes ceder um jogador que está emprestado ao teu clube."); return false; }
   p.loanListed=!p.loanListed;
   addNews(p.loanListed?("Disponibilizaste "+p.name+" para empréstimo."):("Retiraste "+p.name+" da lista de empréstimos."));
   save(); return p.loanListed;
@@ -1237,6 +1240,34 @@ function acceptLoanOffer(i,userShare){                    // userShare: 0 = club
   G.lineup=autoPickLineup(meC,G.formation); save();
   return {ok:true,msg:"Emprestado: "+p.name};
 }
+function loanInList(){                                     // jogadores de outros clubes disponíveis para receber por empréstimo
+  if(!transferWindowOpen())return [];
+  let out=[];
+  allClubsFlat().forEach(({c,di})=>{ if(isMine(c,di))return; if((c.squad||[]).length<=16)return;
+    c.squad.slice().sort((a,b)=>ability(b)-ability(a)).slice(12).forEach(p=>{     // do 13º para baixo (suplentes)
+      if((p.injuredWeeks||0)>0||p.onLoanOut||p.onLoanIn)return;
+      out.push({gid:c.gid, di, short:c.short, cname:c.name, p});
+    });
+  });
+  out.sort((a,b)=>ability(b.p)-ability(a.p));
+  return out.slice(0,60);
+}
+function loanInPlayer(fromGid,pid,borrowerShare){         // borrowerShare: 1 = pagas tudo · 0.5 = dividido
+  if(!transferWindowOpen())return {ok:false,msg:"Janela fechada. Só podes pedir empréstimos nas janelas."};
+  const meC=me(); if(meC.squad.length>=30)return {ok:false,msg:"Plantel cheio (máximo 30)."};
+  const origin=clubByGid(fromGid); if(!origin)return {ok:false,msg:""};
+  const p=origin.squad.find(x=>x.id===pid); if(!p||(p.injuredWeeks||0)>0||p.onLoanOut||p.onLoanIn)return {ok:false,msg:"Jogador indisponível."};
+  const wage=(p.wage!=null?p.wage:wageFor(p)), bShare=(borrowerShare==null?1:borrowerShare);
+  if(wageRoom() < wage*bShare)return {ok:false,msg:"Sem espaço salarial para este empréstimo."};
+  origin.squad=origin.squad.filter(x=>x.id!==pid);
+  meC.squad.push(p); p.onLoanIn=true; p.loanFromGid=fromGid; p.transferListed=false; p.loanListed=false;
+  if(!G.loans)G.loans=[];
+  G.loans.push({pid:p.id, player:p, name:p.name, fromGid:origin.gid, toGid:meC.gid, toShort:meC.short, fromName:origin.name,
+    wage, originShare:(1-bShare), borrowerShare:bShare, userShare:(1-bShare), season:G.season});
+  addNews("🔁 Contrataste "+p.name+" ("+ability(p)+") por empréstimo do "+origin.name+(bShare<1?" (salário dividido 50/50)":" (pagas o salário)")+". Regressa no fim da época.");
+  G.lineup=autoPickLineup(meC,G.formation); save();
+  return {ok:true,msg:"Recebido por empréstimo: "+p.name};
+}
 function transferWindowOpen(){ return G.date==="Set"||G.date==="Jan"; }   // janela 1: até fim de setembro · janela 2: janeiro
 function transferWindow(){   // reformulação de plantéis da IA (pré-época) — as propostas chegam depois, graduais
   G.divisions.forEach(()=>{const n=ri(2,5);for(let k=0;k<n;k++)aiTransfer();});
@@ -1244,8 +1275,8 @@ function transferWindow(){   // reformulação de plantéis da IA (pré-época) 
 }
 function makeOneOffer(){
   const meC=me(); if(meC.squad.length<=14)return null;
-  const listedSale=meC.squad.filter(p=>p.transferListed), listedLoan=meC.squad.filter(p=>p.loanListed);
-  const best=meC.squad.slice().sort((a,b)=>ability(b)-ability(a)).slice(0,8);
+  const listedSale=meC.squad.filter(p=>p.transferListed&&!p.onLoanIn), listedLoan=meC.squad.filter(p=>p.loanListed&&!p.onLoanIn);
+  const best=meC.squad.filter(p=>!p.onLoanIn).sort((a,b)=>ability(b)-ability(a)).slice(0,8);
   const wantLoan = listedLoan.length && (!listedSale.length || Math.random()<0.5);
   if(wantLoan){
     const p=pick(listedLoan); if(!p)return null;
@@ -1273,9 +1304,11 @@ function transferTick(){                                  // corre a cada jornad
 }
 function returnLoans(){                                   // no fim da época, os emprestados regressam ao clube de origem
   (G.loans||[]).forEach(L=>{ const b=clubByGid(L.toGid), o=clubByGid(L.fromGid), p=L.player; if(!p)return;
-    if(b)b.squad=b.squad.filter(x=>x.id!==p.id); p.onLoanOut=false;
+    if(b)b.squad=b.squad.filter(x=>x.id!==p.id); p.onLoanOut=false; p.onLoanIn=false; p.loanFromGid=null;
     if(o&&o.squad.indexOf(p)<0)o.squad.push(p);
-    if(o&&G.myId!=null&&o===me())addNews("🔁 "+p.name+" regressou do empréstimo."); });
+    if(o&&G.myId!=null&&o===me())addNews("🔁 "+p.name+" regressou do empréstimo (era teu).");            // cedeste-o: volta ao teu plantel
+    else if(b&&G.myId!=null&&b===me())addNews("🔁 "+p.name+" terminou o empréstimo e regressou ao "+(o?o.name:"clube de origem")+".");  // recebeste-o: sai
+  });
   G.loans=[];
 }
 function acceptOffer(i){
@@ -1548,8 +1581,12 @@ function negotiateOffer(i,counterFee){
   addNews(o.clubName+" retirou-se da negociação por "+o.playerName+"."); G.transferOffers=G.transferOffers.filter((_,j)=>j!==i); save(); return {status:"withdrawn"};
 }
 /* ---------- salários, teto salarial e mercado de livres ---------- */
-function wageBill(club){ let s=(club.squad||[]).reduce((a,p)=>a+(p.wage!=null?p.wage:wageFor(p)),0);
-  if(typeof G!=="undefined"&&G&&G.loans&&club&&club.gid!=null)G.loans.forEach(L=>{ if(L.fromGid===club.gid)s+=(L.userShare||0)*(L.wage||0); }); // parte do salário que continuas a pagar em empréstimos
+function wageBill(club){ let s=(club.squad||[]).reduce((a,p)=>a+(p.onLoanIn?0:(p.wage!=null?p.wage:wageFor(p))),0);  // emprestados-in contam pela fatia do empréstimo (abaixo)
+  if(typeof G!=="undefined"&&G&&G.loans&&club&&club.gid!=null)G.loans.forEach(L=>{               // empréstimos: cada clube paga a sua fatia
+    const oShare=(L.originShare!=null?L.originShare:(L.userShare||0)), bShare=(L.borrowerShare!=null?L.borrowerShare:(1-(L.userShare||0)));
+    if(L.fromGid===club.gid)s+=oShare*(L.wage||0);      // parte que a origem continua a pagar (cedeste)
+    if(L.toGid===club.gid)  s+=bShare*(L.wage||0);      // parte que o clube que recebe paga (recebeste)
+  });
   return Math.round(s*100)/100; }
 function wageHead(){ const obj=me().objective||{};
   return {title:1.75,promo:1.60,top:1.48,mid:1.38,survive:1.25}[obj.type]||1.42;  // folga sobre a massa de arranque, conforme aspiração
@@ -1863,7 +1900,7 @@ if(typeof module!=="undefined"&&module.exports){
     buyAsk,makeBid,completeBuy,
     offRateFrom,createLive,liveStep,liveSub,liveSetTactic,aiMaybeSub,liveBench,liveResult,liveApplyEnergy,liveMaxSubs,liveReg,liveHalftime,liveDispMin,
     transferFee,transferWindow,transferWindowOpen,transferTick,makeOneOffer,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
-    toggleLoanList,acceptLoanOffer,returnLoans,trainingInjuryTick,
+    toggleLoanList,acceptLoanOffer,loanInList,loanInPlayer,returnLoans,trainingInjuryTick,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     rollInjury,injuryLabel,applyMatchSuspensions,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,

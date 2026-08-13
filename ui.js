@@ -513,10 +513,12 @@ function openPlayer(pid){
     <button class="btn sec small" id="pTalk" style="width:100%;margin-bottom:8px">💬 Reunir com o jogador</button>
     <div class="muted" style="font-size:11px;margin-bottom:3px">🎯 Foco de treino:</div>
     <select id="pTrain" style="margin-bottom:8px">${["Equilibrado","Ataque","Defesa","Físico"].map(f=>`<option${(p.trainFocus||"Equilibrado")===f?" selected":""}>${f}</option>`).join("")}</select>
-    <button class="btn sec small" id="pRenew" style="width:100%;margin-bottom:8px">📄 Renovar contrato (${money(Math.max(0.01,Math.round(p.value*0.08*100)/100))})</button>
+    ${p.onLoanIn
+      ? `<div class="muted" style="font-size:12px;margin:2px 0 8px;color:#7c3aed">🤝 Emprestado por ${(function(){const o=clubByGid&&p.loanFromGid?clubByGid(p.loanFromGid):null;return o?o.name:"outro clube";})()} — regressa no fim da época. Não pode ser vendido nem cedido.</div>`
+      : `<button class="btn sec small" id="pRenew" style="width:100%;margin-bottom:8px">📄 Renovar contrato (${money(Math.max(0.01,Math.round(p.value*0.08*100)/100))})</button>
     <button class="btn sec small" id="pList" style="width:100%;margin-bottom:8px">${p.transferListed?"⭐ Retirar da lista de transferências":"📋 Colocar na lista de transferências"}</button>
     <button class="btn sec small" id="pLoan" style="width:100%;margin-bottom:8px">${p.loanListed?"⭐ Retirar da lista de empréstimos":"🤝 Disponibilizar para empréstimo"}</button>
-    <button class="btn warn small" id="pRelease" style="width:100%;margin-bottom:8px">🚪 Dispensar (sem receita)</button>
+    <button class="btn warn small" id="pRelease" style="width:100%;margin-bottom:8px">🚪 Dispensar (sem receita)</button>`}
     <h2 style="margin:10px 0 4px;color:var(--muted);font-size:12px">Atributos</h2>
     <div class="attrs">${attrRows}</div></div>`;
   document.body.appendChild(mo);
@@ -524,10 +526,10 @@ function openPlayer(pid){
   mo.querySelector("#pClose").onclick=close;
   const pt=mo.querySelector("#pTrain");if(pt)pt.onchange=()=>{p.trainFocus=pt.value;save();toast(p.name+": foco de treino "+pt.value);};
   const ptk=mo.querySelector("#pTalk");if(ptk)ptk.onclick=()=>{close();openTalk(p);};
-  mo.querySelector("#pRenew").onclick=()=>{const r=renewContract(p.id);if(r.msg)toast(r.msg);close();render();};
-  mo.querySelector("#pList").onclick=()=>{const listed=toggleTransferList(p.id);toast(listed?"Colocado na lista de transferências":"Retirado da lista");close();render();};
-  mo.querySelector("#pLoan").onclick=()=>{const listed=toggleLoanList(p.id);toast(listed?"Disponível para empréstimo":"Retirado da lista de empréstimos");close();render();};
-  mo.querySelector("#pRelease").onclick=()=>{if(confirm("Dispensar "+p.name+"? Sai sem qualquer receita.")){const r=releasePlayer(p.id);if(r.msg)toast(r.msg);close();render();}};
+  const pRn=mo.querySelector("#pRenew");if(pRn)pRn.onclick=()=>{const r=renewContract(p.id);if(r.msg)toast(r.msg);close();render();};
+  const pLi=mo.querySelector("#pList");if(pLi)pLi.onclick=()=>{const listed=toggleTransferList(p.id);toast(listed?"Colocado na lista de transferências":"Retirado da lista");close();render();};
+  const pLo=mo.querySelector("#pLoan");if(pLo)pLo.onclick=()=>{const listed=toggleLoanList(p.id);toast(listed?"Disponível para empréstimo":"Retirado da lista de empréstimos");close();render();};
+  const pRe=mo.querySelector("#pRelease");if(pRe)pRe.onclick=()=>{if(confirm("Dispensar "+p.name+"? Sai sem qualquer receita.")){const r=releasePlayer(p.id);if(r.msg)toast(r.msg);close();render();}};
   mo.onclick=e=>{if(e.target===mo)close();};
 }
 /* ---------- ficha só-leitura (scouting) + proposta ---------- */
@@ -580,7 +582,7 @@ function openClubSquad(gid){
   const negotiable=(myClubs().indexOf(club)>=0 && club.gid!==me().gid);
   const rows=club.squad.slice().sort((a,b)=>POSITIONS.indexOf(a.pos)-POSITIONS.indexOf(b.pos)||ability(b)-ability(a)).map(p=>
     `<div class="pl" data-scout="${p.id}"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · pot.${p.potential}${p.transferListed?' · <span style="color:var(--accent)">LT</span>':''}</div></div>
+      <div class="info"><div class="nm">${p.name}${p.onLoanIn?' <span title="Emprestado" style="color:#7c3aed;font-weight:800;font-size:10px">EMP</span>':''}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · pot.${p.potential}${p.transferListed?' · <span style="color:var(--accent)">LT</span>':''}</div></div>
       <span class="muted" style="font-size:18px">›</span></div>`).join("");
   mo.innerHTML=`<div class="box"><button class="close" id="cClose">✕</button>
     <div class="row" style="gap:8px;margin-bottom:6px">${swatch(club,true)}<div style="font-weight:800;font-size:16px">${club.name}</div></div>
@@ -729,7 +731,21 @@ function viewMarket(){
     <b>${winOpen?"🟢 Janela de transferências ABERTA":"🔴 Janela fechada"}</b>
     <div class="muted" style="font-size:11px;margin-top:3px">${winOpen?"Podes contratar de outros clubes e assinar livres.":"Só podes assinar jogadores sem clube (livres). As janelas abrem no início da época (até fim de setembro) e em janeiro."}</div></div>`;
   const nFree=(G.freeAgents||[]).length;
-  h+=`<div class="seg" id="segMktTab"><button data-mt="clubs" class="${marketTab==='clubs'?'active':''}">Clubes</button><button data-mt="free" class="${marketTab==='free'?'active':''}">Livres${nFree?" ("+nFree+")":""}</button></div>`;
+  h+=`<div class="seg" id="segMktTab"><button data-mt="clubs" class="${marketTab==='clubs'?'active':''}">Clubes</button><button data-mt="loanin" class="${marketTab==='loanin'?'active':''}">Empréstimos</button><button data-mt="free" class="${marketTab==='free'?'active':''}">Livres${nFree?" ("+nFree+")":""}</button></div>`;
+  if(marketTab==="loanin"){
+    h+=`<div class="seg" id="segMkt">`+[["all","Todos"],["GK","GR"],["DEF","DEF"],["MID","MED"],["ATT","ATA"]].map(([k,l])=>`<button data-p="${k}" class="${marketPos===k?'active':''}">${l}</button>`).join("")+`</div>`;
+    if(!winOpen){ h+=`<div class="muted" style="font-size:13px">A janela está fechada — só podes pedir empréstimos nas janelas (setembro e janeiro).</div>`; return h; }
+    let list=(typeof loanInList==="function")?loanInList():[];
+    if(marketPos!=="all")list=list.filter(x=>GROUP[x.p.pos]===marketPos);
+    list=list.slice(0,40);
+    h+=`<div class="muted" style="font-size:11px;margin-bottom:6px">Recebe jogadores por empréstimo — sem custo de transferência. Escolhes pagar o salário todo ou dividir 50/50. Regressam ao clube de origem no fim da época.</div>`;
+    if(!list.length)h+=`<div class="muted" style="font-size:13px">Sem jogadores disponíveis para empréstimo nesta posição.</div>`;
+    else h+=`<div class="plist">`+list.map(x=>{const p=x.p, okHalf=room2>=p.wage*0.5;
+      return `<div class="pl"><div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
+        <div class="info"><div class="nm">${p.name}</div><div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${x.short} · salário ${money(p.wage)}</div></div>
+        <div class="row" style="gap:4px"><button class="btn small ${room2>=p.wage?'':'warn'}" data-loanin="${p.id}" data-from="${x.gid}" data-share="1" title="Pagas o salário todo">Todo</button><button class="btn small sec ${okHalf?'':'warn'}" data-loanin="${p.id}" data-from="${x.gid}" data-share="0.5" title="Dividem o salário">50/50</button></div></div>`;}).join("")+`</div>`;
+    return h;
+  }
   if(marketTab==="free"){
     let fa=(G.freeAgents||[]).slice();
     if(marketPos!=="all")fa=fa.filter(p=>GROUP[p.pos]===marketPos);
@@ -1390,6 +1406,7 @@ function bindView(){
   const smk=$("#segMkt");if(smk)smk.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketPos=b.dataset.p;render();});
   const smt=$("#segMktTab");if(smt)smt.querySelectorAll("button").forEach(b=>b.onclick=()=>{marketTab=b.dataset.mt;render();});
   document.querySelectorAll("[data-signfree]").forEach(b=>b.onclick=e=>{e.stopPropagation();const r=signFreeAgent(+b.dataset.signfree);toast(r.msg);render();});
+  document.querySelectorAll("[data-loanin]").forEach(b=>b.onclick=e=>{if(e)e.stopPropagation();if(typeof loanInPlayer!=="function")return;const r=loanInPlayer(+b.dataset.from,+b.dataset.loanin,+b.dataset.share);toast(r.msg);render();});
   document.querySelectorAll("[data-freescout]").forEach(el=>el.onclick=e=>{if(e.target.closest("[data-signfree]"))return;const p=(G.freeAgents||[]).find(x=>x.id===+el.dataset.freescout);if(p)openScout(p,{});});
   document.querySelectorAll("[data-scoutmk]").forEach(el=>el.onclick=e=>{if(e.target.closest("[data-club]"))return;const from=+el.dataset.mkfrom,p=myClubs()[from]&&myClubs()[from].squad.find(x=>x.id===+el.dataset.scoutmk);if(p)openScout(p,{fromId:from,clubName:myClubs()[from].short});});
   document.querySelectorAll("[data-club]").forEach(el=>el.onclick=e=>{e.stopPropagation();openClubSquad(el.dataset.club);});
