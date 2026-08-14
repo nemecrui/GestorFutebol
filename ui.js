@@ -37,6 +37,44 @@ function openNews(){
   mo.querySelector("#nwClose").onclick=close; mo.querySelector("#nwOk").onclick=close;
   mo.onclick=e=>{if(e.target===mo)close();};
 }
+/* ---------- Tutorial rápido (primeiro arranque) ---------- */
+function hasTutSeen(){ try{ return localStorage.getItem("gf_tut")==="1"; }catch(e){ return false; } }
+function markTutSeen(){ try{ localStorage.setItem("gf_tut","1"); }catch(e){} }
+const TUT_STEPS=[
+  {ic:"👋", t:"Bem-vindo, treinador!", d:"Assumes um clube da AF Braga. A direção dá-te um objetivo para a época — cumpre-o para não seres despedido. O jogo corre época a época."},
+  {ic:"📋", t:"Monta a equipa", d:"No separador <b>Tática</b> montas o onze (toca num jogador e depois no destino), escolhes formação e mentalidade, e defines os <b>papéis</b>: capitão, penáltis, livres e cantos."},
+  {ic:"▶️", t:"Joga a jornada", d:"No <b>Início</b>, carrega em <b>Jogar jornada</b> para o jogo ao vivo — falas ao balneário, mudas ao intervalo e controlas a velocidade (1×/2×/3×). Ou usa <b>Simular</b> para um resultado rápido."},
+  {ic:"👥", t:"Plantel e Academia", d:"No <b>Plantel</b> vês os teus jogadores, o foco de treino e a moral de cada um. A <b>Academia</b> forma jovens que podes promover."},
+  {ic:"💱", t:"Mercado e empréstimos", d:"Nas <b>janelas</b> (setembro e janeiro) contratas de outros clubes, recebes/cedes por empréstimo e assinas jogadores livres. Fica atento ao <b>teto salarial</b>."},
+  {ic:"🧢", t:"Vida de balneário", d:"A moral conta. Trata bem o <b>capitão</b> e resolve os casos de <b>indisciplina</b> com bom senso — tudo isto afeta o rendimento e a tua reputação."},
+  {ic:"🏁", t:"Estás pronto!", d:"Segue o objetivo da direção, consulta as 🔔 <b>Novidades</b> e a 📖 <b>História de carreira</b>. Podes reabrir este guia em <b>Início → Como jogar</b>. Boa sorte!"}
+];
+function openTutorial(){
+  markTutSeen();
+  let i=0;
+  const mo=document.createElement("div");mo.className="modal";
+  document.body.appendChild(mo);
+  function draw(){
+    const s=TUT_STEPS[i], last=i===TUT_STEPS.length-1;
+    const dots=TUT_STEPS.map((_,k)=>`<span style="width:7px;height:7px;border-radius:50%;display:inline-block;margin:0 3px;background:${k===i?'var(--accent)':'rgba(255,255,255,.25)'}"></span>`).join("");
+    mo.innerHTML=`<div class="box"><button class="close" id="tutClose">✕</button>
+      <div class="center" style="font-size:44px;margin:6px 0 2px">${s.ic}</div>
+      <div style="font-weight:800;font-size:18px;text-align:center;margin-bottom:8px">${s.t}</div>
+      <div style="font-size:14px;line-height:1.45;text-align:center;color:#dbe6f2;min-height:88px">${s.d}</div>
+      <div class="center" style="margin:12px 0">${dots}</div>
+      <div class="row" style="gap:8px">
+        ${i>0?`<button class="btn sec small" id="tutPrev" style="flex:1">‹ Anterior</button>`:`<button class="btn sec small" id="tutSkip" style="flex:1">Saltar</button>`}
+        <button class="btn" id="tutNext" style="flex:2">${last?"Começar ▶":"Seguinte ›"}</button>
+      </div></div>`;
+    const close=()=>mo.remove();
+    mo.querySelector("#tutClose").onclick=close;
+    const sk=mo.querySelector("#tutSkip"); if(sk)sk.onclick=close;
+    const pv=mo.querySelector("#tutPrev"); if(pv)pv.onclick=()=>{i--;draw();};
+    mo.querySelector("#tutNext").onclick=()=>{ if(last)close(); else {i++;draw();} };
+  }
+  draw();
+  mo.onclick=e=>{if(e.target===mo)mo.remove();};
+}
 function openRecords(){
   const R=(typeof ensureRecords==="function")?ensureRecords():(G.records||{}); const aw=G.awards||[];
   const rec=(icon,label,val)=>val?`<div class="row between" style="border-bottom:1px solid var(--line);padding:6px 2px;font-size:13px"><span>${icon} ${label}</span><b>${val}</b></div>`:"";
@@ -419,7 +457,8 @@ function viewHome(){
       <button class="btn sec small" id="btnRecords2" style="width:100%;margin-top:8px">🏅 Recordes & Prémios</button>
     </div>`;
   }
-  h+=`<div class="card"><button class="btn sec small" id="btnNews" style="width:100%;margin-bottom:8px">🔔 Novidades${hasNewsNew()?' <span style="color:var(--red);font-weight:900">•</span>':''}</button>
+  h+=`<div class="card"><button class="btn sec small" id="btnTut" style="width:100%;margin-bottom:8px">❓ Como jogar (guia rápido)</button>
+    <button class="btn sec small" id="btnNews" style="width:100%;margin-bottom:8px">🔔 Novidades${hasNewsNew()?' <span style="color:var(--red);font-weight:900">•</span>':''}</button>
     <button class="btn sec small" id="btnSaves" style="width:100%;margin-bottom:8px">💾 Gravações · exportar / importar / trocar</button>
     <button class="btn warn small" id="btnReset" style="width:100%">↺ Novo jogo (apaga este slot)</button></div>`;
   return h;
@@ -1387,6 +1426,7 @@ function bindView(){
   document.querySelectorAll("[data-evc]").forEach(b=>b.onclick=()=>{resolveEvent(+b.dataset.evc);render();});
   const bec=$("#btnEventCont");if(bec)bec.onclick=()=>{dismissEvent();render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
+  const btt=$("#btnTut");if(btt)btt.onclick=()=>openTutorial();
   const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
@@ -1470,6 +1510,7 @@ function splashScreen(){
       el.querySelector("#mgrName").focus(); return;
     }
     newGame(curGroup().fi,+clubSel.value,nm);track("nova-carreira/"+me().short, G.manager.name+" · "+me().name+" ("+myDivObj().name+")");el.remove();TAB="home";render();
+    if(!hasTutSeen())setTimeout(()=>{ if(G)openTutorial(); },500);   // guia rápido no primeiro arranque
   };
 }
 function boot(){

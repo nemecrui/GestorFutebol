@@ -39,7 +39,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 - ⬜ 🔧 **Conquistas/desafios** — vencer a Taça, subir 3 divisões, campeão invicto, etc.
 - ✅ ⚡ Dérbis/rivalidades — rivais por clube; o dérbi pesa mais na moral e na direção; destaque na antevisão e no jogo.
 - ✅ 🔧 Eventos e notícias com histórias — wonderkid, pedido de saída, direção (via eventos de escolha + rival).
-- ⬜ ⚡ **Tutorial rápido** no primeiro arranque.
+- ✅ ⚡ **Tutorial rápido** no primeiro arranque — guia de 7 passos (objetivo, tática/papéis, jogar/simular, plantel/academia, mercado/empréstimos, balneário), reabrível em Início → Como jogar.
 
 ## Técnico / UX
 - ✅ ⚡ **Controlo de velocidade do jogo** (1×/2×/3× no jogo ao vivo) + **simular jornada** e **simular resto da época**.
