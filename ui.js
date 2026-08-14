@@ -129,7 +129,8 @@ function teamMoraleAvg(club){const a=club.squad||[];return a.length?a.reduce((s,
 function header(){
   const c=me();
   $("#hName").textContent=(G.manager&&G.manager.name)?G.manager.name:"Gestor";
-  $("#hBadge").style.background=`linear-gradient(135deg,${c.c1} 0 55%,${c.c2} 55% 100%)`;
+  const hb=$("#hBadge"); hb.style.background=`linear-gradient(135deg,${c.c1} 0 55%,${c.c2} 55% 100%)`;
+  const hcr=crestOf(c); hb.innerHTML=hcr?`<img src="${hcr}" alt="" onerror="this.remove()">`:"";
   $("#hSub").textContent=c.name+" · "+myDivObj().name;
   $("#hCash").textContent=money(c.budget);
 }
