@@ -119,6 +119,20 @@ const GAME_DATA = {
     ]
   },
 
+  /* ---- EMBLEMAS dos clubes (só para quem autorizou) ----
+     A chave é o NOME EXATO do clube (tal como aparece no jogo). O valor é o
+     caminho para o ficheiro do emblema, dentro da pasta "crests/".
+     - Usa de preferência SVG (nítido e leve) ou PNG quadrado com fundo transparente.
+     - Quem NÃO estiver aqui continua com o losango das cores do clube.
+     - Se o ficheiro faltar, o jogo volta automaticamente às cores (não fica vazio).
+     Exemplo (o ficheiro de exemplo já existe em crests/exemplo.svg):
+       "Cachapuz WLS": "crests/exemplo.svg" */
+  crests: {
+    // "Cachapuz WLS": "crests/cachapuz.svg",
+    // "CD Maximinense": "crests/maximinense.png"
+	"AD Oliveirense": "crests/AD_Oliveirense.png"
+  },
+
   /* ---- ADICIONAR clubes novos a uma divisão ----
      Acrescenta ao fim da lista dessa divisão. Mantém, de preferência,
      um número PAR de equipas por divisão. Podes incluir um "roster". */

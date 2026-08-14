@@ -64,8 +64,9 @@
   .pos-DEF{background:#0e2f4d;color:#7cc0ff}
   .pos-MID{background:#0c3b23;color:#66d9a0}
   .pos-ATT{background:#3d1420;color:#ff8a9b}
-  .swatch{width:20px;height:20px;border-radius:5px;flex-shrink:0;border:1px solid rgba(255,255,255,.25);display:inline-block;vertical-align:middle}
+  .swatch{width:20px;height:20px;border-radius:5px;flex-shrink:0;border:1px solid rgba(255,255,255,.25);display:inline-block;vertical-align:middle;position:relative;overflow:hidden}
   .swatch.sm{width:14px;height:14px;border-radius:4px}
+  .swatch .crestimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:rgba(255,255,255,.9)}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{padding:7px 3px;text-align:center;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-size:11px;text-transform:uppercase}

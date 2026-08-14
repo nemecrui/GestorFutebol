@@ -114,7 +114,12 @@ function openCareer(){
 function textOn(hex){const c=hex.replace("#","");const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)>150?"#111":"#fff";}
 function ratingClass(v){return v>=72?"r-hi":v>=60?"r-mid":"r-lo";}
 function posClass(pos){return "pos-"+GROUP[pos];}
-function swatch(cl,sm){return `<span class="swatch ${sm?'sm':''}" style="background:linear-gradient(135deg,${cl.c1} 0 55%,${cl.c2} 55% 100%)"></span>`;}
+function crestOf(cl){ return (cl&&cl.crest) || (typeof GAME_DATA!=="undefined"&&GAME_DATA.crests&&cl&&GAME_DATA.crests[cl.name])||null; }
+function swatch(cl,sm){
+  const base=`background:linear-gradient(135deg,${cl.c1} 0 55%,${cl.c2} 55% 100%)`;
+  const cr=crestOf(cl);
+  return `<span class="swatch ${sm?'sm':''}" style="${base}">${cr?`<img class="crestimg" src="${cr}" alt="" onerror="this.remove()">`:""}</span>`;
+}
 function clubTag(cl,sm){return swatch(cl,sm)+`<span>${cl.short}</span>`;}
 function clubTagFull(cl){return swatch(cl)+`<span class="full clink" data-club="${cl.gid}">${cl.name}</span>`;}
 function attrColor(v){return v>=15?"#16a34a":v>=11?"#d9a400":"#e5484d";}

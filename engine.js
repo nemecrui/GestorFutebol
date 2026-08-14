@@ -258,7 +258,7 @@ function makeSquadFromRoster(roster,level){
 }
 function clubFromDef(d,id){
   const level=clamp(Math.round(d.str/5),4,16);
-  return {id, name:d.n, short:d.s, c1:d.c1, c2:d.c2, strength:d.str,
+  return {id, name:d.n, short:d.s, c1:d.c1, c2:d.c2, strength:d.str, crest:d.crest||null,
     budget:Math.round(rnd(0.06,0.28)*100)/100, squad:(d.roster?makeSquadFromRoster(d.roster,level):makeSquad(level)),
     susp:[], P:0,W:0,D:0,L:0,GF:0,GA:0,Pts:0};
 }
@@ -283,6 +283,7 @@ function buildGroups(){
       const defs=se.clubs.map(c=>{ const x=Object.assign({},c);
         if(typeof CFG!=="undefined"&&CFG.clubs&&CFG.clubs[x.s])Object.assign(x,CFG.clubs[x.s]);
         if(typeof CFG!=="undefined"&&CFG.rosters&&CFG.rosters[x.n])x.roster=CFG.rosters[x.n];   // plantel real por NOME do clube
+        if(typeof CFG!=="undefined"&&CFG.crests&&CFG.crests[x.n])x.crest=CFG.crests[x.n];        // emblema real por NOME do clube (opt-in)
         return x; });
       const clubs=defs.map((d,i)=>{ const c=clubFromDef(d,i); c.gid=GID++; c.tier=div.tier; c.serie=se.name; return c; });
       groups.push({name, tier:div.tier, serie:se.name, upSlots:slots.up, downSlots:slots.down,
