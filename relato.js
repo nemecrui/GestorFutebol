@@ -353,6 +353,43 @@ const RELATO = {
     ]
   },
 
+  /* ---- CONFERÊNCIAS DE IMPRENSA ----
+     fx: morale (equipa) · board (confiança direção) · rep (reputação) · rival (humor do rival, +provoca) · pmorale (jogador mencionado) */
+  imprensa: {
+    pre: [
+      { q:"Vão ao jogo com o {adv} como favoritos?",
+        opts:[ {label:"Somos favoritos e vamos ganhar", fx:{morale:2, board:2, rival:1}},
+               {label:"Respeitamos o {adv}, vai ser difícil", fx:{board:1}},
+               {label:"Não faço previsões", fx:{}} ] },
+      { q:"Que dizes sobre o momento de {jogador}?",
+        opts:[ {label:"Confio totalmente nele", fx:{pmorale:4}},
+               {label:"Tem de dar mais", fx:{pmorale:-4, board:1}},
+               {label:"Não falo de jogadores em particular", fx:{}} ] },
+      { q:"Provocam-te sobre o {rival}. Respondes?",
+        opts:[ {label:"Vamos passar-lhes por cima", fx:{morale:3, rival:3, board:-1}},
+               {label:"Foco no nosso trabalho", fx:{}},
+               {label:"Respeito o {rival}", fx:{rival:-2, board:1}} ] },
+      { q:"A direção espera resultados. Sentes pressão?",
+        opts:[ {label:"A pressão faz parte, assumo-a", fx:{board:2, rep:1}},
+               {label:"Confio no meu trabalho", fx:{morale:1}},
+               {label:"Só penso no próximo jogo", fx:{}} ] }
+    ],
+    post: [
+      { cond:"win", q:"Qual foi o segredo da vitória?",
+        opts:[ {label:"Todo o mérito é dos jogadores", fx:{morale:3}},
+               {label:"O meu trabalho está a dar frutos", fx:{rep:2, morale:-1}},
+               {label:"Também tivemos alguma sorte", fx:{board:-1}} ] },
+      { cond:"loss", q:"Como explicas este resultado negativo?",
+        opts:[ {label:"Assumo a responsabilidade", fx:{board:2, morale:2}},
+               {label:"Fomos prejudicados na arbitragem", fx:{rep:1, board:-1, rival:1}},
+               {label:"A equipa não esteve à altura", fx:{morale:-4, board:1}} ] },
+      { cond:"any", q:"Uma palavra sobre a exibição de {jogador}?",
+        opts:[ {label:"Esteve enorme, é um orgulho", fx:{pmorale:5}},
+               {label:"Pode e tem de fazer melhor", fx:{pmorale:-4, board:1}},
+               {label:"Avalio a equipa como um todo", fx:{morale:1}} ] }
+    ]
+  },
+
   /* ---- Reação caricata do CAPITÃO ao ser substituído (sem efeito na moral) ---- */
   captainSub: [
     "O capitão sai a resmungar e atira o colete para o banco.",

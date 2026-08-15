@@ -233,9 +233,31 @@ function makePlayer(pos,level){
   const value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
   const p={id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
     value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, morale:clamp(65+ri(-5,10),0,100), trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, banMatches:0, ycBanned:0, wage:0};
+  assignTraits(p);
   p.wage=wageFor(p); return p;
 }
 function wageFor(p){ return Math.max(0.005, Math.round(Math.pow(ability(p)/55,2.6)*0.042*100)/100); }
+/* ---------- Traços de personalidade ---------- */
+const TRAITS={
+  lider:{lbl:"Líder",ic:"🧠"}, veterano:{lbl:"Veterano",ic:"🎖️"}, profissional:{lbl:"Profissional",ic:"✅"},
+  temperamental:{lbl:"Temperamental",ic:"🌋"}, boaVida:{lbl:"Boa-vida",ic:"🍺"}, criaCaso:{lbl:"Cria-caso",ic:"🎭"}, ambicioso:{lbl:"Ambicioso",ic:"🚀"}
+};
+function assignTraits(p){
+  if(p.traits)return p.traits;
+  const t=[];
+  if(p.age>=31 && Math.random()<0.5)t.push(Math.random()<0.6?"veterano":"lider");
+  else if(p.age<=21 && Math.random()<0.4)t.push("ambicioso");
+  if(!t.length && Math.random()<0.55)t.push(pick(["lider","profissional","temperamental","boaVida","criaCaso","ambicioso"]));
+  if(t.length && Math.random()<0.14){ const extra=pick(Object.keys(TRAITS)); if(t.indexOf(extra)<0)t.push(extra); }
+  p.traits=t.slice(0,2); return p.traits;
+}
+function hasTrait(p,k){ return !!(p&&p.traits&&p.traits.indexOf(k)>=0); }
+function traitLabels(p){ return ((p&&p.traits)||[]).map(k=>TRAITS[k]?TRAITS[k]:{lbl:k,ic:"•"}); }
+function ensureTraits(){ const apply=arr=>(arr||[]).forEach(p=>{ if(p&&!p.traits)assignTraits(p); });
+  (G.divisions||[]).forEach(d=>d.clubs.forEach(c=>apply(c.squad)));
+  if(G.academy)apply(G.academy.youth); apply(G.freeAgents);
+  (G.loans||[]).forEach(L=>{ if(L&&L.player&&!L.player.traits)assignTraits(L.player); });
+}
 function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
 function applyRosterEntry(p,r){                 // aplica overrides opcionais de um jogador definido à mão
   if(r.idade!=null)p.age=clamp(Math.round(r.idade),15,42);
@@ -493,7 +515,8 @@ function maybeDiscipline(){
   if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||G.event)return;   // não empilhar cartões
   if(Math.random()>=0.10)return;                                     // ~10% por jornada
   const c=me(); const pool=(c.squad||[]).filter(p=>(p.injuredWeeks||0)<=0); if(!pool.length)return;
-  const p=pick(pool), D=_disPools();
+  const w=pool.map(x=>{ let v=1; if(hasTrait(x,"criaCaso"))v+=4; if(hasTrait(x,"boaVida"))v+=3; if(hasTrait(x,"temperamental"))v+=1.5; if(hasTrait(x,"profissional"))v=0.15; if(hasTrait(x,"lider")||hasTrait(x,"veterano"))v*=0.5; return v; });
+  const p=weightedObj(pool,w)||pick(pool), D=_disPools();     // traços tornam uns mais dados a indisciplina que outros
   const serious=Math.random()<0.4;
   G.discipline={active:true, pid:p.id, name:p.name,
     situation:pick(D.situacoes), justification:serious?pick(D.justSeria):pick(D.justComica), serious, multa:pick(D.multas)};
@@ -520,6 +543,59 @@ function resolveDiscipline(choice){
     else { addNews("✅ Ilibaste "+D.name+" — a justificação parecia legítima."); }
   }
   G.discipline=null; save(); return {ok:true};
+}
+/* ---------- Pedidos de jogador (traço ambicioso) ---------- */
+function maybePlayerRequest(){
+  if(G.playerReq&&G.playerReq.active)return null;
+  if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||G.event||(G.discipline&&G.discipline.active)||(G.press&&G.press.active))return null;
+  const c=me(), xi=new Set(G.lineup||[]);
+  const cand=(c.squad||[]).filter(p=>hasTrait(p,"ambicioso") && !xi.has(p.id) && (p.injuredWeeks||0)<=0 && !p.onLoanIn);
+  if(!cand.length || Math.random()>=0.5)return null;
+  const p=pick(cand);
+  G.playerReq={active:true, pid:p.id, name:p.name};
+  addNews("🚀 "+p.name+" (ambicioso) pediu para falar contigo — quer mais minutos.");
+  return "request";
+}
+function resolvePlayerRequest(choice){
+  const R=G.playerReq; if(!R||!R.active)return {ok:false};
+  const c=me(), p=c.squad.find(x=>x.id===R.pid);
+  const setMor=(pl,dv)=>{ if(pl)pl.morale=clamp((pl.morale==null?70:pl.morale)+dv,0,100); };
+  if(choice==="prometer"){ if(p){ p.promise={active:true, until:(G.week||0)+4, apps0:(p.apps||0)}; setMor(p,6); } addNews("Prometeste mais minutos a "+R.name+"."); }
+  else if(choice==="elogiar"){ setMor(p,3); addNews("Deste um voto de confiança a "+R.name+"."); }
+  else { setMor(p,-6); addNews("Disseste a "+R.name+" que tem de merecer o lugar."); }
+  G.playerReq=null; save(); return {ok:true};
+}
+/* ---------- Conferências de imprensa ---------- */
+function nextOppName(){ const d=myDivObj(); if(d.week>=d.fixtures.length)return "o adversário";
+  for(const [h,a] of d.fixtures[d.week]){ if(h===G.myId)return d.clubs[a].name; if(a===G.myId)return d.clubs[h].name; } return "o adversário"; }
+function _pressPools(){
+  if(typeof RELATO!=="undefined" && RELATO && RELATO.imprensa)return RELATO.imprensa;
+  return { pre:[{q:"Sentes pressão neste jogo?",opts:[{label:"Assumo a pressão",fx:{board:1}},{label:"Foco no trabalho",fx:{}}]}],
+           post:[{q:"O que dizes do resultado?",opts:[{label:"Assumo a responsabilidade",fx:{board:1}},{label:"Seguimos em frente",fx:{}}]}] };
+}
+function buildPress(when,opts){
+  const c=me(), P=_pressPools(); let pool=(when==="pre"?P.pre:P.post)||[]; if(!pool.length)return null;
+  if(when==="post" && opts&&opts.result){ const f=pool.filter(t=>!t.cond||t.cond==="any"||t.cond===opts.result); if(f.length)pool=f; }
+  const tpl=pick(pool);
+  const ctx={ clube:c.name, adv:nextOppName(), rival:(G.rival?G.rival.name:"o rival") };
+  let targetPid=null;
+  const mentionsPlayer=/\{jogador\}/.test(tpl.q)||(tpl.opts||[]).some(o=>/\{jogador\}/.test(o.label));
+  if(mentionsPlayer){ const p=pick(c.squad); ctx.jogador=lastNameOf(p.name); targetPid=p.id; }
+  const fill=s=>String(s).replace(/\{(\w+)\}/g,(m,k)=>ctx[k]!=null?ctx[k]:m);
+  return { active:true, when, q:fill(tpl.q), opts:(tpl.opts||[]).map(o=>({label:fill(o.label), fx:o.fx||{}})), targetPid };
+}
+function lastNameOf(n){ return String(n||"").split(" ").slice(-1)[0]; }
+function resolvePress(i){
+  const pr=G.press; if(!pr||!pr.active)return {ok:false};
+  const fx=(pr.opts&&pr.opts[i]&&pr.opts[i].fx)||{};
+  const c=me();
+  if(fx.morale)teamMoraleDelta(c, fx.morale, null);
+  if(fx.pmorale && pr.targetPid!=null){ const p=c.squad.find(x=>x.id===pr.targetPid); if(p)p.morale=clamp((p.morale==null?70:p.morale)+fx.pmorale,0,100); }
+  if(fx.board && G.board)G.board.confidence=clamp(G.board.confidence+fx.board,0,100);
+  if(fx.rep)G.manager.reputation=clamp((G.manager.reputation||40)+fx.rep,0,100);
+  if(fx.rival && G.rival)G.rival.mood=clamp((G.rival.mood||0)+fx.rival,-10,10);
+  addNews("🎤 Conferência de imprensa: «"+(pr.opts[i]?pr.opts[i].label:"...")+"»");
+  G.press=null; save(); return {ok:true};
 }
 function pickGoal(club,lineup,formation,gone){
   const slots=FORMATIONS[formation].slots;
@@ -793,6 +869,11 @@ function playWeek(preMy){
   if(!G.fired)maybeBoardMeeting();           // maus resultados podem gerar nova reunião
   if(!G.fired)maybeEvent();                  // eventos de história (reação ao último jogo)
   if(!G.fired)captainMoodTick(preMy);        // descontentamento do capitão (banco/substituições)
+  if(!G.fired && !G.press && Math.random()<0.55){                                  // conferência de imprensa pós-jogo
+    const res=myDivObj().results[myDivObj().results.length-1]||[]; const my=res.find(x=>x.h===G.myId||x.a===G.myId);
+    let r="draw"; if(my){ const isH=my.h===G.myId, gf=isH?my.hg:my.ag, ga=isH?my.ag:my.hg; r=gf>ga?"win":gf<ga?"loss":"draw"; }
+    const pr=buildPress("post",{result:r}); if(pr)G.press=pr;
+  }
   if(G.grace>0)G.grace--;                    // margem após assumir um clube a meio da época
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
   G.week=myD.week; advanceMonth();
@@ -805,15 +886,16 @@ function playWeek(preMy){
 }
 /* ---------- Calendário híbrido: dias entre jogos + "Continuar" ---------- */
 function ensureDays(){ if(typeof G.dayGap!=="number"){ G.dayGap=ri(6,8); G.dayCursor=G.dayGap; } if(typeof G.dayCursor!=="number")G.dayCursor=G.dayGap; return G; }
-function startGap(){ G.dayGap=ri(6,8); G.dayCursor=0; }         // dias variáveis até ao próximo jogo
+function startGap(){ G.dayGap=ri(6,8); G.dayCursor=0; G.pressPreDone=false; }   // dias variáveis até ao próximo jogo
 function matchDay(){ ensureDays(); const d=myDivObj(); if(d.week>=d.fixtures.length)return true; return G.dayCursor>=G.dayGap; }
 function daysToMatch(){ ensureDays(); return Math.max(0,(G.dayGap||0)-(G.dayCursor||0)); }
 function dayTick(){                                              // o que pode acontecer num dia entre jogos
   if(G.fired)return null;
+  const busy=(G.discipline&&G.discipline.active)||G.event||(G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.press&&G.press.active)||(G.playerReq&&G.playerReq.active);
+  if(!busy && !G.pressPreDone && daysToMatch()<=2 && Math.random()<0.55){ const pr=buildPress("pre"); if(pr){ G.press=pr; G.pressPreDone=true; return "press"; } }   // conferência da véspera
+  if(!busy){ const rq=maybePlayerRequest(); if(rq)return rq; }   // pedido de um jogador ambicioso
+  if(!busy && Math.random()<0.2){ maybeDiscipline(); if(G.discipline&&G.discipline.active)return "discipline"; }
   const o=transferDayTick(); if(o)return o;                     // proposta recebida (paragem "soft")
-  if(!(G.discipline&&G.discipline.active) && !G.event && !(G.meeting&&G.meeting.active) && !(G.capMeeting&&G.capMeeting.active)){
-    if(Math.random()<0.2){ maybeDiscipline(); if(G.discipline&&G.discipline.active)return "discipline"; }
-  }
   return null;
 }
 function advanceDay(){                                           // avança 1 dia; devolve o que o fez parar (se algo)
@@ -1527,6 +1609,7 @@ function updateMorale(club,playedIds,gf,ga,derby){
       else { d-=25; addNews(p.name+" sente-se enganado — prometeste minutos que não deste."); }
       p.promise.active=false;
     }
+    if(d<0){ let m=1; if(hasTrait(p,"temperamental"))m*=1.5; if(hasTrait(p,"profissional")||hasTrait(p,"veterano")||hasTrait(p,"lider"))m*=0.6; d*=m; }  // traços moldam as quedas de moral
     p.morale=clamp(Math.round(p.morale+d),0,100);
   });
   club.squad.forEach(p=>{                                                            // jogadores muito insatisfeitos agem
@@ -1939,6 +2022,8 @@ if(typeof module!=="undefined"&&module.exports){
     ensureRecords,updateRecordsMatch,endSeasonAwards,ensureCareer,careerNewSpell,recordCareerSeason,
     ensureRoles,setRole,roleTakerId,penMissChance,fkMissChance,captainFactor,cornerBoost,bestFieldByAttr,
     ensureCapMood,captainMoodTick,resolveCaptainMeeting,maybeDiscipline,resolveDiscipline,teamMoraleDelta,
+    TRAITS,assignTraits,hasTrait,traitLabels,ensureTraits,
+    maybePlayerRequest,resolvePlayerRequest,buildPress,resolvePress,nextOppName,
     talkResolve,applyTeamTalkMorale,liveApplyTalk,favTier,clubRecentForm,
     wageFor,wageBill,wageCapFor,ensureWageCap,wageRoom,ensureFreeAgents,signFreeAgent,refreshFreeAgents,
     ensureRivals,rivalOf,isDerby,

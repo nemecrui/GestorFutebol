@@ -342,6 +342,19 @@ function viewHome(){
       <button class="btn sec small" data-disc="ilibar" style="width:100%">🤝 Ilibar (perdoar)</button>
       <div class="muted" style="font-size:11px;margin-top:8px">Decide antes do próximo jogo. Ilibar uma desculpa fraca pode desagradar ao balneário.</div></div>`;
   }
+  if(G.press&&G.press.active){
+    const P=G.press;
+    h+=`<div class="card" style="border-color:#3b8cff"><h2 style="color:#3b8cff">🎤 Conferência de imprensa${P.when==="pre"?" · véspera":" · pós-jogo"}</h2>
+      <div style="font-size:13px;margin-bottom:10px">${P.q}</div>
+      ${(P.opts||[]).map((o,i)=>`<button class="btn sec small" data-press="${i}" style="width:100%;margin-bottom:6px">${o.label}</button>`).join("")}</div>`;
+  }
+  if(G.playerReq&&G.playerReq.active){
+    h+=`<div class="card" style="border-color:#7c3aed"><h2 style="color:#7c3aed">🚀 Pedido de ${G.playerReq.name}</h2>
+      <div style="font-size:13px;margin-bottom:10px">${G.playerReq.name} está ambicioso e quer mais minutos. Que lhe dizes?</div>
+      <button class="btn sec small" data-preq="prometer" style="width:100%;margin-bottom:6px">Prometo dar-lhe minutos</button>
+      <button class="btn sec small" data-preq="elogiar" style="width:100%;margin-bottom:6px">Voto de confiança (sem promessas)</button>
+      <button class="btn warn small" data-preq="merecer" style="width:100%">Tem de merecer o lugar</button></div>`;
+  }
   if(G.shortObjective&&G.shortObjective.active){
     const so=G.shortObjective;
     h+=`<div class="card" style="border-color:var(--accent)"><h2 style="color:var(--accent)">Objetivo de curto prazo</h2>
@@ -559,6 +572,7 @@ function openPlayer(pid){
     <div class="muted" style="font-size:11px;margin-bottom:6px">Energia: ${enHtml(p.energy)}${(p.injuredWeeks||0)>0?` · <span style="color:var(--red)">🏥 Lesionado — ${injuryLabel(p.injuredWeeks)} (${p.injuredWeeks} jornada${p.injuredWeeks>1?"s":""})</span>`:""}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">⭐ Última avaliação: ${p.lastRating!=null?p.lastRating:"—"} · Média (5 jogos): ${avg5(p)!=null?avg5(p):"—"} · Forma: ${formIcon(p)} ${((p.form||0)>0?"+":"")+(Math.round((p.form||0)*10)/10)}</div>
     <div class="muted" style="font-size:11px;margin-bottom:6px">🙂 Moral: ${moraleTag(p)}${p.wantsTalk?' · <span style="color:var(--accent)">pediu para reunir</span>':''}</div>
+    ${(typeof traitLabels==="function"&&(p.traits||[]).length)?`<div style="font-size:11px;margin-bottom:6px">${traitLabels(p).map(t=>`<span style="display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:2px 8px;margin:0 4px 4px 0">${t.ic} ${t.lbl}</span>`).join("")}</div>`:""}
     <button class="btn sec small" id="pTalk" style="width:100%;margin-bottom:8px">💬 Reunir com o jogador</button>
     <div class="muted" style="font-size:11px;margin-bottom:3px">🎯 Foco de treino:</div>
     <select id="pTrain" style="margin-bottom:8px">${["Equilibrado","Ataque","Defesa","Físico"].map(f=>`<option${(p.trainFocus||"Equilibrado")===f?" selected":""}>${f}</option>`).join("")}</select>
@@ -692,7 +706,7 @@ function rolesCardHTML(c){
   const R=(typeof ensureRoles==="function")?ensureRoles():(G.roles||{captain:null,penalty:null,freekick:null,corner:null});
   const xi=(G.lineup||[]).map(id=>c.squad.find(p=>p.id===id)).filter(Boolean);
   if(!xi.length)return `<div class="card"><h2>Papéis de equipa</h2><div class="muted" style="font-size:12px">Preenche o onze para escolher os papéis.</div></div>`;
-  const lead=p=>Math.round(ability(p)+Math.max(0,(p.age||24)-25)*0.8);
+  const lead=p=>Math.round(ability(p)+Math.max(0,(p.age||24)-25)*0.8+(typeof hasTrait==="function"?((hasTrait(p,"lider")?12:0)+(hasTrait(p,"veterano")?8:0)):0));
   const defs=[
     {role:"captain", label:"🧢 Capitão",  val:lead,               hint:"experiência/qualidade"},
     {role:"penalty", label:"🎯 Penáltis", val:p=>p.attrs.pen||0,  hint:"Penáltis"},
@@ -1415,11 +1429,13 @@ function bindView(){
   document.querySelectorAll("[data-meet]").forEach(b=>b.onclick=()=>{const r=resolveBoardMeeting(b.dataset.meet);toast(r.msg);TAB="home";render();});
   document.querySelectorAll("[data-capmeet]").forEach(b=>b.onclick=()=>{if(typeof resolveCaptainMeeting==="function")resolveCaptainMeeting(b.dataset.capmeet);TAB="home";render();});
   document.querySelectorAll("[data-disc]").forEach(b=>b.onclick=()=>{if(typeof resolveDiscipline==="function")resolveDiscipline(b.dataset.disc);TAB="home";render();});
-  const meetBlock=()=>{ if(G.meeting&&G.meeting.active){ toast("Responde primeiro à reunião com a direção.");TAB="home";render();return true; } if(G.capMeeting&&G.capMeeting.active){ toast("Responde primeiro à reunião sobre o capitão.");TAB="home";render();return true; } if(G.discipline&&G.discipline.active){ toast("Resolve primeiro o caso de indisciplina.");TAB="home";render();return true; } return false; };
+  document.querySelectorAll("[data-press]").forEach(b=>b.onclick=()=>{if(typeof resolvePress==="function")resolvePress(+b.dataset.press);TAB="home";render();});
+  document.querySelectorAll("[data-preq]").forEach(b=>b.onclick=()=>{if(typeof resolvePlayerRequest==="function")resolvePlayerRequest(b.dataset.preq);TAB="home";render();});
+  const meetBlock=()=>{ if(G.meeting&&G.meeting.active){ toast("Responde primeiro à reunião com a direção.");TAB="home";render();return true; } if(G.capMeeting&&G.capMeeting.active){ toast("Responde primeiro à reunião sobre o capitão.");TAB="home";render();return true; } if(G.discipline&&G.discipline.active){ toast("Resolve primeiro o caso de indisciplina.");TAB="home";render();return true; } if(G.press&&G.press.active){ toast("Responde primeiro à conferência de imprensa.");TAB="home";render();return true; } if(G.playerReq&&G.playerReq.active){ toast("Responde primeiro ao pedido do jogador.");TAB="home";render();return true; } return false; };
   const bco=$("#btnContinue");if(bco)bco.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const r=(typeof advanceToNextStop==="function")?advanceToNextStop():"match";render();if(r==="offer")toast("📩 Recebeste uma proposta.");else if(r==="match")toast("🗓️ Dia de jogo!");};
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}openPreMatch(nx,(boost)=>playMatchAnimated(boost));};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
-  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();let n=0;while(d.week<d.fixtures.length){const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st)break;playWeek();n++;if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.discipline&&G.discipline.active)||(G.event&&!G.fired)||G.fired||G.seasonDone)break;}toast(n+" jornada(s) simulada(s)");render();};
+  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();let n=0;while(d.week<d.fixtures.length){const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st)break;playWeek();n++;if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.discipline&&G.discipline.active)||(G.press&&G.press.active)||(G.playerReq&&G.playerReq.active)||(G.event&&!G.fired)||G.fired||G.seasonDone)break;}toast(n+" jornada(s) simulada(s)");render();};
   const bs1=$("#btnSim1");if(bs1)bs1.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}playWeek();toast("Resultado: "+lastUserResultTxt());render();};
   const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();
   const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();
@@ -1521,7 +1537,7 @@ function splashScreen(){
 function boot(){
   document.getElementById("splash")?.remove();
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }
