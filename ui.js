@@ -205,6 +205,10 @@ function enColor(e){ e=(e==null?100:e); return e>=70?'#16a34a':e>=45?'#f2c200':'
 function enHtml(e){ e=(e==null?100:e); return '<span style="color:'+enColor(e)+';font-weight:800">⚡'+e+'</span>'; }
 function enBar(e){ e=(e==null?100:e); return '<div style="height:4px;width:100%;background:#0006;border-radius:2px;margin-top:2px;overflow:hidden"><i style="display:block;height:100%;width:'+e+'%;background:'+enColor(e)+'"></i></div>'; }
 function moraleTag(p){ const m=(p&&p.morale!=null)?p.morale:70; const c=m>=66?'#16a34a':m>=40?'#f2c200':'#e5484d'; const l=m>=66?'Alta':m>=40?'Média':'Baixa'; return '<span style="color:'+c+';font-weight:700">'+l+'</span>'; }
+function moraleFace(p){ const m=(p&&p.morale!=null)?p.morale:70;
+  const c=m>=80?'#16a34a':m>=66?'#16a34a':m>=40?'#f2c200':m>=22?'#e5484d':'#e5484d';
+  const f=m>=80?'😃':m>=66?'🙂':m>=40?'😐':m>=22?'🙁':'😠';
+  return `<span title="Moral ${Math.round(m)}" style="display:inline-block;border:1px solid ${c};background:${c}22;border-radius:20px;padding:0 4px;font-size:11px;line-height:1.5;vertical-align:middle">${f}</span>`; }
 function openTalk(p){
   const mo=document.createElement("div");mo.className="modal";
   const m=p.morale!=null?p.morale:70;
@@ -496,12 +500,14 @@ function viewSquad(){
   h+=`<div class="seg" id="segPos">`+[["all","Todos"],["GK","GR"],["DEF","DEF"],["MID","MED"],["ATT","ATA"]].map(([k,l])=>
     `<button data-p="${k}" class="${squadFilter===k?'active':''}">${l}</button>`).join("")+`</div>`;
   h+=`<div class="plist">`+list.map(p=>{
-    const on=inXI.has(p.id), susp=(c.susp||[]).includes(p.id), inj=(p.injuredWeeks||0)>0;
+    const susp=(c.susp||[]).includes(p.id), inj=(p.injuredWeeks||0)>0;
+    const slotIdx=(G.lineup||[]).indexOf(p.id);
+    const slotPos=(slotIdx>=0 && FORMATIONS[G.formation].slots[slotIdx])?FORMATIONS[G.formation].slots[slotIdx].pos:null;
     const tag=susp?('SUSP'+((p.banMatches||0)>1?' '+p.banMatches:'')):inj?('LES '+p.injuredWeeks):'';
     const nearBan=!susp&&((p.yc||0)%5===4);   // a um amarelo da suspensão
-    return `<div class="pl" data-detail="${p.id}"><div class="num">${on?'<span style="color:var(--accent)">●</span>':'○'}</div>
+    return `<div class="pl" data-detail="${p.id}"><div class="num">${slotPos?`<span class="pill ${posClass(slotPos)}" style="font-size:9px;padding:1px 4px">${slotPos}</span>`:'<span class="muted" style="font-size:9px">Sup</span>'}</div>
       <div class="rating ${ratingClass(ability(p))}">${ability(p)}</div>
-      <div class="info"><div class="nm">${p.name}${p.wantsTalk?' 💬':''}${(p.contractYears||0)<=1?' <span title="último ano de contrato" style="color:var(--red);font-weight:800;font-size:11px">⏳</span>':''}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${nearBan?` <span title="a um amarelo da suspensão" style="font-size:11px">🟨⚠</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
+      <div class="info"><div class="nm">${moraleFace(p)} ${p.name}${p.wantsTalk?' 💬':''}${(p.contractYears||0)<=1?' <span title="último ano de contrato" style="color:var(--red);font-weight:800;font-size:11px">⏳</span>':''}${tag?` <span class="tag" style="color:var(--red);font-weight:800;font-size:11px">${tag}</span>`:''}${nearBan?` <span title="a um amarelo da suspensão" style="font-size:11px">🟨⚠</span>`:''}${p.transferListed?` <span class="tag" style="color:var(--accent);font-weight:800;font-size:11px">LT</span>`:''}</div>
         <div class="sub"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${p.age}a · ${enHtml(p.energy)} · ${formIcon(p)} · ⭐${avg5(p)!=null?avg5(p):"—"} · ⚽${p.goals}</div></div>
       <span class="muted" style="font-size:18px">›</span></div>`;
   }).join("")+`</div>`;
@@ -560,7 +566,7 @@ function openPlayer(pid){
   }).join("");
   mo.innerHTML=`<div class="box"><button class="close" id="pClose">✕</button>
     <div class="row" style="gap:10px;margin-bottom:4px"><div class="rating ${ratingClass(abil)}" style="width:44px;height:44px;font-size:18px">${abil}</div>
-      <div><div style="font-weight:800;font-size:16px">${p.name}</div>
+      <div><div style="font-weight:800;font-size:16px">${moraleFace(p)} ${p.name}</div>
       <div class="muted" style="font-size:12px"><span class="pill ${posClass(p.pos)}">${p.pos}</span> ${POS_NAME[p.pos]}</div></div></div>
     <div class="grid2" style="margin:10px 0">
       <div class="stat"><div class="v">${p.age}</div><div class="l">Idade</div></div>
