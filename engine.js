@@ -313,6 +313,7 @@ function newGame(divIdx,clubIdx,managerName){
   seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me()); ensureRivals(); pickRival();
   ensureCareer();                                                    // inicia a história de carreira (1ª passagem)
   ensureRoles();                                                      // papéis de equipa (capitão/penáltis/livres/cantos)
+  startGap();                                                         // abre o período de dias até ao 1º jogo (pré-época)
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
   addNews("Verba de transferências: "+money(me().budget)+".");
@@ -790,19 +791,43 @@ function playWeek(preMy){
   boardAfterUserMatch();
   checkShortObjective();                    // período de prova acordado numa reunião
   if(!G.fired)maybeBoardMeeting();           // maus resultados podem gerar nova reunião
-  if(!G.fired)maybeEvent();                  // eventos de história (cartões com escolhas)
+  if(!G.fired)maybeEvent();                  // eventos de história (reação ao último jogo)
   if(!G.fired)captainMoodTick(preMy);        // descontentamento do capitão (banco/substituições)
-  if(!G.fired)maybeDiscipline();             // cartões de indisciplina (chegar tarde, faltar, bar...)
   if(G.grace>0)G.grace--;                    // margem após assumir um clube a meio da época
   G.divisions.forEach((d,di)=>{ if(di!==G.myDiv&&d.week<d.fixtures.length)simRound(d,null,false); });
   G.week=myD.week; advanceMonth();
-  transferTick();                            // janelas: set (até fim de setembro) e janeiro; propostas graduais
+  transferWindowState();                     // abre/fecha as janelas (set / jan) conforme o mês
   if(myD.week>=myD.fixtures.length){
     G.divisions.forEach((d,di)=>{ if(di!==G.myDiv){ while(d.week<d.fixtures.length)simRound(d,null,false); } });
     endSeason();
-  }
+  } else { startGap(); }                     // abre o intervalo de dias até ao próximo jogo
   save();
 }
+/* ---------- Calendário híbrido: dias entre jogos + "Continuar" ---------- */
+function ensureDays(){ if(typeof G.dayGap!=="number"){ G.dayGap=ri(6,8); G.dayCursor=G.dayGap; } if(typeof G.dayCursor!=="number")G.dayCursor=G.dayGap; return G; }
+function startGap(){ G.dayGap=ri(6,8); G.dayCursor=0; }         // dias variáveis até ao próximo jogo
+function matchDay(){ ensureDays(); const d=myDivObj(); if(d.week>=d.fixtures.length)return true; return G.dayCursor>=G.dayGap; }
+function daysToMatch(){ ensureDays(); return Math.max(0,(G.dayGap||0)-(G.dayCursor||0)); }
+function dayTick(){                                              // o que pode acontecer num dia entre jogos
+  if(G.fired)return null;
+  const o=transferDayTick(); if(o)return o;                     // proposta recebida (paragem "soft")
+  if(!(G.discipline&&G.discipline.active) && !G.event && !(G.meeting&&G.meeting.active) && !(G.capMeeting&&G.capMeeting.active)){
+    if(Math.random()<0.2){ maybeDiscipline(); if(G.discipline&&G.discipline.active)return "discipline"; }
+  }
+  return null;
+}
+function advanceDay(){                                           // avança 1 dia; devolve o que o fez parar (se algo)
+  ensureDays();
+  if(matchDay())return {stop:"match",blocking:true};
+  G.dayCursor++;
+  const reason=dayTick();
+  save();
+  if(reason)return {stop:reason, blocking:(reason!=="offer")};
+  if(matchDay())return {stop:"match",blocking:true};
+  return {stop:null,blocking:false};
+}
+function advanceToNextStop(){ let g=0; while(g++<90){ const r=advanceDay(); if(r.stop)return r.stop; } return "match"; }   // "Continuar": pára em qualquer coisa
+function flushToMatch(){ ensureDays(); let g=0; while(g++<90){ const r=advanceDay(); if(r.stop==="match")return null; if(r.stop&&r.blocking)return r.stop; } return null; }  // Jogar/Simular: só pára em decisões
 /* ---------- Supertaça + Play-off de subida ---------- */
 function poSimTie(aGid,bGid){                 // simula rapidamente uma eliminatória (empate → moeda ponderada = "penáltis")
   const a=clubByGid(aGid), b=clubByGid(bGid); if(!a||!b)return {sa:0,sb:0,w:a?aGid:bGid,pens:false};
@@ -975,6 +1000,7 @@ function newSeason(){
   transferWindow();
   cupCreate();
   G.playoff=null; G.superCup=null; G.finalissima=null;
+  startGap();                                                        // dias até ao 1º jogo da nova época
   save();
 }
 function sortedTable(d){
@@ -1161,6 +1187,7 @@ function takeNewJob(i){
     newSeason();
   }
   careerNewSpell();                          // regista a passagem por este clube na história de carreira
+  startGap();
   return true;
 }
 /* ---------- Fase 3: transferências ---------- */
@@ -1291,18 +1318,19 @@ function makeOneOffer(){
   return {type:"sale",clubShort:cl.c.short,clubName:cl.c.name,divIdx:cl.di,playerId:p.id,playerName:p.name,
     fee:Math.max(0.02,Math.round(base*rnd(0.8,1.05)*100)/100),maxFee:Math.round(base*rnd(1.1,1.6)*100)/100,round:0};
 }
-function transferTick(){                                  // corre a cada jornada: atividade e propostas graduais nas janelas
+function transferWindowState(){                           // abre/fecha a janela (corre à mudança de mês)
   const open=transferWindowOpen();
-  if(open){
-    if(!G.windowOpen){ G.windowOpen=true; addNews("🔁 Abriu a janela de transferências."); }
-    for(let k=0;k<ri(0,2);k++)aiTransfer();
-    if((G.transferOffers||[]).length<7 && Math.random()<0.5){ const o=makeOneOffer(); if(o){ G.transferOffers.push(o); addNews("📩 "+o.clubName+" fez uma proposta"+(o.type==="loan"?" de empréstimo":"")+" por "+o.playerName+"."); } }
-  } else if(G.windowOpen){
-    G.windowOpen=false;
-    if((G.transferOffers||[]).length)addNews("🔁 Fechou a janela — as propostas pendentes caducaram.");
-    G.transferOffers=[];
-  }
+  if(open){ if(!G.windowOpen){ G.windowOpen=true; addNews("🔁 Abriu a janela de transferências."); } }
+  else if(G.windowOpen){ G.windowOpen=false; if((G.transferOffers||[]).length)addNews("🔁 Fechou a janela — as propostas pendentes caducaram."); G.transferOffers=[]; }
 }
+function transferDayTick(){                               // atividade de mercado num dia (só com janela aberta)
+  if(!transferWindowOpen())return null;
+  for(let k=0;k<ri(0,1);k++)aiTransfer();
+  if((G.transferOffers||[]).length<7 && Math.random()<0.35){ const o=makeOneOffer();
+    if(o){ G.transferOffers.push(o); addNews("📩 "+o.clubName+" fez uma proposta"+(o.type==="loan"?" de empréstimo":"")+" por "+o.playerName+"."); return "offer"; } }
+  return null;
+}
+function transferTick(){ transferWindowState(); transferDayTick(); }   // compat: estado + 1 tick diário
 function returnLoans(){                                   // no fim da época, os emprestados regressam ao clube de origem
   (G.loans||[]).forEach(L=>{ const b=clubByGid(L.toGid), o=clubByGid(L.fromGid), p=L.player; if(!p)return;
     if(b)b.squad=b.squad.filter(x=>x.id!==p.id); p.onLoanOut=false; p.onLoanIn=false; p.loanFromGid=null;
@@ -1900,7 +1928,8 @@ if(typeof module!=="undefined"&&module.exports){
     setObjectives,squadRating,evaluateBoard,fireManager,makeJobOffers,takeNewJob,boardAfterUserMatch,
     buyAsk,makeBid,completeBuy,
     offRateFrom,createLive,liveStep,liveSub,liveSetTactic,aiMaybeSub,liveBench,liveResult,liveApplyEnergy,liveMaxSubs,liveReg,liveHalftime,liveDispMin,
-    transferFee,transferWindow,transferWindowOpen,transferTick,makeOneOffer,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
+    transferFee,transferWindow,transferWindowOpen,transferTick,transferWindowState,transferDayTick,makeOneOffer,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
+    ensureDays,startGap,matchDay,daysToMatch,dayTick,advanceDay,advanceToNextStop,flushToMatch,
     toggleLoanList,acceptLoanOffer,loanInList,loanInPlayer,returnLoans,trainingInjuryTick,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     rollInjury,injuryLabel,applyMatchSuspensions,

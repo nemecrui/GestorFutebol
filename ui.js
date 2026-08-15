@@ -43,7 +43,7 @@ function markTutSeen(){ try{ localStorage.setItem("gf_tut","1"); }catch(e){} }
 const TUT_STEPS=[
   {ic:"👋", t:"Bem-vindo, treinador!", d:"Assumes um clube da AF Braga. A direção dá-te um objetivo para a época — cumpre-o para não seres despedido. O jogo corre época a época."},
   {ic:"📋", t:"Monta a equipa", d:"No separador <b>Tática</b> montas o onze (toca num jogador e depois no destino), escolhes formação e mentalidade, e defines os <b>papéis</b>: capitão, penáltis, livres e cantos."},
-  {ic:"▶️", t:"Joga a jornada", d:"No <b>Início</b>, carrega em <b>Jogar jornada</b> para o jogo ao vivo — falas ao balneário, mudas ao intervalo e controlas a velocidade (1×/2×/3×). Ou usa <b>Simular</b> para um resultado rápido."},
+  {ic:"▶️", t:"Continuar e jogar", d:"No <b>Início</b>, <b>Continuar</b> avança os dias até acontecer algo (uma proposta, um caso a decidir) ou chegar o dia do jogo. Aí, <b>Jogar jornada</b> leva-te ao jogo ao vivo (falas ao balneário, mudas ao intervalo, controlas a velocidade). <b>Simular</b> salta direto para o resultado."},
   {ic:"👥", t:"Plantel e Academia", d:"No <b>Plantel</b> vês os teus jogadores, o foco de treino e a moral de cada um. A <b>Academia</b> forma jovens que podes promover."},
   {ic:"💱", t:"Mercado e empréstimos", d:"Nas <b>janelas</b> (setembro e janeiro) contratas de outros clubes, recebes/cedes por empréstimo e assinas jogadores livres. Fica atento ao <b>teto salarial</b>."},
   {ic:"🧢", t:"Vida de balneário", d:"A moral conta. Trata bem o <b>capitão</b> e resolve os casos de <b>indisciplina</b> com bom senso — tudo isto afeta o rendimento e a tua reputação."},
@@ -354,7 +354,11 @@ function viewHome(){
       ${isDerby(c.gid,opp.gid)?`<div class="center" style="margin:4px 0 2px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:11px;padding:2px 10px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
       ${(G.rival&&opp.gid===G.rival.gid)?`<div class="center" style="margin:2px 0"><span style="background:linear-gradient(180deg,#3b8cff,#1d4ed8);color:#fff;font-weight:800;font-size:11px;padding:2px 10px;border-radius:20px;letter-spacing:1px">🗣️ RIVAL DA ÉPOCA</span></div>`:""}
       ${(function(){const iss=lineupIssues(c);if(iss.ok)return "";const nm=c.squad.filter(p=>(c.susp||[]).includes(p.id)).map(p=>p.name);return `<div class="center" style="color:var(--red);font-size:12px;margin:6px 0">⚠ Onze inválido${iss.sus?` — suspenso(s): ${nm.join(", ")}`:""}${iss.vac?`${iss.sus?"; ":" — "}${iss.vac} vazio(s)`:""}. Corrige na Tática.</div>`;})()}
-      <button class="btn" id="btnPlay" style="margin-top:4px">▶ Jogar jornada</button>
+      ${(function(){ const md=(typeof matchDay==="function")?matchDay():true, dtm=(typeof daysToMatch==="function")?daysToMatch():0;
+        return md
+          ? `<div class="center" style="font-size:11px;color:var(--accent);margin:4px 0 2px">🗓️ Dia de jogo!</div><button class="btn" id="btnPlay" style="margin-top:2px">▶ Jogar jornada</button>`
+          : `<div class="center muted" style="font-size:11px;margin:4px 0 2px">🗓️ Próximo jogo daqui a ~${dtm} dia${dtm===1?'':'s'}</div><button class="btn" id="btnContinue" style="margin-top:2px">▶ Continuar</button>`;
+      })()}
       <div class="row" style="gap:6px;margin-top:8px">
         <button class="btn sec small" id="btnSim1" style="flex:1">⏩ Simular jornada</button>
         <button class="btn sec small" id="btnSim" style="flex:1">⏩⏩ Resto da época</button></div></div>`;
@@ -1412,10 +1416,11 @@ function bindView(){
   document.querySelectorAll("[data-capmeet]").forEach(b=>b.onclick=()=>{if(typeof resolveCaptainMeeting==="function")resolveCaptainMeeting(b.dataset.capmeet);TAB="home";render();});
   document.querySelectorAll("[data-disc]").forEach(b=>b.onclick=()=>{if(typeof resolveDiscipline==="function")resolveDiscipline(b.dataset.disc);TAB="home";render();});
   const meetBlock=()=>{ if(G.meeting&&G.meeting.active){ toast("Responde primeiro à reunião com a direção.");TAB="home";render();return true; } if(G.capMeeting&&G.capMeeting.active){ toast("Responde primeiro à reunião sobre o capitão.");TAB="home";render();return true; } if(G.discipline&&G.discipline.active){ toast("Resolve primeiro o caso de indisciplina.");TAB="home";render();return true; } return false; };
-  const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}openPreMatch(nx,(boost)=>playMatchAnimated(boost));};
+  const bco=$("#btnContinue");if(bco)bco.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const r=(typeof advanceToNextStop==="function")?advanceToNextStop():"match";render();if(r==="offer")toast("📩 Recebeste uma proposta.");else if(r==="match")toast("🗓️ Dia de jogo!");};
+  const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}openPreMatch(nx,(boost)=>playMatchAnimated(boost));};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
-  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();let n=0;while(d.week<d.fixtures.length){playWeek();n++;if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.discipline&&G.discipline.active)||(G.event&&!G.fired)||G.fired||G.seasonDone)break;}toast(n+" jornada(s) simulada(s)");render();};
-  const bs1=$("#btnSim1");if(bs1)bs1.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}playWeek();toast("Resultado: "+lastUserResultTxt());render();};
+  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();let n=0;while(d.week<d.fixtures.length){const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st)break;playWeek();n++;if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.discipline&&G.discipline.active)||(G.event&&!G.fired)||G.fired||G.seasonDone)break;}toast(n+" jornada(s) simulada(s)");render();};
+  const bs1=$("#btnSim1");if(bs1)bs1.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}playWeek();toast("Resultado: "+lastUserResultTxt());render();};
   const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();
   const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();
   const bcar=$("#btnCareer");if(bcar)bcar.onclick=()=>openCareer();
@@ -1516,7 +1521,7 @@ function splashScreen(){
 function boot(){
   document.getElementById("splash")?.remove();
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }

@@ -24,6 +24,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 - ✅ 🔧 **Papéis de equipa** — **Fase 1 ✅**: seleção (capitão/penáltis/livres/cantos) restrita ao onze e ordenada; o atributo do batedor mexe na conversão de penáltis e livres; capitão dá empurrão à equipa; braçadeira e livre desperdiçado no relato. **Fase 2 ✅**: drama do capitão — medidor de descontentamento (banco/substituição), contágio de moral, reunião da direção, protesto raro no 1º minuto e saída aziada com relato caricato. **Fase 3 ✅**: cartões de indisciplina (chegar tarde/faltar ao treino, bar na véspera…) com justificação séria/cómica e castigo interno selecionável (suspensão › multa cómica › repreensão) ou ilibar, com consequências na moral e reputação.
 
 ## Experiência de jogo
+- ✅ 🔧 **Calendário híbrido "Continuar"** — entre jogos passam dias variáveis; o botão **Continuar** avança até acontecer algo (proposta recebida, caso a decidir) ou o dia de jogo. **Simular** salta direto para o jogo. Base pronta para pendurar conferências de imprensa e pedidos de jogadores.
 - ✅ 🔧 Antevisão do adversário — forma, onze provável, jogadores-chave, barras de força.
 - ✅ ⚡ Conversa de balneário — antes e ao intervalo; o tom afeta moral e desempenho.
 - ✅ ⚡ Relatório pós-jogo — Homem do Jogo, golos, expulsões e notas dos teus jogadores.
