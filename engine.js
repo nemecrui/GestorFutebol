@@ -335,6 +335,7 @@ function newGame(divIdx,clubIdx,managerName){
   seedFreeAgents(6, clamp(Math.round(me().strength/5),4,15)); G.wageBase=wageBill(me()); ensureRivals(); pickRival();
   ensureCareer();                                                    // inicia a história de carreira (1ª passagem)
   ensureRoles();                                                      // papéis de equipa (capitão/penáltis/livres/cantos)
+  ensureInstr();                                                      // instruções táticas rápidas
   startGap();                                                         // abre o período de dias até ao 1º jogo (pré-época)
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
@@ -457,6 +458,28 @@ function cornerBoost(club,lineup,gone){                            // bom batedo
   const id=roleTakerId(club,lineup,gone,"corner","cru"); if(id==null)return 0;
   const p=club.squad.find(x=>x.id===id); if(!p||!p.attrs)return 0;
   return clamp(((p.attrs.cru||10)-10)/400,0,0.03);
+}
+/* ---------- Instruções táticas rápidas ---------- */
+function ensureInstr(){ if(!G.instr)G.instr={pressao:"normal",ritmo:"normal",foco:"equilibrado",entradas:"normais"};
+  ["pressao","ritmo","foco","entradas"].forEach(k=>{ if(G.instr[k]==null)G.instr[k]=(k==="foco"?"equilibrado":k==="entradas"?"normais":"normal"); });
+  return G.instr; }
+function setInstr(key,val){ ensureInstr(); if(["pressao","ritmo","foco","entradas"].indexOf(key)>=0)G.instr[key]=val; save(); return G.instr; }
+function instrEffect(userEnergy){                                   // multiplicadores conforme as instruções (perspetiva do utilizador)
+  const I=G.instr||{}; const e={uAtk:1,uMid:1,uDef:1,oAtk:1,oMid:1,oDef:1,uRate:1,oRate:1,uEnergy:1,uFoul:1,headerBoost:0};
+  const tired=1-clamp(userEnergy==null?1:userEnergy,0,1);
+  if(I.pressao==="alta"){ e.uAtk*=1.06; e.uMid*=1.05; e.oMid*=0.95; e.oAtk*=(1+0.16*tired); e.uEnergy*=1.35; e.uFoul*=1.3; }
+  else if(I.pressao==="baixa"){ e.uAtk*=0.90; e.oAtk*=0.86; e.uDef*=1.06; e.uEnergy*=0.82; }
+  if(I.ritmo==="acelerado"){ e.uRate*=1.14; e.oRate*=1.12; e.uEnergy*=1.2; }
+  else if(I.ritmo==="cauteloso"){ e.uRate*=0.85; e.oRate*=0.85; e.uEnergy*=0.85; }
+  if(I.foco==="alas"){ e.headerBoost=0.06; }
+  else if(I.foco==="meio"){ e.uMid*=1.05; }
+  if(I.entradas==="duras"){ e.oAtk*=0.95; e.uFoul*=1.6; }
+  return e;
+}
+function instrHeaderBoost(club,lineup,gone){
+  if(!isUserClub(club)||!G.instr||G.instr.foco!=="alas")return 0;
+  const b=bestFieldByAttr(club,lineup,"cru",gone); const cru=(b&&b.attrs)?b.attrs.cru:10;
+  return 0.06*clamp(cru/20,0.3,1);
 }
 /* ---------- Descontentamento do capitão (Fase 2) ---------- */
 function ensureCapMood(){
@@ -606,7 +629,7 @@ function pickGoal(club,lineup,formation,gone){
   const sel=weightedObj(cands,w); if(!sel)return null;
   let gtype="open"; const r=Math.random();
   if(r<0.07)gtype="penalty"; else if(r<0.12)gtype="freekick";
-  else if(Math.random()<0.12+sel.p.attrs.cab/70+cornerBoost(club,lineup,gone))gtype="header";
+  else if(Math.random()<0.12+sel.p.attrs.cab/70+cornerBoost(club,lineup,gone)+instrHeaderBoost(club,lineup,gone))gtype="header";
   let pid=sel.p.id;
   if(gtype==="penalty"){const id=roleTakerId(club,lineup,gone,"penalty","pen"); if(id!=null)pid=id;}
   else if(gtype==="freekick"){const id=roleTakerId(club,lineup,gone,"freekick","liv"); if(id!=null)pid=id;}
@@ -639,6 +662,11 @@ function simulate(home,away,hLine,aLine,eHome,eAway){
   const hS=teamStrength(home,hLine,G.formation,G.mentality);
   const aS=teamStrength(away,aLine,"4-4-2",pick(["Defensivo","Equilibrado","Equilibrado","Atacante"]));
   hS.atk*=eHome;hS.mid*=eHome;hS.def*=eHome; aS.atk*=eAway;aS.mid*=eAway;aS.def*=eAway;
+  let uRateH=1,uRateA=1,uFoulH=1,uFoulA=1;                          // instruções táticas do utilizador
+  const uH=(typeof me==="function"&&home===me()), uA=(typeof me==="function"&&away===me());
+  if((uH||uA)&&typeof instrEffect==="function"){ const eE=instrEffect(uH?eHome:eAway); const uS=uH?hS:aS, oS=uH?aS:hS;
+    uS.atk*=eE.uAtk;uS.mid*=eE.uMid;uS.def*=eE.uDef; oS.atk*=eE.oAtk;oS.mid*=eE.oMid;oS.def*=eE.oDef;
+    if(uH){uRateH=eE.uRate;uRateA=eE.oRate;uFoulH=eE.uFoul;} else {uRateA=eE.uRate;uRateH=eE.oRate;uFoulA=eE.uFoul;} }
   const events=[]; let hg=0,ag=0,hRed=0,aRed=0;
   const yc={}, expelledH=[], expelledA=[];
   function offRate(){ return offRateFrom(hS,aS,hRed,aRed); }
@@ -668,10 +696,10 @@ function simulate(home,away,hLine,aLine,eHome,eAway){
   }
   for(let m=1;m<=90;m++){
     const rt=offRate();
-    if(Math.random()<rt.hx/90){ if(scoreFor("H",m))hg++; }
-    if(Math.random()<rt.ax/90){ if(scoreFor("A",m))ag++; }
-    if(Math.random()<0.0125)disciplinary("H",home,hLine,m);
-    if(Math.random()<0.0125)disciplinary("A",away,aLine,m);
+    if(Math.random()<rt.hx*uRateH/90){ if(scoreFor("H",m))hg++; }
+    if(Math.random()<rt.ax*uRateA/90){ if(scoreFor("A",m))ag++; }
+    if(Math.random()<0.0125*uFoulH)disciplinary("H",home,hLine,m);
+    if(Math.random()<0.0125*uFoulA)disciplinary("A",away,aLine,m);
   }
   return {hg,ag,events,expelledH,expelledA};
 }
@@ -748,7 +776,16 @@ function liveRate(st){
     const prog=(st.talkUntil-st.minute)/(st.talkUntil-st.talkFrom), mult=1+(st.talkFactor-1)*prog;
     if(st.userSide==="H"){hS.atk*=mult;hS.mid*=mult;hS.def*=mult;} else {aS.atk*=mult;aS.mid*=mult;aS.def*=mult;}
   }
-  return offRateFrom(hS,aS,st.H.gone.length,st.A.gone.length);
+  let irH=1, irA=1;
+  if(st.userSide && typeof instrEffect==="function"){                     // instruções táticas do utilizador
+    const uH=st.userSide==="H", uFit=(((uH?fH:fA)-0.82)/0.18);              // fração de energia média (0..1)
+    const eE=instrEffect(clamp(uFit,0,1)); const uS=uH?hS:aS, oS=uH?aS:hS;
+    uS.atk*=eE.uAtk;uS.mid*=eE.uMid;uS.def*=eE.uDef; oS.atk*=eE.oAtk;oS.mid*=eE.oMid;oS.def*=eE.oDef;
+    if(uH){irH=eE.uRate;irA=eE.oRate;} else {irA=eE.uRate;irH=eE.oRate;}
+  }
+  const rt=offRateFrom(hS,aS,st.H.gone.length,st.A.gone.length);
+  rt.hx*=irH; rt.ax*=irA;
+  return rt;
 }
 function liveGoal(st,side,m){
   const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away, line=S.line;
@@ -772,13 +809,15 @@ function liveFoul(st,side,m,out){
 function liveStep(st){
   if(st.minute>=st.maxMin)return [];
   st.minute++; const m=st.minute, out=[];
-  const decay=(club,S)=>S.line.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(!p)return; const d=0.22+Math.max(0,(p.age-30))*0.02; st.fit[id]=clamp((st.fit[id]==null?100:st.fit[id])-d,0,100);});
-  decay(st.home,st.H); decay(st.away,st.A);
+  const IE=(st.userSide&&typeof instrEffect==="function")?instrEffect(1):null;   // energia/faltas não dependem da fadiga
+  const uEn=IE?IE.uEnergy:1, uFoul=IE?IE.uFoul:1;
+  const decay=(club,S,side)=>{ const mul=(st.userSide===side)?uEn:1; S.line.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(!p)return; const d=(0.22+Math.max(0,(p.age-30))*0.02)*mul; st.fit[id]=clamp((st.fit[id]==null?100:st.fit[id])-d,0,100);}); };
+  decay(st.home,st.H,"H"); decay(st.away,st.A,"A");
   const rt=liveRate(st);
   if(Math.random()<rt.hx/90){ const e=liveGoal(st,"H",m); if(e){out.push(e); if(e.type==="goal")st.hg++;} }
   if(Math.random()<rt.ax/90){ const e=liveGoal(st,"A",m); if(e){out.push(e); if(e.type==="goal")st.ag++;} }
-  if(Math.random()<0.0125)liveFoul(st,"H",m,out);
-  if(Math.random()<0.0125)liveFoul(st,"A",m,out);
+  if(Math.random()<0.0125*(st.userSide==="H"?uFoul:1))liveFoul(st,"H",m,out);
+  if(Math.random()<0.0125*(st.userSide==="A"?uFoul:1))liveFoul(st,"A",m,out);
   st.events.push(...out);
   return out;
 }
@@ -2021,6 +2060,7 @@ if(typeof module!=="undefined"&&module.exports){
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     ensureRecords,updateRecordsMatch,endSeasonAwards,ensureCareer,careerNewSpell,recordCareerSeason,
     ensureRoles,setRole,roleTakerId,penMissChance,fkMissChance,captainFactor,cornerBoost,bestFieldByAttr,
+    ensureInstr,setInstr,instrEffect,instrHeaderBoost,
     ensureCapMood,captainMoodTick,resolveCaptainMeeting,maybeDiscipline,resolveDiscipline,teamMoraleDelta,
     TRAITS,assignTraits,hasTrait,traitLabels,ensureTraits,
     maybePlayerRequest,resolvePlayerRequest,buildPress,resolvePress,nextOppName,

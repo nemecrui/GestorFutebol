@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-15", texto:"🎛️ Instruções táticas rápidas: define Pressão (bloco/normal/alta), Ritmo (cauto/normal/rápido), Foco (equilibrado/alas/meio) e Entradas (normais/duras) — na Tática e a meio do jogo. Cada opção tem o seu custo (energia, cartões) e influencia tanto os jogos ao vivo como os simulados." },
     { data:"2026-08-14", texto:"🎤 Balneário & media: os jogadores têm agora traços de personalidade (líder, ambicioso, boa-vida, cria-caso...) que mexem na moral e na indisciplina. Há conferências de imprensa (véspera e pós-jogo) com respostas à tua escolha, e os jogadores ambiciosos no banco pedem-te mais minutos. Vê os traços na ficha de cada jogador." },
     { data:"2026-08-14", texto:"🗓️ Novo ritmo de jogo: entre partidas passam dias e o botão «Continuar» avança até acontecer algo (uma proposta, um caso a decidir) ou chegar o dia de jogo. «Simular» continua a saltar direto para o resultado." },
     { data:"2026-08-13", texto:"🤝 Já podes RECEBER jogadores por empréstimo: novo separador 'Empréstimos' no mercado (nas janelas). Sem custo de transferência, escolhes pagar o salário todo ou dividir 50/50, e o jogador regressa ao clube de origem no fim da época." },

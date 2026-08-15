@@ -702,6 +702,7 @@ function viewTactics(){
   h+=`<div class="card"><h2>Suplentes ${iss.sus?'<span style="color:var(--red);font-size:11px">(há suspensos)</span>':''}</h2>${benchHTML(c)}</div>`;
   h+=`<div class="card"><h2>Formação</h2><select id="selForm">${Object.keys(FORMATIONS).map(f=>`<option ${f===G.formation?'selected':''}>${f}</option>`).join("")}</select></div>`;
   h+=`<div class="card"><h2>Mentalidade</h2><select id="selMent">${Object.keys(MENTAL).map(m=>`<option ${m===G.mentality?'selected':''}>${m}</option>`).join("")}</select></div>`;
+  h+=instrCardHTML();
   h+=rolesCardHTML(c);
   h+=`<div class="card"><h2>Força do onze</h2>${bar("Defesa",s.def)}${bar("Meio-campo",s.mid)}${bar("Ataque",s.atk)}
     <div class="center" style="margin-top:10px"><span class="rating ${ratingClass(Math.round(s.overall))}" style="display:inline-flex">${Math.round(s.overall)}</span> <span class="muted">global</span></div></div>`;
@@ -731,6 +732,18 @@ function rolesCardHTML(c){
     <div class="muted" style="font-size:11px;margin-bottom:8px">Restrito ao onze, ordenado do melhor para o pior. Vazio = o jogo escolhe o melhor. O capitão dá um pequeno empurrão à equipa; o penaltista/batedor de livres bons convertem mais.</div>${rows}${capWarn}</div>`;
 }
 function lastNameU(n){ return String(n).split(" ").slice(-1)[0]; }
+const INSTR_LBL={pressao:"🔺 Pressão", ritmo:"⏱️ Ritmo", foco:"🎯 Foco", entradas:"🦵 Entradas"};
+function instrHTML(){
+  const I=(typeof ensureInstr==="function")?ensureInstr():(G.instr||{pressao:"normal",ritmo:"normal",foco:"equilibrado",entradas:"normais"});
+  const seg=(key,opts)=>`<div class="row" style="align-items:center;gap:6px;margin-bottom:5px"><span style="min-width:74px;font-size:12px">${INSTR_LBL[key]}</span><div class="seg" style="flex:1;margin:0">`+opts.map(([v,l])=>`<button data-instr="${key}" data-val="${v}" class="${I[key]===v?'active':''}">${l}</button>`).join("")+`</div></div>`;
+  return seg("pressao",[["baixa","Bloco"],["normal","Normal"],["alta","Alta"]])
+    + seg("ritmo",[["cauteloso","Cauto"],["normal","Normal"],["acelerado","Rápido"]])
+    + seg("foco",[["equilibrado","Equil."],["alas","Alas"],["meio","Meio"]])
+    + seg("entradas",[["normais","Normais"],["duras","Duras"]]);
+}
+function instrCardHTML(){ return `<div class="card"><h2>Instruções táticas</h2>
+  <div class="muted" style="font-size:11px;margin-bottom:8px">Ajustes rápidos (valem no jogo e nas simulações). Cada opção tem um custo: pressão alta e ritmo rápido gastam energia; entradas duras arriscam cartões.</div>
+  ${instrHTML()}</div>`; }
 function pitchHTML(cl){
   const slots=FORMATIONS[G.formation].slots, tc=textOn(cl.c1), susp=new Set(cl.susp||[]);
   let spots="";
@@ -1001,6 +1014,8 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
         <div class="row" style="gap:6px;margin-bottom:8px">
           <select id="cgForm" style="flex:1">${Object.keys(FORMATIONS).map(f=>`<option${S.form===f?' selected':''}>${f}</option>`).join("")}</select>
           <select id="cgMent" style="flex:1">${["Defensivo","Equilibrado","Atacante"].map(f=>`<option${S.ment===f?' selected':''}>${f}</option>`).join("")}</select></div>
+        <div class="muted" style="font-size:11px;margin:2px 0 4px">Instruções táticas:</div>
+        ${instrHTML()}
         <div class="muted" style="font-size:11px;margin-bottom:4px">Em campo — toca em quem SAI${sel!=null?' (selecionado, escolhe quem entra)':''}:</div>
         <div class="plist" style="max-height:150px;overflow:auto">${onRows}</div>
         <div class="muted" style="font-size:11px;margin:8px 0 4px">Suplentes — toca em quem ENTRA:</div>
@@ -1014,6 +1029,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       });
       cm.querySelector("#cgForm").onchange=e=>liveSetTactic(st,userSide,e.target.value,null);
       cm.querySelector("#cgMent").onchange=e=>liveSetTactic(st,userSide,null,e.target.value);
+      cm.querySelectorAll("[data-instr]").forEach(b=>b.onclick=()=>{ if(typeof setInstr==="function")setInstr(b.dataset.instr,b.dataset.val); draw(); });
       cm.querySelectorAll("[data-out]").forEach(el=>el.onclick=()=>{sel=+el.dataset.out;draw();});
       cm.querySelectorAll("[data-in]").forEach(el=>el.onclick=()=>{ if(sel==null){toast("Escolhe primeiro quem sai.");return;}
         if(S.subs>=maxS){toast("Já usaste todas as substituições.");return;}
@@ -1473,6 +1489,7 @@ function bindView(){
   const sf=$("#selForm");if(sf)sf.onchange=()=>{tacSel=null;G.formation=sf.value;G.lineup=autoPickLineup(me(),G.formation,[...unavailable(me())]);save();render();};
   const sm=$("#selMent");if(sm)sm.onchange=()=>{G.mentality=sm.value;save();render();};
   document.querySelectorAll(".roleSel").forEach(sel=>sel.onchange=()=>{ if(typeof setRole==="function")setRole(sel.dataset.role, sel.value?+sel.value:null); render(); });
+  document.querySelectorAll("[data-instr]").forEach(b=>b.onclick=()=>{ if(typeof setInstr==="function")setInstr(b.dataset.instr,b.dataset.val); render(); });
   const ba=$("#btnAuto");if(ba)ba.onclick=()=>{tacSel=null;G.lineup=autoPickLineup(me(),G.formation,[...unavailable(me())]);save();toast("Onze otimizado");render();};
   const bva=$("#btnVacate");if(bva)bva.onclick=()=>{if(tacSel&&tacSel.type==="slot"){G.lineup[tacSel.slot]=null;tacSel=null;save();render();}};
   const bcs=$("#btnCancelSel");if(bcs)bcs.onclick=()=>{tacSel=null;render();};
@@ -1543,7 +1560,7 @@ function splashScreen(){
 function boot(){
   document.getElementById("splash")?.remove();
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }
