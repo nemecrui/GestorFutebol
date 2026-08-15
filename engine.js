@@ -336,6 +336,7 @@ function newGame(divIdx,clubIdx,managerName){
   ensureCareer();                                                    // inicia a história de carreira (1ª passagem)
   ensureRoles();                                                      // papéis de equipa (capitão/penáltis/livres/cantos)
   ensureInstr();                                                      // instruções táticas rápidas
+  ensureAch();                                                        // conquistas
   startGap();                                                         // abre o período de dias até ao 1º jogo (pré-época)
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
@@ -895,7 +896,12 @@ function simRound(d,preMy,hasUser){
       trainingInjuryTick(uc,false);                         // lesões de treino podem acontecer em qualquer jornada
       const opp=(h===G.myId?away:home), derby=isDerby(me().gid,opp.gid);
       rateUserMatch(uc,played,r,isH); updateForm(uc,played); updateChem(userLine); trainTick(uc,played); updateMorale(uc,played,isH?r.hg:r.ag,isH?r.ag:r.hg,derby);
-      if(G.rival&&opp.gid===G.rival.gid)rivalReact(isH?r.hg:r.ag,isH?r.ag:r.hg); }
+      if(G.rival&&opp.gid===G.rival.gid)rivalReact(isH?r.hg:r.ag,isH?r.ag:r.hg);
+      const gfU=isH?r.hg:r.ag, gaU=isH?r.ag:r.hg;                              // conquistas & desafio
+      let hh=0,aa=0,down2=false; (r.events||[]).filter(e=>e.type==="goal").sort((x,y)=>x.m-y.m).forEach(e=>{ if(e.side==="H")hh++; else aa++; const mine=isH?hh:aa, thrs=isH?aa:hh; if(thrs-mine>=2)down2=true; });
+      checkMatchAch(gfU,gaU,derby,down2);
+      const cardsU=(r.events||[]).filter(e=>(e.type==="yellow"||e.type==="red")&&e.side===(isH?"H":"A")).length;
+      resolveChallenge(gfU,gaU,cardsU); }
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -925,7 +931,7 @@ function playWeek(preMy){
 }
 /* ---------- Calendário híbrido: dias entre jogos + "Continuar" ---------- */
 function ensureDays(){ if(typeof G.dayGap!=="number"){ G.dayGap=ri(6,8); G.dayCursor=G.dayGap; } if(typeof G.dayCursor!=="number")G.dayCursor=G.dayGap; return G; }
-function startGap(){ G.dayGap=ri(6,8); G.dayCursor=0; G.pressPreDone=false; }   // dias variáveis até ao próximo jogo
+function startGap(){ G.dayGap=ri(6,8); G.dayCursor=0; G.pressPreDone=false; if(typeof newChallenge==="function")newChallenge(); }   // dias variáveis até ao próximo jogo (+ desafio da jornada)
 function matchDay(){ ensureDays(); const d=myDivObj(); if(d.week>=d.fixtures.length)return true; return G.dayCursor>=G.dayGap; }
 function daysToMatch(){ ensureDays(); return Math.max(0,(G.dayGap||0)-(G.dayCursor||0)); }
 function dayTick(){                                              // o que pode acontecer num dia entre jogos
@@ -1001,7 +1007,7 @@ function superCupSetup(){                           // campeão do topo (Pró-Na
   if(champGid===cupW){                              // dobradinha → Supertaça automática
     const club=clubByGid(cupW);
     addNews("🏆 Supertaça: "+(club?club.name:cupW)+" conquista a Supertaça (dobradinha de campeão e Taça).");
-    if(cupW===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:G.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); }
+    if(cupW===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:G.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); unlockAch("supertaca"); }
     return;
   }
   const userIn=(champGid===ms||cupW===ms);
@@ -1016,7 +1022,7 @@ function superCupResolve(userResult){
   else { const r=poSimTie(sc.champ,sc.cup); sa=r.sa; sb=r.sb; w=r.w; pens=r.pens; }
   const wc=clubByGid(w);
   addNews("🏆 Supertaça "+sc.season+": "+(a?a.name:sc.champ)+" "+sa+"–"+sb+" "+(b?b.name:sc.cup)+(pens?" (nos penáltis)":"")+" · vencedor: "+(wc?wc.name:w)+".");
-  if(w===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:sc.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); }
+  if(w===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:sc.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); unlockAch("supertaca"); }
   sc.winner=w; sc.sa=sa; sc.sb=sb; sc.pens=pens; sc.pending=false;
   return {w,sa,sb,pens};
 }
@@ -1026,8 +1032,9 @@ function endSeason(){
   const champ=table[0], meRank=table.findIndex(c=>c.id===G.myId)+1;
   addNews("Fim da época "+G.season+" ("+d.name+"). Campeão: "+champ.name+". Ficaste em "+meRank+"º.");
   let prize=Math.max(0.1,(d.clubs.length-meRank+1)*0.08);
-  if(meRank===1){ prize+=1.0; G.manager.trophies.push({type:"league",name:"Campeão · "+d.name,season:G.season}); addNews("🏆 Campeão da "+d.name+"! Prémio: +€1M."); }
+  if(meRank===1){ prize+=1.0; G.manager.trophies.push({type:"league",name:"Campeão · "+d.name,season:G.season}); addNews("🏆 Campeão da "+d.name+"! Prémio: +€1M."); unlockAch("campeao"); if((me().L||0)===0)unlockAch("invicto"); }
   else if(d.upSlots>0 && meRank<=d.upSlots){ prize+=0.6; G.manager.trophies.push({type:"promo",name:"Subida · "+d.name,season:G.season}); addNews("⬆️ Subida garantida! Prémio: +€600K."); }
+  if(d.upSlots>0 && meRank<=d.upSlots){ const A=ensureAch(); A.promos=(A.promos||0)+1; unlockAch("subida"); if(A.promos>=3)unlockAch("subir3"); }
   me().budget=Math.round((me().budget+prize)*100)/100;
   addNews("Prémio de classificação: +"+money(prize)+".");
   endSeasonAwards(meRank);
@@ -1055,7 +1062,7 @@ function finalissimaResolve(userResult){
   else { const r=poSimTie(f.a,f.b); sa=r.sa; sb=r.sb; w=r.w; pens=r.pens; }
   const wc=clubByGid(w);
   addNews("🏆 Finalíssima da Divisão de Honra "+f.season+": "+(a?a.name:f.a)+" "+sa+"–"+sb+" "+(b?b.name:f.b)+(pens?" (penáltis)":"")+" · Campeão: "+(wc?wc.name:w)+".");
-  if(w===ms){ G.manager.trophies.push({type:"honra",name:"Campeão da Divisão de Honra",season:f.season}); me().budget=Math.round((me().budget+0.6)*100)/100; addNews("🏆 És Campeão da Divisão de Honra! Prémio: +€600K."); }
+  if(w===ms){ G.manager.trophies.push({type:"honra",name:"Campeão da Divisão de Honra",season:f.season}); me().budget=Math.round((me().budget+0.6)*100)/100; addNews("🏆 És Campeão da Divisão de Honra! Prémio: +€600K."); unlockAch("honra"); }
   f.winner=w; f.sa=sa; f.sb=sb; f.pens=pens; f.pending=false;
   return {w,sa,sb,pens};
 }
@@ -1523,7 +1530,7 @@ function developYouth(){ const A=ensureAcademy(); const kept=[];
 function promoteYouth(id){ const A=ensureAcademy(); const i=A.youth.findIndex(p=>p.id===id); if(i<0)return {ok:false,msg:""};
   if(me().squad.length>=32)return {ok:false,msg:"Plantel cheio (32) — dispensa alguém primeiro."};
   const p=A.youth.splice(i,1)[0]; p.youth=false; p.onLoan=false; me().squad.push(p);
-  addNews("Promoveste "+p.name+" da academia ao plantel."); save();
+  addNews("Promoveste "+p.name+" da academia ao plantel."); unlockAch("formador"); save();
   return {ok:true,msg:p.name+" promovido ao plantel."};
 }
 function releaseYouth(id){ const A=ensureAcademy(); const i=A.youth.findIndex(p=>p.id===id); if(i<0)return; const p=A.youth.splice(i,1)[0]; addNews("Dispensaste "+p.name+" da academia."); save(); }
@@ -1837,7 +1844,7 @@ function cupAdvanceRound(preUser){
   G.cup.history.push({name:cupRoundName(), ties:G.cup.ties.map(t=>({a:t.a,b:t.b,sa:t.sa,sb:t.sb,w:t.w,pens:!!t.pens}))});
   const winners=G.cup.ties.map(t=>t.w);
   G.cup.remaining=winners; G.cup.round++;
-  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByGid(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().gid){ G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); me().budget=Math.round((me().budget+1.2)*100)/100; addNews("🏆 Prémio de vencedor da Taça: +€1.2M."); } }
+  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByGid(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().gid){ G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); me().budget=Math.round((me().budget+1.2)*100)/100; addNews("🏆 Prémio de vencedor da Taça: +€1.2M."); unlockAch("taca"); } }
   else cupDraw();
   save();
   return userTie;
@@ -1892,6 +1899,48 @@ function recordCareerSeason(meRank,d){                        // guarda o resumo
     W:c.W||0, D:c.D||0, L:c.L||0, GF:c.GF||0, GA:c.GA||0, pts:c.Pts||0 };
   const i=C.seasons.findIndex(s=>s.season===e.season);
   if(i>=0)C.seasons[i]=e; else C.seasons.push(e);
+}
+/* ---------- Conquistas & desafios ---------- */
+const ACHS=[
+  {k:"estreia",   ic:"🎬", t:"Primeira vitória", d:"Vence o teu primeiro jogo."},
+  {k:"campeao",   ic:"🥇", t:"Campeão", d:"Vence um campeonato."},
+  {k:"invicto",   ic:"🛡️", t:"Campeão invicto", d:"Vence o campeonato sem perder um jogo."},
+  {k:"subida",    ic:"⬆️", t:"Subida", d:"Sobe de divisão."},
+  {k:"subir3",    ic:"🚀", t:"Escalada", d:"Consegue 3 subidas na carreira."},
+  {k:"taca",      ic:"🏆", t:"Rei da Taça", d:"Vence a Taça."},
+  {k:"supertaca", ic:"🏅", t:"Supertaça", d:"Vence a Supertaça."},
+  {k:"honra",     ic:"🏆", t:"Finalíssima", d:"Vence a Finalíssima da Divisão de Honra."},
+  {k:"derbi",     ic:"🔥", t:"Senhor do dérbi", d:"Vence um dérbi."},
+  {k:"goleada",   ic:"💥", t:"Goleada", d:"Vence marcando 5 golos ou mais."},
+  {k:"remontada", ic:"🔄", t:"Remontada", d:"Vence depois de estares a perder por 2 golos."},
+  {k:"rival",     ic:"🏁", t:"Acima do rival", d:"Termina a época à frente do rival."},
+  {k:"formador",  ic:"🎓", t:"Formador", d:"Promove um jovem da academia ao plantel."},
+  {k:"vit10",     ic:"⭐", t:"10 vitórias", d:"Chega às 10 vitórias na carreira."},
+  {k:"vit50",     ic:"🌟", t:"50 vitórias", d:"Chega às 50 vitórias na carreira."},
+  {k:"vit100",    ic:"💫", t:"100 vitórias", d:"Chega às 100 vitórias na carreira."}
+];
+function ensureAch(){ if(!G.ach)G.ach={un:{},nn:[],promos:0}; if(!G.ach.un)G.ach.un={}; if(!G.ach.nn)G.ach.nn=[]; if(G.ach.promos==null)G.ach.promos=0; return G.ach; }
+function achDef(k){ return ACHS.find(a=>a.k===k); }
+function unlockAch(k){ const A=ensureAch(); if(A.un[k])return false; const def=achDef(k); if(!def)return false;
+  A.un[k]=G.season||1; A.nn.push(k); addNews("🏅 Conquista desbloqueada: "+def.t+" — "+def.d); return true; }
+function checkCareerAch(){ const w=(G.manager&&G.manager.stats&&G.manager.stats.W)||0; if(w>=10)unlockAch("vit10"); if(w>=50)unlockAch("vit50"); if(w>=100)unlockAch("vit100"); }
+function checkMatchAch(gf,ga,derby,wasDown2){
+  if(gf>ga){ unlockAch("estreia"); if(gf>=5)unlockAch("goleada"); if(derby)unlockAch("derbi"); if(wasDown2)unlockAch("remontada"); }
+  checkCareerAch();
+}
+/* desafios de jornada */
+const CHALS=[
+  {k:"cs",  t:"Vencer sem sofrer golos",  chk:(gf,ga,cards)=>gf>ga&&ga===0},
+  {k:"m2",  t:"Vencer por 2 ou mais golos", chk:(gf,ga,cards)=>gf-ga>=2},
+  {k:"g3",  t:"Marcar 3 golos ou mais",   chk:(gf,ga,cards)=>gf>=3},
+  {k:"fair",t:"Jogo limpo (sem cartões)", chk:(gf,ga,cards)=>cards===0}
+];
+function newChallenge(){ const c=pick(CHALS); G.challenge={key:c.k, label:c.t}; }
+function resolveChallenge(gf,ga,cards){
+  const ch=G.challenge; if(!ch)return; const def=CHALS.find(x=>x.k===ch.key);
+  if(def&&def.chk(gf,ga,cards)){ G.manager.reputation=clamp((G.manager.reputation||40)+2,0,100); teamMoraleDelta(me(),2,null); addNews("✅ Desafio da jornada cumprido: "+ch.label+" (+reputação, +moral)."); }
+  else addNews("❌ Desafio da jornada falhado: "+ch.label+".");
+  G.challenge=null;
 }
 function updateRecordsMatch(gf,ga,oppName){
   const R=ensureRecords();
@@ -2036,7 +2085,7 @@ function resolveRivalDuel(table,meRank){           // no fim da época: quem ter
   const r=G.rival; if(!r||!table)return; const rr=table.findIndex(c=>c.gid===r.gid)+1; if(!rr)return;
   const rc=clubByGid(r.gid), rn=rc?rc.name:"o rival";
   if(meRank<rr){ G.manager.reputation=clamp((G.manager.reputation||40)+2,0,100);
-    addNews("🏁 Duelo da época ganho! Terminaste à frente do "+rn+" ("+meRank+"º vs "+rr+"º). O "+r.name+" que se cale. (+reputação)"); }
+    addNews("🏁 Duelo da época ganho! Terminaste à frente do "+rn+" ("+meRank+"º vs "+rr+"º). O "+r.name+" que se cale. (+reputação)"); unlockAch("rival"); }
   else if(meRank>rr){ addNews("🏁 Duelo da época perdido: o "+rn+" ("+r.name+") ficou à tua frente ("+rr+"º vs "+meRank+"º). Para o ano acertas contas."); }
   else { addNews("🏁 Duelo da época: tu e o "+rn+" lado a lado na tabela."); }
 }
@@ -2059,6 +2108,7 @@ if(typeof module!=="undefined"&&module.exports){
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     ensureRecords,updateRecordsMatch,endSeasonAwards,ensureCareer,careerNewSpell,recordCareerSeason,
+    ACHS,ensureAch,unlockAch,achDef,checkMatchAch,CHALS,newChallenge,resolveChallenge,
     ensureRoles,setRole,roleTakerId,penMissChance,fkMissChance,captainFactor,cornerBoost,bestFieldByAttr,
     ensureInstr,setInstr,instrEffect,instrHeaderBoost,
     ensureCapMood,captainMoodTick,resolveCaptainMeeting,maybeDiscipline,resolveDiscipline,teamMoraleDelta,

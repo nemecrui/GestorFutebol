@@ -38,7 +38,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 - ✅ ⚡ **História de carreira / hall of fame do treinador** — palmarés agrupado, clubes por onde passou (passagens), resumo época a época, totais e % de vitórias.
 
 ## Engajar e crescer
-- ⬜ 🔧 **Conquistas/desafios** — vencer a Taça, subir 3 divisões, campeão invicto, etc.
+- ✅ 🔧 **Conquistas/desafios** — 16 conquistas de carreira (campeão, invicto, taça, subida, remontada, goleada, dérbi, formador, marcos de vitórias…) com ecrã próprio e notificações; + desafio de jornada opcional (vencer sem sofrer, por 2+, marcar 3+, jogo limpo) com recompensa.
 - ✅ ⚡ Dérbis/rivalidades — rivais por clube; o dérbi pesa mais na moral e na direção; destaque na antevisão e no jogo.
 - ✅ 🔧 Eventos e notícias com histórias — wonderkid, pedido de saída, direção (via eventos de escolha + rival).
 - ✅ 🔧 **Traços de personalidade** — líder, veterano, profissional, temperamental, boa-vida, cria-caso, ambicioso; moldam a moral, a indisciplina (quem se mete em sarilhos) e a aptidão para capitão. Mostrados na ficha.
@@ -58,11 +58,14 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 
 ---
 
-## Próximos candidatos (a decidir)
-Opções rápidas e com bom retorno:
-1. ⚡ **Papéis de equipa** — capitão + escolher quem bate penáltis/livres (liga-se bem ao relato novo).
-2. 🔧 **Conquistas/desafios** — dá objetivos e engaja o público jovem.
-3. 🔧 **Empréstimos — receber** — fechar o ciclo dos empréstimos (ir buscar jogadores).
-4. ⚡ **Tutorial rápido** no primeiro arranque.
-5. ⚡ **Modo "nomes genéricos"** — útil para a loja/tema das marcas.
-6. ⚡ **Continuar o relato** — frases tuas + mais insólitas ligadas ao lance.
+## Por fazer (a decidir)
+Do roteiro:
+1. ⚡ **Modo "nomes genéricos"** — em pausa (útil para a loja/tema das marcas).
+2. 🔄 ⚡ **Encher o catálogo do relato** — frases tuas + mais insólitas ligadas ao lance (contínuo).
+
+Ideias novas (discutidas, ainda por entrar):
+4. ⚡–🔧 **Retrospetiva da época partilhável** — cartão/story "a tua época em números" (viral, barato).
+5. 🔧 **Cromos do plantel** — coleção de cartas dos jogadores para partilhar.
+6. 🔧–🏗️ **Instalações/infraestruturas** — treino, dep. médico (menos lesões), academia, estádio (receita).
+7. 🔧 **Progressão do treinador** — licenças + árvore de perks (motivador/tático/formador).
+8. ⚡ **Resumo/destaques do jogo** — recap em texto dos momentos-chave (bom para quem simula).

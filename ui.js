@@ -149,6 +149,26 @@ function openCareer(){
   mo.querySelector("#caClose").onclick=close; mo.querySelector("#caOk").onclick=close;
   mo.onclick=e=>{if(e.target===mo)close();};
 }
+function openAchievements(){
+  const list=(typeof ACHS!=="undefined")?ACHS:[];
+  const A=(typeof ensureAch==="function")?ensureAch():(G.ach||{un:{}});
+  const un=A.un||{}, nUn=list.filter(a=>un[a.k]).length;
+  const rows=list.map(a=>{ const got=un[a.k];
+    return `<div class="row" style="gap:10px;align-items:center;border-bottom:1px solid var(--line);padding:8px 2px;${got?'':'opacity:.45'}">
+      <div style="font-size:24px;width:30px;text-align:center">${got?a.ic:'🔒'}</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:13px">${a.t}</div><div class="muted" style="font-size:11px">${a.d}</div></div>
+      ${got?`<div class="muted" style="font-size:11px">ép. ${got}</div>`:''}</div>`; }).join("");
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><button class="close" id="acClose">✕</button>
+    <div style="font-weight:800;font-size:16px;margin-bottom:2px">🏅 Conquistas</div>
+    <div class="muted" style="font-size:12px;margin-bottom:8px">${nUn}/${list.length} desbloqueadas</div>
+    ${rows}
+    <button class="btn" id="acOk" style="margin-top:12px">Fechar</button></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#acClose").onclick=close; mo.querySelector("#acOk").onclick=close;
+  mo.onclick=e=>{if(e.target===mo)close();};
+}
 function textOn(hex){const c=hex.replace("#","");const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)>150?"#111":"#fff";}
 function ratingClass(v){return v>=72?"r-hi":v>=60?"r-mid":"r-lo";}
 function posClass(pos){return "pos-"+GROUP[pos];}
@@ -182,6 +202,11 @@ function render(){
   else if(TAB==="table")m.innerHTML=viewTable();
   m.classList.remove("vin");void m.offsetWidth;m.classList.add("vin");  // transição suave entre ecrãs
   bindView(); renderNav();
+  if(G.ach&&G.ach.nn&&G.ach.nn.length){                                  // notifica conquistas novas
+    const names=G.ach.nn.map(k=>{const dfn=(typeof achDef==="function")?achDef(k):null;return dfn?dfn.ic+" "+dfn.t:k;});
+    toast("🏅 Conquista"+(names.length>1?"s":"")+": "+names.join(" · "));
+    G.ach.nn=[]; if(typeof save==="function")save();
+  }
 }
 function renderNav(){
   const items=[["home","🏠","Início"],["squad","👥","Plantel"],["tactics","📋","Tática"],["market","💱","Mercado"],["table","🏆","Liga"]];
@@ -371,6 +396,7 @@ function viewHome(){
       ${isDerby(c.gid,opp.gid)?`<div class="center" style="margin:4px 0 2px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:11px;padding:2px 10px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
       ${(G.rival&&opp.gid===G.rival.gid)?`<div class="center" style="margin:2px 0"><span style="background:linear-gradient(180deg,#3b8cff,#1d4ed8);color:#fff;font-weight:800;font-size:11px;padding:2px 10px;border-radius:20px;letter-spacing:1px">🗣️ RIVAL DA ÉPOCA</span></div>`:""}
       ${(function(){const iss=lineupIssues(c);if(iss.ok)return "";const nm=c.squad.filter(p=>(c.susp||[]).includes(p.id)).map(p=>p.name);return `<div class="center" style="color:var(--red);font-size:12px;margin:6px 0">⚠ Onze inválido${iss.sus?` — suspenso(s): ${nm.join(", ")}`:""}${iss.vac?`${iss.sus?"; ":" — "}${iss.vac} vazio(s)`:""}. Corrige na Tática.</div>`;})()}
+      ${G.challenge?`<div class="center" style="font-size:11px;margin:6px 0 0"><span style="background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:2px 10px">🎯 Desafio da jornada: ${G.challenge.label}</span></div>`:""}
       ${(function(){ const md=(typeof matchDay==="function")?matchDay():true, dtm=(typeof daysToMatch==="function")?daysToMatch():0;
         return md
           ? `<div class="center" style="font-size:11px;color:var(--accent);margin:4px 0 2px">🗓️ Dia de jogo!</div><button class="btn" id="btnPlay" style="margin-top:2px">▶ Jogar jornada</button>`
@@ -475,6 +501,7 @@ function viewHome(){
       <div class="muted" style="font-size:12px;margin-bottom:4px">Troféus (${tr.length})</div>
       ${tr.length? tr.slice().reverse().map(t=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:5px 2px;font-size:13px"><span>${t.type==="cup"?"🏆":t.type==="league"?"🥇":"⬆️"} ${t.name}</span><span class="muted" style="font-size:12px">época ${t.season}</span></div>`).join("") : `<div class="muted" style="font-size:13px">Ainda sem troféus — vai à luta!</div>`}
       <button class="btn sec small" id="btnCareer" style="width:100%;margin-top:10px">📖 História de carreira</button>
+      <button class="btn sec small" id="btnAch" style="width:100%;margin-top:8px">🏅 Conquistas${(function(){const A=(typeof ensureAch==="function")?ensureAch():(G.ach||{un:{}});const n=A&&A.un?Object.keys(A.un).length:0;const tot=(typeof ACHS!=="undefined")?ACHS.length:0;return tot?` (${n}/${tot})`:'';})()}</button>
       <button class="btn sec small" id="btnRecords2" style="width:100%;margin-top:8px">🏅 Recordes & Prémios</button>
     </div>`;
   }
@@ -1462,6 +1489,7 @@ function bindView(){
   const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();
   const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();
   const bcar=$("#btnCareer");if(bcar)bcar.onclick=()=>openCareer();
+  const bach=$("#btnAch");if(bach)bach.onclick=()=>openAchievements();
   const bpo=$("#btnPlayoff");if(bpo)bpo.onclick=()=>{if(meetBlock())return;playPlayoff();};
   const bsc=$("#btnSuperCup");if(bsc)bsc.onclick=()=>{if(meetBlock())return;playSuperCup();};
   const bfi=$("#btnFinalissima");if(bfi)bfi.onclick=()=>{if(meetBlock())return;playFinalissima();};
@@ -1560,7 +1588,7 @@ function splashScreen(){
 function boot(){
   document.getElementById("splash")?.remove();
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }
