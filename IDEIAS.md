@@ -49,6 +49,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 
 ## Técnico / UX
 - ✅ 🔧 **Dinamismo visual** — cascata de cartões ao trocar de separador, barras animadas e dinheiro a "contar"; golo com tremor + confete (nas cores do clube); celebração de ecrã inteiro para título/subida/taça/supertaça/finalíssima. Interruptor de animações e respeito por "reduzir movimento".
+- ✅ 🔧 **Mascote/treinador em SVG** (chars.js) com 4 poses animadas — festejo (celebração), a falar (conferências), desapontado (derrota) e parado (ecrã do treinador); gravata assume a cor do clube; leve e offline.
 - ✅ ⚡ **Controlo de velocidade do jogo** (1×/2×/3× no jogo ao vivo) + **simular jornada** e **simular resto da época**.
 - ⬜ ⚡ **Modo "nomes genéricos"** (útil para a loja, pelo tema das marcas dos clubes).
 

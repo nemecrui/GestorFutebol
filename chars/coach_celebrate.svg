@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 300" width="220" height="300">
+  <style>
+    .fig{animation:cbounce 1.1s ease-in-out infinite; transform-origin:110px 285px}
+    .armL{animation:armL 1.1s ease-in-out infinite; transform-origin:84px 150px}
+    .armR{animation:armR 1.1s ease-in-out infinite; transform-origin:136px 150px}
+    @keyframes cbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+    @keyframes armL{0%,100%{transform:rotate(-30deg)}50%{transform:rotate(-42deg)}}
+    @keyframes armR{0%,100%{transform:rotate(30deg)}50%{transform:rotate(42deg)}}
+  </style>
+  <defs>
+    <linearGradient id="suit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b3a4f"/><stop offset="1" stop-color="#233042"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="110" cy="288" rx="46" ry="8" fill="#000" opacity="0.22"/>
+
+  <g class="fig" stroke="#0b1220" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <!-- pernas (calças do fato) -->
+    <rect x="96" y="226" width="13" height="52" rx="6" fill="#233042"/>
+    <rect x="111" y="226" width="13" height="52" rx="6" fill="#233042"/>
+    <ellipse cx="99" cy="280" rx="14" ry="7" fill="#12151d"/>
+    <ellipse cx="121" cy="280" rx="14" ry="7" fill="#12151d"/>
+
+    <!-- braços levantados (V de festejo) -->
+    <g class="armL">
+      <rect x="72" y="146" width="16" height="66" rx="8" fill="url(#suit)"/>
+      <circle cx="80" cy="140" r="11" fill="#f0c39a"/>
+    </g>
+    <g class="armR">
+      <rect x="132" y="146" width="16" height="66" rx="8" fill="url(#suit)"/>
+      <circle cx="140" cy="140" r="11" fill="#f0c39a"/>
+    </g>
+
+    <!-- tronco: casaco esguio -->
+    <path d="M86 150 Q86 140 110 140 Q134 140 134 150 L138 224 Q110 232 82 224 Z" fill="url(#suit)"/>
+    <!-- camisa (V) -->
+    <path d="M110 141 L96 150 L110 176 L124 150 Z" fill="#f2f6fb"/>
+    <!-- lapelas -->
+    <path d="M110 141 L96 150 L104 168 Z" fill="#1c2836"/>
+    <path d="M110 141 L124 150 L116 168 Z" fill="#1c2836"/>
+    <!-- gravata (cor do clube, variavel tie) -->
+    <path d="M110 150 L104 158 L110 200 L116 158 Z" fill="var(--tie,#c1121f)"/>
+    <!-- botões -->
+    <circle cx="110" cy="200" r="2.2" fill="#f5c518" stroke="none"/>
+    <circle cx="110" cy="212" r="2.2" fill="#f5c518" stroke="none"/>
+
+    <!-- pescoço -->
+    <rect x="103" y="120" width="14" height="16" rx="6" fill="#f0c39a"/>
+
+    <!-- cabeça -->
+    <circle cx="110" cy="100" r="28" fill="#f0c39a"/>
+    <circle cx="84" cy="102" r="5.5" fill="#f0c39a"/>
+    <circle cx="136" cy="102" r="5.5" fill="#f0c39a"/>
+    <!-- cabelo -->
+    <path d="M83 96 Q84 68 110 66 Q136 68 137 96 Q130 84 110 84 Q90 84 83 96 Z" fill="#3a2415"/>
+    <!-- olhos + sorriso -->
+    <circle cx="100" cy="100" r="3.4" fill="#0b1220" stroke="none"/>
+    <circle cx="120" cy="100" r="3.4" fill="#0b1220" stroke="none"/>
+    <path d="M99 111 Q110 121 121 111" fill="none" stroke="#0b1220" stroke-width="3.4"/>
+  </g>
+</svg>

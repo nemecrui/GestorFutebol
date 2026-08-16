@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-16", texto:"🧑‍💼 Chegou o treinador-mascote! Uma personagem que festeja nas conquistas, fala nas conferências de imprensa e fica desanimada nas derrotas — com a gravata na cor do teu clube." },
     { data:"2026-08-16", texto:"✨ Mais vida e dinamismo: os ecrãs entram em cascata, as barras e o dinheiro animam, os golos trazem tremor e confete nas cores do clube, e há celebração de ecrã inteiro quando és campeão, sobes de divisão ou ganhas uma taça. Podes ligar/desligar as animações no painel (respeita também o 'reduzir movimento' do telemóvel)." },
     { data:"2026-08-16", texto:"🧠 Progressão do treinador: ganhas XP a jogar, vencer, subir de divisão e desbloquear conquistas; sobes de nível (com licenças D→Pro) e ganhas pontos para desbloquear perks permanentes — Motivador, Tático e Formador. Vê tudo no botão «Treinador» do painel." },
     { data:"2026-08-16", texto:"🔁 Empréstimos mais realistas: clubes e jogadores recusam vir de divisões muito superiores ou quando são muito melhores do que o teu plantel — deixa de ser possível encher a equipa de reforços da divisão de topo." },

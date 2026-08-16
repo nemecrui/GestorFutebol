@@ -30,8 +30,10 @@ function confettiBurst(container, colors){
 }
 function celebrateOverlay(o){
   const ic=o.kind==="cup"?"🏆":o.kind==="promo"?"⬆️":o.kind==="final"?"🏆":o.kind==="super"?"🏅":"🥇";
+  const tie=(typeof me==="function"&&me())?me().c1:"#f5c518";
+  const fig=(typeof coachSVG==="function")?`<div class="cico" style="width:150px;height:196px;margin:0 auto">${coachSVG("celebrate",tie)}</div>`:`<div class="cico">${ic}</div>`;
   const mo=document.createElement("div"); mo.id="celebrate";
-  mo.innerHTML=`<div class="cbox"><div class="cico">${ic}</div><div class="ctitle">${o.title||"Conquista!"}</div>${o.sub?`<div class="csub">${o.sub}</div>`:""}
+  mo.innerHTML=`<div class="cbox">${fig}<div style="font-size:30px;margin-top:-6px">${ic}</div><div class="ctitle">${o.title||"Conquista!"}</div>${o.sub?`<div class="csub">${o.sub}</div>`:""}
     <button class="btn" id="cbShare" style="min-width:170px;margin-bottom:8px">📸 Partilhar</button>
     <button class="btn sec small" id="cbOk" style="width:100%">Continuar</button></div>`;
   document.body.appendChild(mo);
@@ -217,9 +219,11 @@ function openCoach(){
       ${got?`<span style="color:var(--green2);font-weight:800;font-size:12px">✓ Ativo</span>`:`<button class="btn sec small" data-perk="${k}" ${(C.points||0)>0?'':'disabled style="opacity:.45"'}>Desbloquear</button>`}</div>`;
   }).join("");
   const mo=document.createElement("div");mo.className="modal";
+  const ctie=(typeof me==="function"&&me())?me().c1:"#f5c518";
+  const cfig=(typeof coachSVG==="function")?`<div style="width:78px;height:100px;flex-shrink:0">${coachSVG("idle",ctie)}</div>`:"";
   mo.innerHTML=`<div class="box"><button class="close" id="coClose">✕</button>
-    <div style="font-weight:800;font-size:16px;margin-bottom:2px">🧠 Treinador · Nível ${info.level}</div>
-    <div class="muted" style="font-size:12px;margin-bottom:8px">Licença ${lic} · ${C.points||0} ponto(s) por gastar</div>
+    <div class="row" style="gap:10px;align-items:center;margin-bottom:8px">${cfig}<div><div style="font-weight:800;font-size:16px">🧠 Treinador · Nível ${info.level}</div>
+    <div class="muted" style="font-size:12px">Licença ${lic} · ${C.points||0} ponto(s) por gastar</div></div></div>
     <div class="muted" style="font-size:11px;margin-bottom:3px">XP para o nível ${info.level+1}: ${info.into}/${info.need}</div>
     <div class="barwrap" style="margin-bottom:12px"><div class="bar" style="width:${pct}%;background:var(--accent)"></div></div>
     <h2 style="color:var(--muted);font-size:12px;margin:2px 0 2px">Perks (permanentes)</h2>${rows}
@@ -450,7 +454,8 @@ function viewHome(){
   if(G.press&&G.press.active&&G.press.qs){
     const P=G.press, allDone=P.qs.every(q=>q.answered);
     const effChip=eff=>(eff&&eff.length)?eff.map(([ic,dv])=>`<span style="color:${dv>=0?'#16a34a':'#e5484d'};font-size:11px;margin-left:6px">${ic}${dv>0?'+':''}${dv}</span>`).join(""):'<span class="muted" style="font-size:11px;margin-left:6px">sem efeito de maior</span>';
-    h+=`<div class="card" style="border-color:#3b8cff"><h2 style="color:#3b8cff">🎤 Conferência de imprensa${P.when==="pre"?" · véspera":" · pós-jogo"}</h2>`;
+    const ptie=me().c1, pfig=(typeof coachSVG==="function")?`<div style="width:46px;height:60px;flex-shrink:0">${coachSVG("talk",ptie)}</div>`:"";
+    h+=`<div class="card" style="border-color:#3b8cff"><div class="row" style="gap:8px;align-items:center"><h2 style="color:#3b8cff;flex:1">🎤 Conferência de imprensa${P.when==="pre"?" · véspera":" · pós-jogo"}</h2>${pfig}</div>`;
     P.qs.forEach((Q,qi)=>{
       h+=`<div style="margin-bottom:9px"><div style="font-size:13px;margin-bottom:6px">${Q.q}</div>`;
       if(Q.answered)h+=`<div style="font-size:12px"><span style="color:var(--accent)">▸ ${Q.opts[Q.choice].label}</span>${effChip(Q.eff)}</div>`;
@@ -1303,7 +1308,12 @@ function showPostMatch(st, r, onClose){
   const uClub=userSide==="H"?home:away, uS=userSide==="H"?st.H:st.A, rc=v=>v>=7?"#16a34a":v>=5?"#d9a400":"#e5484d";
   const yourR=[...uS.appeared].map(id=>uClub.squad.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>(b.lastRating||0)-(a.lastRating||0));
   const mo=document.createElement("div");mo.className="modal";
+  const uGFr=userSide==="H"?r.hg:r.ag, uGAr=userSide==="H"?r.ag:r.hg;
+  const rpose=uGFr>uGAr?"celebrate":uGFr<uGAr?"sad":"idle";
+  const rtie=(userSide==="H"?home:away).c1||"#f5c518";
+  const rfig=(userSide&&typeof coachSVG==="function")?`<div style="width:66px;height:86px;margin:2px auto -6px">${coachSVG(rpose,rtie)}</div>`:"";
   mo.innerHTML=`<div class="box"><div class="center"><h2 style="justify-content:center">Relatório do jogo</h2></div>
+    ${rfig}
     <div class="scorebug"><div class="t">${clubTag(home)}</div><div class="sc">${r.hg} - ${r.ag}</div><div class="t a">${clubTag(away)}</div></div>
     ${r.hadET?`<div class="center muted" style="font-size:11px;margin-bottom:4px">após prolongamento</div>`:""}
     ${motm?`<div class="card" style="padding:10px;margin:8px 0;text-align:center;border-color:var(--accent)"><div class="muted" style="font-size:11px;letter-spacing:1px">⭐ HOMEM DO JOGO</div><div style="font-weight:800;font-size:16px">${motm.p.name}</div><div class="muted" style="font-size:12px"><span class="pill ${posClass(motm.p.pos)}">${motm.p.pos}</span> ${motm.club.short}${motm.g?" · "+motm.g+" golo"+(motm.g>1?"s":""):""}${motm.side===userSide&&motm.p.lastRating!=null?" · nota "+motm.p.lastRating:""}</div></div>`:""}
