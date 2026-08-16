@@ -371,11 +371,18 @@ function viewHome(){
       <button class="btn sec small" data-disc="ilibar" style="width:100%">🤝 Ilibar (perdoar)</button>
       <div class="muted" style="font-size:11px;margin-top:8px">Decide antes do próximo jogo. Ilibar uma desculpa fraca pode desagradar ao balneário.</div></div>`;
   }
-  if(G.press&&G.press.active){
-    const P=G.press;
-    h+=`<div class="card" style="border-color:#3b8cff"><h2 style="color:#3b8cff">🎤 Conferência de imprensa${P.when==="pre"?" · véspera":" · pós-jogo"}</h2>
-      <div style="font-size:13px;margin-bottom:10px">${P.q}</div>
-      ${(P.opts||[]).map((o,i)=>`<button class="btn sec small" data-press="${i}" style="width:100%;margin-bottom:6px">${o.label}</button>`).join("")}</div>`;
+  if(G.press&&G.press.active&&G.press.qs){
+    const P=G.press, allDone=P.qs.every(q=>q.answered);
+    const effChip=eff=>(eff&&eff.length)?eff.map(([ic,dv])=>`<span style="color:${dv>=0?'#16a34a':'#e5484d'};font-size:11px;margin-left:6px">${ic}${dv>0?'+':''}${dv}</span>`).join(""):'<span class="muted" style="font-size:11px;margin-left:6px">sem efeito de maior</span>';
+    h+=`<div class="card" style="border-color:#3b8cff"><h2 style="color:#3b8cff">🎤 Conferência de imprensa${P.when==="pre"?" · véspera":" · pós-jogo"}</h2>`;
+    P.qs.forEach((Q,qi)=>{
+      h+=`<div style="margin-bottom:9px"><div style="font-size:13px;margin-bottom:6px">${Q.q}</div>`;
+      if(Q.answered)h+=`<div style="font-size:12px"><span style="color:var(--accent)">▸ ${Q.opts[Q.choice].label}</span>${effChip(Q.eff)}</div>`;
+      else h+=Q.opts.map((o,oi)=>`<button class="btn sec small" data-press="${qi}" data-po="${oi}" style="width:100%;margin-bottom:5px">${o.label}</button>`).join("");
+      h+=`</div>`;
+    });
+    if(allDone)h+=`<button class="btn" id="pressDone" style="width:100%;margin-top:2px">Concluir</button>`;
+    h+=`</div>`;
   }
   if(G.playerReq&&G.playerReq.active){
     h+=`<div class="card" style="border-color:#7c3aed"><h2 style="color:#7c3aed">🚀 Pedido de ${G.playerReq.name}</h2>
@@ -1243,11 +1250,12 @@ function showPostMatch(st, r, onClose){
   };
 }
 function openPreMatch(next, startFn){
-  const c=me(), opp=myClubs()[next.opp];
+  const c=me(), opp=next.oppClub||myClubs()[next.opp];
   const myLine=availableLineup(c,G.lineup,G.formation), oppLine=aiPickLineup(opp,"4-4-2");
   const myS=teamStrength(c,myLine,G.formation,G.mentality), opS=teamStrength(opp,oppLine,"4-4-2","Equilibrado");
   const fav=favTier(myS.overall,opS.overall), form=clubRecentForm(opp,5);
-  const tbl=sortedTable(myDivObj()), oppPos=tbl.findIndex(x=>x.id===opp.id)+1;
+  const inMyDiv=myDivObj().clubs.some(x=>x.gid===opp.gid);
+  const oppPos=inMyDiv?(sortedTable(myDivObj()).findIndex(x=>x.gid===opp.gid)+1):null;
   const keys=opp.squad.slice().sort((a,b)=>ability(b)-ability(a)).slice(0,3);
   const scorer=opp.squad.slice().sort((a,b)=>(b.goals||0)-(a.goals||0))[0];
   const bar=(l,m1,m2)=>{const t=m1+m2||1,pm=Math.round(m1/t*100);return `<div style="margin:5px 0"><div style="font-size:11px;color:var(--muted)">${l}</div><div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#0006"><i style="width:${pm}%;background:var(--green2)"></i><i style="width:${100-pm}%;background:var(--red)"></i></div></div>`;};
@@ -1256,10 +1264,10 @@ function openPreMatch(next, startFn){
   const mo=document.createElement("div");mo.className="modal";
   const derby=isDerby(c.gid,opp.gid);
   mo.innerHTML=`<div class="box"><button class="close" id="pmClose">✕</button>
-    <div class="center"><h2 style="justify-content:center">Antevisão · ${next.home?"em casa":"fora"}</h2></div>
+    <div class="center"><h2 style="justify-content:center">Antevisão${next.cup?" · Taça":""} · ${next.home?"em casa":"fora"}</h2></div>
     ${derby?`<div class="center" style="margin:2px 0 8px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:12px;padding:3px 12px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
     <div class="scorebug"><div class="t">${clubTag(c)}</div><div class="sc" style="font-size:15px">VS</div><div class="t a">${clubTag(opp)}</div></div>
-    <div class="muted center" style="font-size:12px;margin-bottom:8px">${opp.name} · ${oppPos}º · forma: ${fmtForm(form)}</div>
+    <div class="muted center" style="font-size:12px;margin-bottom:8px">${opp.name}${oppPos?" · "+oppPos+"º":""} · forma: ${fmtForm(form)}</div>
     <div class="card" style="padding:9px;margin-bottom:8px">
       ${bar("Ataque",Math.round(myS.atk),Math.round(opS.atk))}${bar("Meio-campo",Math.round(myS.mid),Math.round(opS.mid))}${bar("Defesa",Math.round(myS.def),Math.round(opS.def))}
       <div class="center" style="font-size:11px;margin-top:5px"><b>${favTxt}</b> · <span style="color:var(--green2)">tu</span> vs <span style="color:var(--red)">eles</span></div></div>
@@ -1313,7 +1321,8 @@ function playCupTie(){
   const pens=(matchMo,r)=>{ perPlayer(r);
     const shoot=penaltyShootout(teamStrength(ca,st.H.line,st.H.form,st.H.ment).overall,teamStrength(cb,st.A.line,st.A.form,st.A.ment).overall);
     animateShootout(ca,cb,shoot,(winSide)=>{ const w=winSide==="A"?aShort:bShort; cupAdvanceRound({sa:r.hg,sb:r.ag,w,pens:true,et:true}); if(matchMo)matchMo.remove(); toast(w===ms?"Passaste nos penáltis!":"Eliminado nos penáltis"); render(); }); };
-  animateMatch(st,c,userLine,settle,pens);
+  const oppClub=userIsA?cb:ca;
+  openPreMatch({oppClub, home:userIsA, cup:true}, (boost)=>{ if(boost)liveApplyTalk(st,boost,35); animateMatch(st,c,userLine,settle,pens); });
 }
 function animateShootout(ca,cb,shoot,onDone){
   const mo=document.createElement("div");mo.className="modal";
@@ -1478,7 +1487,8 @@ function bindView(){
   document.querySelectorAll("[data-meet]").forEach(b=>b.onclick=()=>{const r=resolveBoardMeeting(b.dataset.meet);toast(r.msg);TAB="home";render();});
   document.querySelectorAll("[data-capmeet]").forEach(b=>b.onclick=()=>{if(typeof resolveCaptainMeeting==="function")resolveCaptainMeeting(b.dataset.capmeet);TAB="home";render();});
   document.querySelectorAll("[data-disc]").forEach(b=>b.onclick=()=>{if(typeof resolveDiscipline==="function")resolveDiscipline(b.dataset.disc);TAB="home";render();});
-  document.querySelectorAll("[data-press]").forEach(b=>b.onclick=()=>{if(typeof resolvePress==="function")resolvePress(+b.dataset.press);TAB="home";render();});
+  document.querySelectorAll("[data-press]").forEach(b=>b.onclick=()=>{if(typeof resolvePress==="function")resolvePress(+b.dataset.press,+b.dataset.po);TAB="home";render();});
+  { const pd=$("#pressDone"); if(pd)pd.onclick=()=>{if(typeof closePress==="function")closePress();TAB="home";render();}; }
   document.querySelectorAll("[data-preq]").forEach(b=>b.onclick=()=>{if(typeof resolvePlayerRequest==="function")resolvePlayerRequest(b.dataset.preq);TAB="home";render();});
   const meetBlock=()=>{ if(G.meeting&&G.meeting.active){ toast("Responde primeiro à reunião com a direção.");TAB="home";render();return true; } if(G.capMeeting&&G.capMeeting.active){ toast("Responde primeiro à reunião sobre o capitão.");TAB="home";render();return true; } if(G.discipline&&G.discipline.active){ toast("Resolve primeiro o caso de indisciplina.");TAB="home";render();return true; } if(G.press&&G.press.active){ toast("Responde primeiro à conferência de imprensa.");TAB="home";render();return true; } if(G.playerReq&&G.playerReq.active){ toast("Responde primeiro ao pedido do jogador.");TAB="home";render();return true; } return false; };
   const bco=$("#btnContinue");if(bco)bco.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const r=(typeof advanceToNextStop==="function")?advanceToNextStop():"match";render();if(r==="offer")toast("📩 Recebeste uma proposta.");else if(r==="match")toast("🗓️ Dia de jogo!");};
@@ -1588,7 +1598,7 @@ function splashScreen(){
 function boot(){
   document.getElementById("splash")?.remove();
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();if(G.press&&!G.press.qs)G.press=null;TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }

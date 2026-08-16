@@ -387,6 +387,27 @@ const RELATO = {
         opts:[ {label:"Esteve enorme, é um orgulho", fx:{pmorale:5}},
                {label:"Pode e tem de fazer melhor", fx:{pmorale:-4, board:1}},
                {label:"Avalio a equipa como um todo", fx:{morale:1}} ] }
+    ],
+    // perguntas inusitadas / cómicas / lançar boatos (podem sair em qualquer conferência)
+    misc: [
+      { q:"Perguntam se vais atrás de um craque do {rival} em janeiro.",
+        opts:[ {label:"Deixo a porta aberta...", fx:{rival:2}, rumor:"o {clube} andaria de olho num jogador do {rival}."},
+               {label:"Estou focado no meu plantel", fx:{board:1}} ] },
+      { q:"Um adepto desafia-te: prometes bigode até ao fim da época se subires?",
+        opts:[ {label:"Prometo o bigode!", fx:{morale:2, rep:1}},
+               {label:"Vamos com calma...", fx:{}} ] },
+      { q:"Corre o boato de que só bebes o café do bar em frente ao estádio.",
+        opts:[ {label:"É a minha superstição sagrada", fx:{rep:1}},
+               {label:"Não comento a minha vida privada", fx:{}} ] },
+      { q:"Dizem que a tua playlist no balneário é de fazer fugir os jogadores.",
+        opts:[ {label:"A minha música é que motiva!", fx:{morale:2}},
+               {label:"Vou passar o comando aos jogadores", fx:{morale:1}} ] },
+      { q:"É verdade que dormes com a camisola do clube?",
+        opts:[ {label:"Todas as noites", fx:{morale:1}},
+               {label:"Isso fica entre mim e a camisola", fx:{rep:1}} ] },
+      { q:"Um jornalista pergunta se o {clube} vai contratar um extraterrestre avançado.",
+        opts:[ {label:"Se marcar golos, assino já", fx:{rep:1}},
+               {label:"Prefiro talento cá do burgo", fx:{morale:1}, rumor:"o {clube} aposta forte na formação local."} ] }
     ]
   },
 

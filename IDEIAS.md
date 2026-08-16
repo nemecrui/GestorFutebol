@@ -42,7 +42,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 - ✅ ⚡ Dérbis/rivalidades — rivais por clube; o dérbi pesa mais na moral e na direção; destaque na antevisão e no jogo.
 - ✅ 🔧 Eventos e notícias com histórias — wonderkid, pedido de saída, direção (via eventos de escolha + rival).
 - ✅ 🔧 **Traços de personalidade** — líder, veterano, profissional, temperamental, boa-vida, cria-caso, ambicioso; moldam a moral, a indisciplina (quem se mete em sarilhos) e a aptidão para capitão. Mostrados na ficha.
-- ✅ 🔧 **Conferências de imprensa** — véspera (no loop de dias) e pós-jogo, com escolhas que mexem na moral, na direção, na reputação e no humor do rival.
+- ✅ 🔧 **Conferências de imprensa** — véspera (no loop de dias) e pós-jogo, com **várias perguntas**, **indicador do efeito** de cada resposta e perguntas **inusitadas/cómicas** que podem lançar **boatos**. Também na Taça (com conversa de balneário antes do jogo).
 - ✅ ⚡ **Pedidos de jogadores** — ambiciosos no banco pedem minutos (paragem no loop); prometes, dás confiança ou dizes que têm de merecer.
 - ✅ ⚡ **Tutorial rápido** no primeiro arranque — guia de 7 passos (objetivo, tática/papéis, jogar/simular, plantel/academia, mercado/empréstimos, balneário), reabrível em Início → Como jogar.
 
