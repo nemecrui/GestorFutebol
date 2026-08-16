@@ -5,7 +5,42 @@
    ============================================================ */
 
 let TAB="home", tacSel=null, squadFilter="all", marketPos="all", tableTab="table", leagueDiv=null, squadTab="main", marketTab="clubs";
+let _lastTab=null, _prevCash=null;
 const $=s=>document.querySelector(s);
+/* ---------- animações / dinamismo ---------- */
+let ANIM=true; try{ ANIM=(localStorage.getItem("gf_anim")!=="0"); }catch(e){}
+function reduceMotion(){ try{ return window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } }
+function animOn(){ return ANIM && !reduceMotion(); }
+function applyAnimClass(){ try{ document.body.classList.toggle("noanim", !animOn()); }catch(e){} }
+function setAnim(on){ ANIM=on; try{ localStorage.setItem("gf_anim", on?"1":"0"); }catch(e){} applyAnimClass(); }
+function confettiBurst(container, colors){
+  if(!animOn()||!container)return;
+  const wrap=document.createElement("div"); wrap.className="confetti-wrap";
+  const cols=colors&&colors.length?colors:["#f5c518","#16a34a","#3b8cff","#ffffff"];
+  for(let i=0;i<34;i++){ const s=document.createElement("i"); s.className="confetti";
+    s.style.left=(20+Math.random()*60)+"%";
+    s.style.background=cols[i%cols.length];
+    s.style.setProperty("--x",(Math.random()*220-110)+"px");
+    s.style.setProperty("--y",(160+Math.random()*180)+"px");
+    s.style.setProperty("--r",(Math.random()*900-300)+"deg");
+    s.style.setProperty("--d",(900+Math.random()*700)+"ms");
+    s.style.animationDelay=(Math.random()*120)+"ms";
+    wrap.appendChild(s); }
+  container.appendChild(wrap); setTimeout(()=>wrap.remove(),2000);
+}
+function celebrateOverlay(o){
+  const ic=o.kind==="cup"?"🏆":o.kind==="promo"?"⬆️":o.kind==="final"?"🏆":o.kind==="super"?"🏅":"🥇";
+  const mo=document.createElement("div"); mo.id="celebrate";
+  mo.innerHTML=`<div class="cbox"><div class="cico">${ic}</div><div class="ctitle">${o.title||"Conquista!"}</div>${o.sub?`<div class="csub">${o.sub}</div>`:""}
+    <button class="btn" id="cbShare" style="min-width:170px;margin-bottom:8px">📸 Partilhar</button>
+    <button class="btn sec small" id="cbOk" style="width:100%">Continuar</button></div>`;
+  document.body.appendChild(mo);
+  if(animOn())confettiBurst(mo,["#f5c518","#16a34a","#ffffff","#3b8cff"]);
+  const close=()=>mo.remove();
+  mo.querySelector("#cbOk").onclick=close;
+  mo.querySelector("#cbShare").onclick=()=>{ try{ if(typeof shareTrophy==="function")shareTrophy(o.kind); }catch(e){} };
+  mo.onclick=e=>{ if(e.target===mo)close(); };
+}
 
 function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),1900);}
 /* ---------- som (sintetizado, sem ficheiros) + vibração ---------- */
@@ -217,8 +252,13 @@ function header(){
   const hb=$("#hBadge"); hb.style.background=`linear-gradient(135deg,${c.c1} 0 55%,${c.c2} 55% 100%)`;
   const hcr=crestOf(c); hb.innerHTML=hcr?`<img src="${hcr}" alt="" onerror="this.remove()">`:"";
   $("#hSub").textContent=c.name+" · "+myDivObj().name;
-  $("#hCash").textContent=money(c.budget);
+  const hc=$("#hCash");
+  if(animOn() && _prevCash!=null && Math.abs(_prevCash-c.budget)>0.001){ animateNum(hc, _prevCash, c.budget, money, 600); hc.classList.remove("bump");void hc.offsetWidth;hc.classList.add("bump"); }
+  else hc.textContent=money(c.budget);
+  _prevCash=c.budget;
 }
+function animateNum(el, from, to, fmt, dur){ if(!el)return; fmt=fmt||(x=>String(Math.round(x))); dur=dur||500;
+  const t0=performance.now(); function step(t){ const k=Math.min(1,(t-t0)/dur); const v=from+(to-from)*(1-Math.pow(1-k,3)); el.textContent=fmt(v); if(k<1)requestAnimationFrame(step); else el.textContent=fmt(to); } requestAnimationFrame(step); }
 function render(){
   if(!G)return; header();
   const m=$("#main");
@@ -228,7 +268,11 @@ function render(){
   else if(TAB==="market")m.innerHTML=viewMarket();
   else if(TAB==="table")m.innerHTML=viewTable();
   m.classList.remove("vin");void m.offsetWidth;m.classList.add("vin");  // transição suave entre ecrãs
+  const fresh=(TAB!==_lastTab); _lastTab=TAB; m.classList.toggle("freshtab",fresh&&animOn());  // cascata só ao trocar de separador
   bindView(); renderNav();
+  if(G.celebrate&&G.celebrate.length){                                    // celebração de ecrã inteiro (título/subida/taça)
+    const o=G.celebrate.shift(); if(typeof save==="function")save(); setTimeout(()=>{ if(G)celebrateOverlay(o); },250);
+  }
   if(G.ach&&G.ach.nn&&G.ach.nn.length){                                  // notifica conquistas novas
     const names=G.ach.nn.map(k=>{const dfn=(typeof achDef==="function")?achDef(k):null;return dfn?dfn.ic+" "+dfn.t:k;});
     toast("🏅 Conquista"+(names.length>1?"s":"")+": "+names.join(" · "));
@@ -546,6 +590,7 @@ function viewHome(){
     </div>`;
   }
   h+=`<div class="card"><button class="btn sec small" id="btnTut" style="width:100%;margin-bottom:8px">❓ Como jogar (guia rápido)</button>
+    <button class="btn sec small" id="btnAnim" style="width:100%;margin-bottom:8px">✨ Animações: ${ANIM?"ligadas":"desligadas"}</button>
     <button class="btn sec small" id="btnNews" style="width:100%;margin-bottom:8px">🔔 Novidades${hasNewsNew()?' <span style="color:var(--red);font-weight:900">•</span>':''}</button>
     <button class="btn sec small" id="btnSaves" style="width:100%;margin-bottom:8px">💾 Gravações · exportar / importar / trocar</button>
     <button class="btn warn small" id="btnReset" style="width:100%">↺ Novo jogo (apaga este slot)</button></div>`;
@@ -1017,7 +1062,11 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   function updateStats(){const tot=momSumH+momSumA||1,pH=Math.round(momSumH/tot*100);mo.querySelector("#posH").textContent=pH+"%";mo.querySelector("#posA").textContent=(100-pH)+"%";mo.querySelector("#shH").textContent=stat.H.sh;mo.querySelector("#shA").textContent=stat.A.sh;mo.querySelector("#sotH").textContent=stat.H.sot;mo.querySelector("#sotA").textContent=stat.A.sot;mo.querySelector("#corH").textContent=stat.H.cor;mo.querySelector("#corA").textContent=stat.A.cor;}
   function setComment(txt,hold){commentEl.style.opacity=0;setTimeout(()=>{commentEl.textContent=txt;commentEl.style.opacity=1;},110);commentHold=hold||0;}
   function colorFlash(side){const cl=side==="H"?home:away,f=mo.querySelector("#goalFlash");f.style.background=`radial-gradient(circle at 50% 38%, ${cl.c1}, transparent 70%)`;f.classList.remove("show");void f.offsetWidth;f.classList.add("show");}
-  function goalCelebrate(side,nm){goalBanner.innerHTML=`⚽ GOLO!<div class="gb-sc">${nm}</div>`;goalBanner.classList.remove("show");void goalBanner.offsetWidth;goalBanner.classList.add("show");colorFlash(side);if(scoreEl.animate)scoreEl.animate([{transform:"scale(1)"},{transform:"scale(1.4)"},{transform:"scale(1)"}],{duration:500});sndCheer();vib([40,30,90]);}
+  function goalCelebrate(side,nm){goalBanner.innerHTML=`⚽ GOLO!<div class="gb-sc">${nm}</div>`;goalBanner.classList.remove("show");void goalBanner.offsetWidth;goalBanner.classList.add("show");colorFlash(side);if(scoreEl.animate)scoreEl.animate([{transform:"scale(1)"},{transform:"scale(1.4)"},{transform:"scale(1)"}],{duration:500});sndCheer();vib([40,30,90]);
+    const box=mo.querySelector(".live-box");
+    if(box && animOn()){ box.classList.remove("shake");void box.offsetWidth;box.classList.add("shake"); }
+    if(side===userSide){ const cl=side==="H"?home:away; confettiBurst(box||mo,[cl.c1,cl.c2,"#f5c518"]); }   // confete só no teu golo
+  }
   const PRESS=["{T} carrega para a frente","grande pressão do {T}","{T} instala-se no meio-campo adversário","{T} procura o golo","{T} manda no jogo"];
   const BAL=["jogo equilibrado","muita luta pela bola","as equipas estudam-se","ritmo mais partido agora"];
   const CHANCE=["quase golo do {T}!","que defesa do guarda-redes!","por muito pouco!","travessão! esteve lá perto"];
@@ -1542,6 +1591,7 @@ function bindView(){
   const bec=$("#btnEventCont");if(bec)bec.onclick=()=>{dismissEvent();render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
   const btt=$("#btnTut");if(btt)btt.onclick=()=>openTutorial();
+  const ban=$("#btnAnim");if(ban)ban.onclick=()=>{ setAnim(!ANIM); toast("Animações "+(ANIM?"ligadas":"desligadas")); render(); };
   const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
@@ -1631,6 +1681,7 @@ function splashScreen(){
 }
 function boot(){
   document.getElementById("splash")?.remove();
+  applyAnimClass();                          // respeita a preferência de animações / reduzir movimento
   requestPersist();                          // pede ao browser para não despejar a gravação
   if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();if(typeof ensureCoach==="function")ensureCoach();if(G.press&&!G.press.qs)G.press=null;TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }

@@ -219,6 +219,48 @@
   .attr .av{width:18px;text-align:right;font-weight:800}
   .close{position:absolute;top:10px;right:12px;background:var(--panel2);border:1px solid var(--line);color:var(--text);
     border-radius:8px;width:30px;height:30px;font-size:16px;cursor:pointer}
+
+  /* ===== Animações / dinamismo ===== */
+  .bar{transition:width .5s cubic-bezier(.4,0,.2,1)}
+  /* cascata de cartões ao trocar de separador */
+  @keyframes cardUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  #main.freshtab > .card{animation:cardUp .30s ease both}
+  #main.freshtab > .card:nth-child(1){animation-delay:.00s}
+  #main.freshtab > .card:nth-child(2){animation-delay:.04s}
+  #main.freshtab > .card:nth-child(3){animation-delay:.08s}
+  #main.freshtab > .card:nth-child(4){animation-delay:.12s}
+  #main.freshtab > .card:nth-child(5){animation-delay:.16s}
+  #main.freshtab > .card:nth-child(6){animation-delay:.20s}
+  #main.freshtab > .card:nth-child(n+7){animation-delay:.24s}
+  /* golo: tremor do ecrã + pulso do placar */
+  @keyframes liveShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-4px,2px)}40%{transform:translate(4px,-2px)}60%{transform:translate(-3px,-1px)}80%{transform:translate(3px,1px)}}
+  .live-box.shake{animation:liveShake .42s ease}
+  /* confetti */
+  .confetti-wrap{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:8}
+  .confetti{position:absolute;top:32%;width:9px;height:14px;border-radius:2px;opacity:0;will-change:transform,opacity;
+    animation:confFall var(--d,1100ms) ease-out forwards}
+  @keyframes confFall{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x,0),var(--y,260px)) rotate(var(--r,540deg))}}
+  /* celebração de ecrã inteiro */
+  #celebrate{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 40%,rgba(11,122,59,.35),rgba(0,0,0,.82));backdrop-filter:blur(2px)}
+  #celebrate .cbox{text-align:center;padding:22px;max-width:88%}
+  #celebrate .cico{font-size:76px;animation:cbPop .7s cubic-bezier(.2,1.4,.4,1) both}
+  #celebrate .ctitle{font-weight:900;font-size:30px;color:#ffcf33;text-shadow:0 3px 18px #000;margin:6px 0 2px;animation:cbPop .7s .06s cubic-bezier(.2,1.4,.4,1) both}
+  #celebrate .csub{color:#dbe6f2;font-size:15px;margin-bottom:16px;animation:cbPop .7s .12s ease both}
+  @keyframes cbPop{0%{opacity:0;transform:scale(.4) translateY(10px)}100%{opacity:1;transform:none}}
+  /* count-up */
+  .cash.bump{animation:cashBump .4s ease}
+  @keyframes cashBump{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+  /* dérbi/rival a pulsar */
+  @keyframes softPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .pulse{animation:softPulse 1.4s ease-in-out infinite}
+  body.noanim .bar{transition:none}
+  body.noanim #main.freshtab > .card,body.noanim .live-box.shake,body.noanim #celebrate .cico,body.noanim #celebrate .ctitle,body.noanim #celebrate .csub,body.noanim .cash.bump,body.noanim .pulse{animation:none}
+  body.noanim .confetti{display:none}
+  @media (prefers-reduced-motion: reduce){
+    .bar{transition:none}
+    #main.freshtab > .card,.live-box.shake,.confetti,#celebrate .cico,#celebrate .ctitle,#celebrate .csub,.cash.bump,.pulse{animation:none!important}
+  }
 </style>
 </head>
 <body>

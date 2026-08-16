@@ -48,6 +48,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 - ✅ ⚡ **Tutorial rápido** no primeiro arranque — guia de 7 passos (objetivo, tática/papéis, jogar/simular, plantel/academia, mercado/empréstimos, balneário), reabrível em Início → Como jogar.
 
 ## Técnico / UX
+- ✅ 🔧 **Dinamismo visual** — cascata de cartões ao trocar de separador, barras animadas e dinheiro a "contar"; golo com tremor + confete (nas cores do clube); celebração de ecrã inteiro para título/subida/taça/supertaça/finalíssima. Interruptor de animações e respeito por "reduzir movimento".
 - ✅ ⚡ **Controlo de velocidade do jogo** (1×/2×/3× no jogo ao vivo) + **simular jornada** e **simular resto da época**.
 - ⬜ ⚡ **Modo "nomes genéricos"** (útil para a loja, pelo tema das marcas dos clubes).
 

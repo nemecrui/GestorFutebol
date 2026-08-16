@@ -1021,7 +1021,7 @@ function superCupSetup(){                           // campeão do topo (Pró-Na
   if(champGid===cupW){                              // dobradinha → Supertaça automática
     const club=clubByGid(cupW);
     addNews("🏆 Supertaça: "+(club?club.name:cupW)+" conquista a Supertaça (dobradinha de campeão e Taça).");
-    if(cupW===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:G.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); unlockAch("supertaca"); }
+    if(cupW===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:G.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); unlockAch("supertaca"); queueCelebrate("super","SUPERTAÇA!","Campeão da Supertaça"); }
     return;
   }
   const userIn=(champGid===ms||cupW===ms);
@@ -1036,7 +1036,7 @@ function superCupResolve(userResult){
   else { const r=poSimTie(sc.champ,sc.cup); sa=r.sa; sb=r.sb; w=r.w; pens=r.pens; }
   const wc=clubByGid(w);
   addNews("🏆 Supertaça "+sc.season+": "+(a?a.name:sc.champ)+" "+sa+"–"+sb+" "+(b?b.name:sc.cup)+(pens?" (nos penáltis)":"")+" · vencedor: "+(wc?wc.name:w)+".");
-  if(w===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:sc.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); unlockAch("supertaca"); }
+  if(w===ms){ G.manager.trophies.push({type:"supercup",name:"Supertaça",season:sc.season}); me().budget=Math.round((me().budget+0.5)*100)/100; addNews("🏆 Prémio de Supertaça: +€500K."); unlockAch("supertaca"); queueCelebrate("super","SUPERTAÇA!","Campeão da Supertaça"); }
   sc.winner=w; sc.sa=sa; sc.sb=sb; sc.pens=pens; sc.pending=false;
   return {w,sa,sb,pens};
 }
@@ -1046,9 +1046,9 @@ function endSeason(){
   const champ=table[0], meRank=table.findIndex(c=>c.id===G.myId)+1;
   addNews("Fim da época "+G.season+" ("+d.name+"). Campeão: "+champ.name+". Ficaste em "+meRank+"º.");
   let prize=Math.max(0.1,(d.clubs.length-meRank+1)*0.08);
-  if(meRank===1){ prize+=1.0; G.manager.trophies.push({type:"league",name:"Campeão · "+d.name,season:G.season}); addNews("🏆 Campeão da "+d.name+"! Prémio: +€1M."); unlockAch("campeao"); if((me().L||0)===0)unlockAch("invicto"); }
+  if(meRank===1){ prize+=1.0; G.manager.trophies.push({type:"league",name:"Campeão · "+d.name,season:G.season}); addNews("🏆 Campeão da "+d.name+"! Prémio: +€1M."); unlockAch("campeao"); if((me().L||0)===0)unlockAch("invicto"); queueCelebrate("champ","CAMPEÕES!",d.name); }
   else if(d.upSlots>0 && meRank<=d.upSlots){ prize+=0.6; G.manager.trophies.push({type:"promo",name:"Subida · "+d.name,season:G.season}); addNews("⬆️ Subida garantida! Prémio: +€600K."); }
-  if(d.upSlots>0 && meRank<=d.upSlots){ const A=ensureAch(); A.promos=(A.promos||0)+1; unlockAch("subida"); if(A.promos>=3)unlockAch("subir3"); addXP(60); }
+  if(d.upSlots>0 && meRank<=d.upSlots){ const A=ensureAch(); A.promos=(A.promos||0)+1; unlockAch("subida"); if(A.promos>=3)unlockAch("subir3"); addXP(60); if(meRank!==1)queueCelebrate("promo","SUBIMOS!",d.name); }
   if(meRank===1)addXP(80); else addXP(Math.max(6,Math.round((d.clubs.length-meRank)*2)));   // XP de fim de época (melhor classificação, mais XP)
   me().budget=Math.round((me().budget+prize)*100)/100;
   addNews("Prémio de classificação: +"+money(prize)+".");
@@ -1077,7 +1077,7 @@ function finalissimaResolve(userResult){
   else { const r=poSimTie(f.a,f.b); sa=r.sa; sb=r.sb; w=r.w; pens=r.pens; }
   const wc=clubByGid(w);
   addNews("🏆 Finalíssima da Divisão de Honra "+f.season+": "+(a?a.name:f.a)+" "+sa+"–"+sb+" "+(b?b.name:f.b)+(pens?" (penáltis)":"")+" · Campeão: "+(wc?wc.name:w)+".");
-  if(w===ms){ G.manager.trophies.push({type:"honra",name:"Campeão da Divisão de Honra",season:f.season}); me().budget=Math.round((me().budget+0.6)*100)/100; addNews("🏆 És Campeão da Divisão de Honra! Prémio: +€600K."); unlockAch("honra"); }
+  if(w===ms){ G.manager.trophies.push({type:"honra",name:"Campeão da Divisão de Honra",season:f.season}); me().budget=Math.round((me().budget+0.6)*100)/100; addNews("🏆 És Campeão da Divisão de Honra! Prémio: +€600K."); unlockAch("honra"); queueCelebrate("final","CAMPEÃO DA HONRA!","Finalíssima"); }
   f.winner=w; f.sa=sa; f.sb=sb; f.pens=pens; f.pending=false;
   return {w,sa,sb,pens};
 }
@@ -1878,7 +1878,7 @@ function cupAdvanceRound(preUser){
   G.cup.history.push({name:cupRoundName(), ties:G.cup.ties.map(t=>({a:t.a,b:t.b,sa:t.sa,sb:t.sb,w:t.w,pens:!!t.pens}))});
   const winners=G.cup.ties.map(t=>t.w);
   G.cup.remaining=winners; G.cup.round++;
-  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByGid(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().gid){ G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); me().budget=Math.round((me().budget+1.2)*100)/100; addNews("🏆 Prémio de vencedor da Taça: +€1.2M."); unlockAch("taca"); } }
+  if(winners.length===1){ G.cup.active=false; G.cup.winner=winners[0]; const wc=clubByGid(winners[0]); addNews("🏆 Taça: "+(wc?wc.name:winners[0])+" é o vencedor!"); if(winners[0]===me().gid){ G.manager.trophies.push({type:"cup",name:"Vencedor da Taça",season:G.season}); me().budget=Math.round((me().budget+1.2)*100)/100; addNews("🏆 Prémio de vencedor da Taça: +€1.2M."); unlockAch("taca"); queueCelebrate("cup","TAÇA CONQUISTADA!","Vencedor da Taça"); } }
   else cupDraw();
   save();
   return userTie;
@@ -1982,6 +1982,7 @@ const COACH_PERKS={
   tatico:   {t:"Tático",    ramo:"Tático",    ic:"📋", d:"Ligeiro reforço no rendimento da equipa."},
   formador: {t:"Formador",  ramo:"Formador",  ic:"🎓", d:"Jogadores evoluem mais depressa e menos lesões de treino."}
 };
+function queueCelebrate(kind,title,sub){ if(!G.celebrate)G.celebrate=[]; G.celebrate.push({kind,title,sub}); }
 function ensureCoach(){ if(!G.coach)G.coach={xp:0,level:1,points:0,perks:{},nn:[]}; if(!G.coach.perks)G.coach.perks={}; if(!G.coach.nn)G.coach.nn=[]; return G.coach; }
 function coachNeed(level){ return 150+(level-1)*100; }              // XP para subir do 'level' ao seguinte
 function coachLevelInfo(){ const C=ensureCoach(); let lvl=1, rem=C.xp||0; while(rem>=coachNeed(lvl)){ rem-=coachNeed(lvl); lvl++; } return {level:lvl, into:rem, need:coachNeed(lvl)}; }
@@ -2160,7 +2161,7 @@ if(typeof module!=="undefined"&&module.exports){
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     ensureRecords,updateRecordsMatch,endSeasonAwards,ensureCareer,careerNewSpell,recordCareerSeason,
     ACHS,ensureAch,unlockAch,achDef,checkMatchAch,CHALS,newChallenge,resolveChallenge,
-    COACH_PERKS,ensureCoach,coachNeed,coachLevelInfo,coachLicense,addXP,coachHas,coachBuy,
+    COACH_PERKS,ensureCoach,coachNeed,coachLevelInfo,coachLicense,addXP,coachHas,coachBuy,queueCelebrate,
     ensureRoles,setRole,roleTakerId,penMissChance,fkMissChance,captainFactor,cornerBoost,bestFieldByAttr,
     ensureInstr,setInstr,instrEffect,instrHeaderBoost,
     ensureCapMood,captainMoodTick,resolveCaptainMeeting,maybeDiscipline,resolveDiscipline,teamMoraleDelta,
