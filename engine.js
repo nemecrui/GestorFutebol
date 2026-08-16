@@ -337,6 +337,7 @@ function newGame(divIdx,clubIdx,managerName){
   ensureRoles();                                                      // papéis de equipa (capitão/penáltis/livres/cantos)
   ensureInstr();                                                      // instruções táticas rápidas
   ensureAch();                                                        // conquistas
+  ensureCoach();                                                      // progressão do treinador
   startGap();                                                         // abre o período de dias até ao 1º jogo (pré-época)
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
@@ -414,7 +415,8 @@ function teamStrength(club,lineup,formation,mentality){
   const mine=(typeof G!=="undefined"&&G&&G.myId!=null&&club===me());
   const cm=mine?chemFactor():1;                                                     // química só afeta a tua equipa
   const cap=mine?captainFactor():1;                                                 // capitão dá um pequeno empurrão
-  const f=cm*cap;
+  const co=(mine&&typeof coachHas==="function"&&coachHas("tatico"))?1.02:1;         // perk Tático: reforço subtil
+  const f=cm*cap*co;
   return {def:def*men.def*f, mid:mid*f, atk:atk*men.atk*f, overall:(def+mid+atk)/3*f};
 }
 
@@ -912,7 +914,8 @@ function simRound(d,preMy,hasUser){
       let hh=0,aa=0,down2=false; (r.events||[]).filter(e=>e.type==="goal").sort((x,y)=>x.m-y.m).forEach(e=>{ if(e.side==="H")hh++; else aa++; const mine=isH?hh:aa, thrs=isH?aa:hh; if(thrs-mine>=2)down2=true; });
       checkMatchAch(gfU,gaU,derby,down2);
       const cardsU=(r.events||[]).filter(e=>(e.type==="yellow"||e.type==="red")&&e.side===(isH?"H":"A")).length;
-      resolveChallenge(gfU,gaU,cardsU); }
+      resolveChallenge(gfU,gaU,cardsU);
+      addXP(8 + (gfU>gaU?12:gfU===gaU?4:0) + (gfU>gaU&&derby?6:0)); }   // XP do treinador por jogo
     weekRes.push({h,a,hg:r.hg,ag:r.ag});
   });
   d.results.push(weekRes); d.week++;
@@ -1045,7 +1048,8 @@ function endSeason(){
   let prize=Math.max(0.1,(d.clubs.length-meRank+1)*0.08);
   if(meRank===1){ prize+=1.0; G.manager.trophies.push({type:"league",name:"Campeão · "+d.name,season:G.season}); addNews("🏆 Campeão da "+d.name+"! Prémio: +€1M."); unlockAch("campeao"); if((me().L||0)===0)unlockAch("invicto"); }
   else if(d.upSlots>0 && meRank<=d.upSlots){ prize+=0.6; G.manager.trophies.push({type:"promo",name:"Subida · "+d.name,season:G.season}); addNews("⬆️ Subida garantida! Prémio: +€600K."); }
-  if(d.upSlots>0 && meRank<=d.upSlots){ const A=ensureAch(); A.promos=(A.promos||0)+1; unlockAch("subida"); if(A.promos>=3)unlockAch("subir3"); }
+  if(d.upSlots>0 && meRank<=d.upSlots){ const A=ensureAch(); A.promos=(A.promos||0)+1; unlockAch("subida"); if(A.promos>=3)unlockAch("subir3"); addXP(60); }
+  if(meRank===1)addXP(80); else addXP(Math.max(6,Math.round((d.clubs.length-meRank)*2)));   // XP de fim de época (melhor classificação, mais XP)
   me().budget=Math.round((me().budget+prize)*100)/100;
   addNews("Prémio de classificação: +"+money(prize)+".");
   endSeasonAwards(meRank);
@@ -1407,12 +1411,26 @@ function acceptLoanOffer(i,userShare){                    // userShare: 0 = club
   G.lineup=autoPickLineup(meC,G.formation); save();
   return {ok:true,msg:"Emprestado: "+p.name};
 }
+function squadRefLevel(club){                              // nível de referência do plantel (média dos 11 melhores)
+  const a=((club&&club.squad)||[]).map(ability).sort((x,y)=>y-x).slice(0,11);
+  return a.length? Math.round(a.reduce((s,x)=>s+x,0)/a.length):50;
+}
+function loanInOk(origin,p){                               // o clube/jogador aceita o empréstimo?
+  if(!origin)return false;
+  const gap=(G.myTier-(origin.tier==null?G.myTier:origin.tier));   // >0 = origem é de divisão superior à tua
+  if(gap>=2)return false;                                          // salto de 2+ escalões: recusam sempre
+  const ref=squadRefLevel(me()), over=ability(p)-ref;
+  const maxOver=(gap>=1)?4:8;                                      // vindo de divisão acima, muito mais exigente
+  if(over>maxOver)return false;                                    // jogador demasiado superior ao teu plantel
+  return true;
+}
 function loanInList(){                                     // jogadores de outros clubes disponíveis para receber por empréstimo
   if(!transferWindowOpen())return [];
   let out=[];
   allClubsFlat().forEach(({c,di})=>{ if(isMine(c,di))return; if((c.squad||[]).length<=16)return;
     c.squad.slice().sort((a,b)=>ability(b)-ability(a)).slice(12).forEach(p=>{     // do 13º para baixo (suplentes)
       if((p.injuredWeeks||0)>0||p.onLoanOut||p.onLoanIn)return;
+      if(!loanInOk(c,p))return;                                    // filtra os que recusariam (divisão/qualidade)
       out.push({gid:c.gid, di, short:c.short, cname:c.name, p});
     });
   });
@@ -1424,6 +1442,8 @@ function loanInPlayer(fromGid,pid,borrowerShare){         // borrowerShare: 1 = 
   const meC=me(); if(meC.squad.length>=30)return {ok:false,msg:"Plantel cheio (máximo 30)."};
   const origin=clubByGid(fromGid); if(!origin)return {ok:false,msg:""};
   const p=origin.squad.find(x=>x.id===pid); if(!p||(p.injuredWeeks||0)>0||p.onLoanOut||p.onLoanIn)return {ok:false,msg:"Jogador indisponível."};
+  if(!loanInOk(origin,p)){ const gap=(G.myTier-(origin.tier==null?G.myTier:origin.tier));
+    return {ok:false,msg: gap>=2 ? "Recusado: o "+origin.name+" é de uma divisão bem superior." : "Recusado: "+p.name+" é demasiado superior ao teu plantel para vir por empréstimo."}; }
   const wage=(p.wage!=null?p.wage:wageFor(p)), bShare=(borrowerShare==null?1:borrowerShare);
   if(wageRoom() < wage*bShare)return {ok:false,msg:"Sem espaço salarial para este empréstimo."};
   origin.squad=origin.squad.filter(x=>x.id!==pid);
@@ -1564,8 +1584,9 @@ function processEnergyInjuries(club,playedIds){
   });
 }
 function trainingInjuryTick(club,silent){    // lesões esporádicas nos treinos (acontecem mesmo com energia alta)
+  const chance=(typeof coachHas==="function"&&coachHas("formador")&&club===me())?0.006*0.6:0.006;   // perk Formador: menos lesões de treino
   (club.squad||[]).forEach(p=>{ if((p.injuredWeeks||0)>0)return;
-    if(Math.random()<0.006){ p.injuredWeeks=rollInjury(); if(!silent)addNews("🤕 "+p.name+" lesionou-se no treino ("+injuryLabel(p.injuredWeeks)+") — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } });
+    if(Math.random()<chance){ p.injuredWeeks=rollInjury(); if(!silent)addNews("🤕 "+p.name+" lesionou-se no treino ("+injuryLabel(p.injuredWeeks)+") — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } });
 }
 function rateUserMatch(club,playedIds,r,isHome){
   if(!playedIds)return;
@@ -1643,7 +1664,8 @@ function trainTick(club,playedIds){
   club.squad.forEach(p=>{
     if(roleRatingAttrs(p.attrs,p.pos)>=p.potential)return;                 // já atingiu o potencial
     const ageF=p.age<=19?1.5:p.age<=23?1.15:p.age<=27?0.7:p.age<=31?0.4:0.15; // mais novo => maior incremento
-    const playF=played.has(p.id)?1.35:0.35;                                // JOGAR (mesmo poucos minutos) evolui mais; no banco evolui pouco
+    let playF=played.has(p.id)?1.35:0.35;                                  // JOGAR (mesmo poucos minutos) evolui mais; no banco evolui pouco
+    if(typeof coachHas==="function"&&coachHas("formador"))playF*=1.2;       // perk Formador: evoluem mais depressa
     if(Math.random()<0.11*ageF*playF){
       const focus=p.trainFocus||"Equilibrado", foc=FOCUS_ATTRS[focus]||null, prof=PROFILES[p.pos]||{};
       let pool=ATTR_KEYS.filter(k=>prof[k]&&(!foc||foc.includes(k))); if(!pool.length)pool=ATTR_KEYS.filter(k=>prof[k]);
@@ -1666,7 +1688,7 @@ function updateMorale(club,playedIds,gf,ga,derby){
       else { d-=25; addNews(p.name+" sente-se enganado — prometeste minutos que não deste."); }
       p.promise.active=false;
     }
-    if(d<0){ let m=1; if(hasTrait(p,"temperamental"))m*=1.5; if(hasTrait(p,"profissional")||hasTrait(p,"veterano")||hasTrait(p,"lider"))m*=0.6; d*=m; }  // traços moldam as quedas de moral
+    if(d<0){ let m=1; if(hasTrait(p,"temperamental"))m*=1.5; if(hasTrait(p,"profissional")||hasTrait(p,"veterano")||hasTrait(p,"lider"))m*=0.6; if(typeof coachHas==="function"&&coachHas("motivador"))m*=0.85; d*=m; }  // traços + perk Motivador moldam as quedas de moral
     p.morale=clamp(Math.round(p.morale+d),0,100);
   });
   club.squad.forEach(p=>{                                                            // jogadores muito insatisfeitos agem
@@ -1686,7 +1708,8 @@ function talkResolve(tone, ctx){
   else if(tone==="Exigente") s=(mor>=55?0.3:-0.6)+(fav<=0?0.2:0)+((phase==="ht"&&diff<0)?0.4:0)-(fav>=2?0.3:0);
   else if(tone==="Confiante") s=0.05+(fav>=1?0.45:0)+(mor>=65?0.3:0)-(fav<=-1?0.4:0)-((phase==="ht"&&diff>=2)?0.4:0);
   s+=rnd(-0.25,0.25);
-  if(s>=0.45)return {result:"bom", moraleDelta:6, boost:0.06, msg:pick(TALK_MSG.bom)};
+  const mo=(typeof coachHas==="function"&&coachHas("motivador"))?1.25:1;            // perk Motivador: palestras mais eficazes
+  if(s>=0.45)return {result:"bom", moraleDelta:6, boost:0.06*mo, msg:pick(TALK_MSG.bom)};
   if(s<=-0.35)return {result:"mau", moraleDelta:-6, boost:-0.05, msg:pick(TALK_MSG.mau)};
   return {result:"neutro", moraleDelta:1, boost:0, msg:pick(TALK_MSG.neutro)};
 }
@@ -1933,7 +1956,7 @@ const ACHS=[
 function ensureAch(){ if(!G.ach)G.ach={un:{},nn:[],promos:0}; if(!G.ach.un)G.ach.un={}; if(!G.ach.nn)G.ach.nn=[]; if(G.ach.promos==null)G.ach.promos=0; return G.ach; }
 function achDef(k){ return ACHS.find(a=>a.k===k); }
 function unlockAch(k){ const A=ensureAch(); if(A.un[k])return false; const def=achDef(k); if(!def)return false;
-  A.un[k]=G.season||1; A.nn.push(k); addNews("🏅 Conquista desbloqueada: "+def.t+" — "+def.d); return true; }
+  A.un[k]=G.season||1; A.nn.push(k); addNews("🏅 Conquista desbloqueada: "+def.t+" — "+def.d); if(typeof addXP==="function")addXP(25); return true; }
 function checkCareerAch(){ const w=(G.manager&&G.manager.stats&&G.manager.stats.W)||0; if(w>=10)unlockAch("vit10"); if(w>=50)unlockAch("vit50"); if(w>=100)unlockAch("vit100"); }
 function checkMatchAch(gf,ga,derby,wasDown2){
   if(gf>ga){ unlockAch("estreia"); if(gf>=5)unlockAch("goleada"); if(derby)unlockAch("derbi"); if(wasDown2)unlockAch("remontada"); }
@@ -1953,6 +1976,23 @@ function resolveChallenge(gf,ga,cards){
   else addNews("❌ Desafio da jornada falhado: "+ch.label+".");
   G.challenge=null;
 }
+/* ---------- Progressão do treinador (XP / nível / perks) ---------- */
+const COACH_PERKS={
+  motivador:{t:"Motivador", ramo:"Motivador", ic:"🗣️", d:"Palestras mais eficazes e moral mais estável."},
+  tatico:   {t:"Tático",    ramo:"Tático",    ic:"📋", d:"Ligeiro reforço no rendimento da equipa."},
+  formador: {t:"Formador",  ramo:"Formador",  ic:"🎓", d:"Jogadores evoluem mais depressa e menos lesões de treino."}
+};
+function ensureCoach(){ if(!G.coach)G.coach={xp:0,level:1,points:0,perks:{},nn:[]}; if(!G.coach.perks)G.coach.perks={}; if(!G.coach.nn)G.coach.nn=[]; return G.coach; }
+function coachNeed(level){ return 150+(level-1)*100; }              // XP para subir do 'level' ao seguinte
+function coachLevelInfo(){ const C=ensureCoach(); let lvl=1, rem=C.xp||0; while(rem>=coachNeed(lvl)){ rem-=coachNeed(lvl); lvl++; } return {level:lvl, into:rem, need:coachNeed(lvl)}; }
+function coachLicense(level){ return level>=12?"Pro":level>=9?"A":level>=6?"B":level>=3?"C":"D"; }
+function addXP(n){ const C=ensureCoach(); if(!n)return; const before=coachLevelInfo().level; C.xp=(C.xp||0)+n; const after=coachLevelInfo().level;
+  C.level=after;
+  if(after>before){ C.points=(C.points||0)+(after-before); C.nn.push(after); G.manager.reputation=clamp((G.manager.reputation||40)+2*(after-before),0,100);
+    addNews("📈 Subiste ao nível "+after+" de treinador (licença "+coachLicense(after)+")! Ponto(s) de treinador para gastar: "+C.points+"."); } }
+function coachHas(perk){ return !!(typeof G!=="undefined"&&G&&G.coach&&G.coach.perks&&G.coach.perks[perk]); }
+function coachBuy(perk){ const C=ensureCoach(); if(!COACH_PERKS[perk])return {ok:false,msg:""}; if(C.perks[perk])return {ok:false,msg:"Já tens este perk."}; if((C.points||0)<=0)return {ok:false,msg:"Não tens pontos de treinador."};
+  C.perks[perk]=true; C.points--; addNews("🧠 Perk desbloqueado: "+COACH_PERKS[perk].t+" — "+COACH_PERKS[perk].d); save(); return {ok:true,msg:"Perk: "+COACH_PERKS[perk].t}; }
 function updateRecordsMatch(gf,ga,oppName){
   const R=ensureRecords();
   if(gf>ga){ G.streakW++; G.streakU++; const m=gf-ga;
@@ -2112,7 +2152,7 @@ if(typeof module!=="undefined"&&module.exports){
     offRateFrom,createLive,liveStep,liveSub,liveSetTactic,aiMaybeSub,liveBench,liveResult,liveApplyEnergy,liveMaxSubs,liveReg,liveHalftime,liveDispMin,
     transferFee,transferWindow,transferWindowOpen,transferTick,transferWindowState,transferDayTick,makeOneOffer,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
     ensureDays,startGap,matchDay,daysToMatch,dayTick,advanceDay,advanceToNextStop,flushToMatch,
-    toggleLoanList,acceptLoanOffer,loanInList,loanInPlayer,returnLoans,trainingInjuryTick,
+    toggleLoanList,acceptLoanOffer,loanInList,loanInPlayer,loanInOk,squadRefLevel,returnLoans,trainingInjuryTick,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     rollInjury,injuryLabel,applyMatchSuspensions,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
@@ -2120,6 +2160,7 @@ if(typeof module!=="undefined"&&module.exports){
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,
     ensureRecords,updateRecordsMatch,endSeasonAwards,ensureCareer,careerNewSpell,recordCareerSeason,
     ACHS,ensureAch,unlockAch,achDef,checkMatchAch,CHALS,newChallenge,resolveChallenge,
+    COACH_PERKS,ensureCoach,coachNeed,coachLevelInfo,coachLicense,addXP,coachHas,coachBuy,
     ensureRoles,setRole,roleTakerId,penMissChance,fkMissChance,captainFactor,cornerBoost,bestFieldByAttr,
     ensureInstr,setInstr,instrEffect,instrHeaderBoost,
     ensureCapMood,captainMoodTick,resolveCaptainMeeting,maybeDiscipline,resolveDiscipline,teamMoraleDelta,

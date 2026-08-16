@@ -169,6 +169,33 @@ function openAchievements(){
   mo.querySelector("#acClose").onclick=close; mo.querySelector("#acOk").onclick=close;
   mo.onclick=e=>{if(e.target===mo)close();};
 }
+function openCoach(){
+  const C=(typeof ensureCoach==="function")?ensureCoach():(G.coach||{xp:0,level:1,points:0,perks:{}});
+  const info=(typeof coachLevelInfo==="function")?coachLevelInfo():{level:C.level||1,into:0,need:150};
+  const lic=(typeof coachLicense==="function")?coachLicense(info.level):"D";
+  const pct=Math.round((info.into/Math.max(1,info.need))*100);
+  const perks=(typeof COACH_PERKS!=="undefined")?COACH_PERKS:{};
+  const rows=Object.keys(perks).map(k=>{ const P=perks[k], got=C.perks&&C.perks[k];
+    return `<div class="row" style="gap:10px;align-items:center;border-bottom:1px solid var(--line);padding:8px 2px">
+      <div style="font-size:22px;width:28px;text-align:center">${P.ic}</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:13px">${P.t} <span class="muted" style="font-size:11px">· ${P.ramo}</span></div><div class="muted" style="font-size:11px">${P.d}</div></div>
+      ${got?`<span style="color:var(--green2);font-weight:800;font-size:12px">✓ Ativo</span>`:`<button class="btn sec small" data-perk="${k}" ${(C.points||0)>0?'':'disabled style="opacity:.45"'}>Desbloquear</button>`}</div>`;
+  }).join("");
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><button class="close" id="coClose">✕</button>
+    <div style="font-weight:800;font-size:16px;margin-bottom:2px">🧠 Treinador · Nível ${info.level}</div>
+    <div class="muted" style="font-size:12px;margin-bottom:8px">Licença ${lic} · ${C.points||0} ponto(s) por gastar</div>
+    <div class="muted" style="font-size:11px;margin-bottom:3px">XP para o nível ${info.level+1}: ${info.into}/${info.need}</div>
+    <div class="barwrap" style="margin-bottom:12px"><div class="bar" style="width:${pct}%;background:var(--accent)"></div></div>
+    <h2 style="color:var(--muted);font-size:12px;margin:2px 0 2px">Perks (permanentes)</h2>${rows}
+    <div class="muted" style="font-size:11px;margin-top:8px">Ganha XP jogando, vencendo, subindo de divisão e desbloqueando conquistas.</div>
+    <button class="btn" id="coOk" style="margin-top:12px">Fechar</button></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#coClose").onclick=close; mo.querySelector("#coOk").onclick=close;
+  mo.querySelectorAll("[data-perk]").forEach(b=>b.onclick=()=>{ if(typeof coachBuy==="function"){const r=coachBuy(b.dataset.perk); if(r&&r.msg)toast(r.msg);} close(); openCoach(); });
+  mo.onclick=e=>{if(e.target===mo)close();};
+}
 function textOn(hex){const c=hex.replace("#","");const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)>150?"#111":"#fff";}
 function ratingClass(v){return v>=72?"r-hi":v>=60?"r-mid":"r-lo";}
 function posClass(pos){return "pos-"+GROUP[pos];}
@@ -206,6 +233,11 @@ function render(){
     const names=G.ach.nn.map(k=>{const dfn=(typeof achDef==="function")?achDef(k):null;return dfn?dfn.ic+" "+dfn.t:k;});
     toast("🏅 Conquista"+(names.length>1?"s":"")+": "+names.join(" · "));
     G.ach.nn=[]; if(typeof save==="function")save();
+  }
+  if(G.coach&&G.coach.nn&&G.coach.nn.length){                             // notifica subida de nível
+    const lv=G.coach.nn[G.coach.nn.length-1];
+    toast("📈 Nível "+lv+" de treinador! "+(G.coach.points||0)+" ponto(s) para gastar.");
+    G.coach.nn=[]; if(typeof save==="function")save();
   }
 }
 function renderNav(){
@@ -507,7 +539,8 @@ function viewHome(){
         <div class="stat"><div class="v">${st.GA}</div><div class="l">Golos sofridos</div></div></div>
       <div class="muted" style="font-size:12px;margin-bottom:4px">Troféus (${tr.length})</div>
       ${tr.length? tr.slice().reverse().map(t=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:5px 2px;font-size:13px"><span>${t.type==="cup"?"🏆":t.type==="league"?"🥇":"⬆️"} ${t.name}</span><span class="muted" style="font-size:12px">época ${t.season}</span></div>`).join("") : `<div class="muted" style="font-size:13px">Ainda sem troféus — vai à luta!</div>`}
-      <button class="btn sec small" id="btnCareer" style="width:100%;margin-top:10px">📖 História de carreira</button>
+      <button class="btn sec small" id="btnCoach" style="width:100%;margin-top:10px">🧠 Treinador${(function(){const C=(typeof ensureCoach==="function")?ensureCoach():(G.coach||{});const info=(typeof coachLevelInfo==="function")?coachLevelInfo():{level:C.level||1};return " · Nv "+info.level+((C.points||0)>0?" ("+C.points+"●)":"");})()}</button>
+      <button class="btn sec small" id="btnCareer" style="width:100%;margin-top:8px">📖 História de carreira</button>
       <button class="btn sec small" id="btnAch" style="width:100%;margin-top:8px">🏅 Conquistas${(function(){const A=(typeof ensureAch==="function")?ensureAch():(G.ach||{un:{}});const n=A&&A.un?Object.keys(A.un).length:0;const tot=(typeof ACHS!=="undefined")?ACHS.length:0;return tot?` (${n}/${tot})`:'';})()}</button>
       <button class="btn sec small" id="btnRecords2" style="width:100%;margin-top:8px">🏅 Recordes & Prémios</button>
     </div>`;
@@ -1499,6 +1532,7 @@ function bindView(){
   const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();
   const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();
   const bcar=$("#btnCareer");if(bcar)bcar.onclick=()=>openCareer();
+  const bcoach=$("#btnCoach");if(bcoach)bcoach.onclick=()=>openCoach();
   const bach=$("#btnAch");if(bach)bach.onclick=()=>openAchievements();
   const bpo=$("#btnPlayoff");if(bpo)bpo.onclick=()=>{if(meetBlock())return;playPlayoff();};
   const bsc=$("#btnSuperCup");if(bsc)bsc.onclick=()=>{if(meetBlock())return;playSuperCup();};
@@ -1598,7 +1632,7 @@ function splashScreen(){
 function boot(){
   document.getElementById("splash")?.remove();
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();if(G.press&&!G.press.qs)G.press=null;TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();if(typeof ensureCoach==="function")ensureCoach();if(G.press&&!G.press.qs)G.press=null;TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }

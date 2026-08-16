@@ -24,6 +24,8 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-08-16", texto:"🧠 Progressão do treinador: ganhas XP a jogar, vencer, subir de divisão e desbloquear conquistas; sobes de nível (com licenças D→Pro) e ganhas pontos para desbloquear perks permanentes — Motivador, Tático e Formador. Vê tudo no botão «Treinador» do painel." },
+    { data:"2026-08-16", texto:"🔁 Empréstimos mais realistas: clubes e jogadores recusam vir de divisões muito superiores ou quando são muito melhores do que o teu plantel — deixa de ser possível encher a equipa de reforços da divisão de topo." },
     { data:"2026-08-16", texto:"🎤 Conferências de imprensa melhoradas: podem ter várias perguntas, mostram o efeito de cada resposta (moral, direção, reputação, rival) e trazem perguntas inusitadas/cómicas que às vezes lançam boatos. Os jogos da Taça passam a ter conversa de balneário antes do apito, e os pedidos de jogadores ambiciosos são agora mais espaçados." },
     { data:"2026-08-15", texto:"🏅 Conquistas & desafios: há 16 conquistas para desbloqueares ao longo da carreira (campeão, invicto, vencer a Taça, remontadas, goleadas, dérbis, formar jovens...) com ecrã próprio no painel do treinador. E cada jornada traz um desafio opcional (vencer sem sofrer, marcar 3+, jogo limpo...) que dá recompensa se o cumprires." },
     { data:"2026-08-15", texto:"🎛️ Instruções táticas rápidas: define Pressão (bloco/normal/alta), Ritmo (cauto/normal/rápido), Foco (equilibrado/alas/meio) e Entradas (normais/duras) — na Tática e a meio do jogo. Cada opção tem o seu custo (energia, cartões) e influencia tanto os jogos ao vivo como os simulados." },

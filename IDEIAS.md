@@ -19,7 +19,7 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 ## Profundidade de gestão
 - ✅ 🔧 Academia de jovens — juniores separados, nível 1-5, intake por época, desenvolvimento com foco, potencial em estrelas, empréstimos, promover/dispensar.
 - ✅ 🔧 Contratos e salários — teto de massa salarial, salário por jogador, fim de contrato → livre, mercado de livres, renovações.
-- ✅ 🔧 Empréstimos — **ceder ✅** e **receber ✅** (separador Empréstimos no mercado, sem custo de transferência, salário 100% ou 50/50, regressa no fim da época; não pode ser vendido/cedido/dispensado).
+- ✅ 🔧 Empréstimos — **ceder ✅** e **receber ✅** (separador Empréstimos no mercado, sem custo de transferência, salário 100% ou 50/50, regressa no fim da época; não pode ser vendido/cedido/dispensado). Clubes/jogadores **recusam** empréstimos de divisões muito superiores ou de qualidade muito acima do plantel.
 - ✅ ⚡ Suspensões por amarelos (5 = 1 jogo), vermelho direto = 2 jogos / 2º amarelo = 1 jogo; lesões com gravidade variável. Marcadores no plantel e na ficha.
 - ✅ 🔧 **Papéis de equipa** — **Fase 1 ✅**: seleção (capitão/penáltis/livres/cantos) restrita ao onze e ordenada; o atributo do batedor mexe na conversão de penáltis e livres; capitão dá empurrão à equipa; braçadeira e livre desperdiçado no relato. **Fase 2 ✅**: drama do capitão — medidor de descontentamento (banco/substituição), contágio de moral, reunião da direção, protesto raro no 1º minuto e saída aziada com relato caricato. **Fase 3 ✅**: cartões de indisciplina (chegar tarde/faltar ao treino, bar na véspera…) com justificação séria/cómica e castigo interno selecionável (suspensão › multa cómica › repreensão) ou ilibar, com consequências na moral e reputação.
 
@@ -43,7 +43,8 @@ Esforço: ⚡ rápido · 🔧 médio · 🏗️ maior · Estado: ⬜ por fazer �
 - ✅ 🔧 Eventos e notícias com histórias — wonderkid, pedido de saída, direção (via eventos de escolha + rival).
 - ✅ 🔧 **Traços de personalidade** — líder, veterano, profissional, temperamental, boa-vida, cria-caso, ambicioso; moldam a moral, a indisciplina (quem se mete em sarilhos) e a aptidão para capitão. Mostrados na ficha.
 - ✅ 🔧 **Conferências de imprensa** — véspera (no loop de dias) e pós-jogo, com **várias perguntas**, **indicador do efeito** de cada resposta e perguntas **inusitadas/cómicas** que podem lançar **boatos**. Também na Taça (com conversa de balneário antes do jogo).
-- ✅ ⚡ **Pedidos de jogadores** — ambiciosos no banco pedem minutos (paragem no loop); prometes, dás confiança ou dizes que têm de merecer.
+- ✅ ⚡ **Pedidos de jogadores** — ambiciosos no banco pedem minutos (paragem no loop, com arrefecimento); prometes, dás confiança ou dizes que têm de merecer.
+- ✅ 🔧 **Progressão do treinador** — XP (jogos, vitórias, subidas, troféus, conquistas) → níveis + licenças (D→Pro) + pontos; 3 perks permanentes subtis (Motivador, Tático, Formador) com ecrã próprio.
 - ✅ ⚡ **Tutorial rápido** no primeiro arranque — guia de 7 passos (objetivo, tática/papéis, jogar/simular, plantel/academia, mercado/empréstimos, balneário), reabrível em Início → Como jogar.
 
 ## Técnico / UX
@@ -67,5 +68,4 @@ Ideias novas (discutidas, ainda por entrar):
 4. ⚡–🔧 **Retrospetiva da época partilhável** — cartão/story "a tua época em números" (viral, barato).
 5. 🔧 **Cromos do plantel** — coleção de cartas dos jogadores para partilhar.
 6. 🔧–🏗️ **Instalações/infraestruturas** — treino, dep. médico (menos lesões), academia, estádio (receita).
-7. 🔧 **Progressão do treinador** — licenças + árvore de perks (motivador/tático/formador).
-8. ⚡ **Resumo/destaques do jogo** — recap em texto dos momentos-chave (bom para quem simula).
+7. ⚡ **Resumo/destaques do jogo** — recap em texto dos momentos-chave (bom para quem simula).
