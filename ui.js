@@ -922,6 +922,11 @@ function viewMarket(){
   let h=`<div class="card between row"><div>Verba · ${myDivObj().name}</div><div class="big" style="font-size:18px">${money(meC.budget)}</div></div>`;
   h+=`<div class="card between row" style="padding:10px 12px"><div>Massa salarial <span class="muted" style="font-size:11px">/época</span></div>
     <div style="text-align:right"><b>${money(bill)}</b> <span class="muted">/ ${money(cap)}</span><div class="muted" style="font-size:11px;color:${room2<0.03?'var(--red)':'var(--muted)'}">espaço ${money(room2)}</div></div></div>`;
+  const boost=G.wageBoost||0;
+  h+=`<div class="card" style="padding:9px 12px"><div class="row between" style="align-items:center">
+    <div style="font-size:13px">Ajustar teto salarial <span class="muted" style="font-size:11px">(usa a verba)</span></div>
+    <div class="row" style="gap:6px"><button class="btn sec small" id="capMinus" style="padding:4px 12px">−</button><button class="btn sec small" id="capPlus" style="padding:4px 12px">＋</button></div></div>
+    <div class="muted" style="font-size:11px;margin-top:5px">Passa €50K de cada vez entre a verba de transferências e o teto salarial.${boost>0?` Já converteste ${money(boost)}.`:""}</div></div>`;
   const room=budgetCapRoom(), askDis=room<=0.005;
   h+=`<div class="card" style="padding:8px"><button class="btn sec small" id="btnAskBudget" style="width:100%${askDis?';opacity:.45':''}"${askDis?' disabled':''}>🏦 ${askDis?'Teto de reforço atingido (30%)':'Pedir reforço de verba à direção'}</button>
     <div class="muted" style="font-size:11px;margin-top:6px;text-align:center">Reforço disponível esta época: até ${money(room)}.</div></div>`;
@@ -1586,8 +1591,8 @@ function bindView(){
   const bco=$("#btnContinue");if(bco)bco.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const r=(typeof advanceToNextStop==="function")?advanceToNextStop():"match";render();if(r==="offer")toast("📩 Recebeste uma proposta.");else if(r==="match")toast("🗓️ Dia de jogo!");};
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}openPreMatch(nx,(boost)=>playMatchAnimated(boost));};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
-  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();let n=0;while(d.week<d.fixtures.length){const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st)break;playWeek();n++;if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.discipline&&G.discipline.active)||(G.press&&G.press.active)||(G.playerReq&&G.playerReq.active)||(G.event&&!G.fired)||G.fired||G.seasonDone)break;}toast(n+" jornada(s) simulada(s)");render();};
-  const bs1=$("#btnSim1");if(bs1)bs1.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}playWeek();toast("Resultado: "+lastUserResultTxt());render();};
+  const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();let n=0;if(typeof setSim==="function")setSim(true);try{while(d.week<d.fixtures.length){const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st)break;playWeek();n++;if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.discipline&&G.discipline.active)||(G.event&&!G.fired)||G.fired||G.seasonDone)break;}}finally{if(typeof setSim==="function")setSim(false);}toast(n+" jornada(s) simulada(s)");render();};
+  const bs1=$("#btnSim1");if(bs1)bs1.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(typeof setSim==="function")setSim(true);try{const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}playWeek();}finally{if(typeof setSim==="function")setSim(false);}toast("Resultado: "+lastUserResultTxt());render();};
   const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();
   const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();
   const bcar=$("#btnCareer");if(bcar)bcar.onclick=()=>openCareer();
@@ -1633,6 +1638,8 @@ function bindView(){
   document.querySelectorAll("[data-scoutmk]").forEach(el=>el.onclick=e=>{if(e.target.closest("[data-club]"))return;const from=+el.dataset.mkfrom,p=myClubs()[from]&&myClubs()[from].squad.find(x=>x.id===+el.dataset.scoutmk);if(p)openScout(p,{fromId:from,clubName:myClubs()[from].short});});
   document.querySelectorAll("[data-club]").forEach(el=>el.onclick=e=>{e.stopPropagation();openClubSquad(el.dataset.club);});
   const bab=$("#btnAskBudget");if(bab)bab.onclick=()=>{const r=requestBudget();toast(r.msg);render();};
+  const cp=$("#capPlus");if(cp)cp.onclick=()=>{const r=adjustWageCap(0.05);if(r&&r.msg)toast(r.msg);render();};
+  const cm=$("#capMinus");if(cm)cm.onclick=()=>{const r=adjustWageCap(-0.05);if(r&&r.msg)toast(r.msg);render();};
   const sl=$("#segLeague");if(sl)sl.querySelectorAll("button").forEach(b=>b.onclick=()=>{tableTab=b.dataset.t;render();});
   const segDT=$("#segDivT");if(segDT)segDT.querySelectorAll("button").forEach(b=>b.onclick=()=>{const dt=+b.dataset.dt; if(G.divisions[leagueDiv].tier!==dt)leagueDiv=+b.dataset.idx; render();});
   const segST=$("#segSerT");if(segST)segST.querySelectorAll("button").forEach(b=>b.onclick=()=>{leagueDiv=+b.dataset.d;render();});

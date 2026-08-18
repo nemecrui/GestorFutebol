@@ -920,15 +920,16 @@ function simRound(d,preMy,hasUser){
   });
   d.results.push(weekRes); d.week++;
 }
+let SIM=false; function setSim(v){ SIM=!!v; }   // durante a simulação, não geramos perguntas/pedidos/conferências
 function playWeek(preMy){
   const myD=myDivObj(); if(myD.week>=myD.fixtures.length)return;
   simRound(myD,preMy,true);
   boardAfterUserMatch();
   checkShortObjective();                    // período de prova acordado numa reunião
   if(!G.fired)maybeBoardMeeting();           // maus resultados podem gerar nova reunião
-  if(!G.fired)maybeEvent();                  // eventos de história (reação ao último jogo)
+  if(!G.fired && !SIM)maybeEvent();          // eventos de história (só quando jogas, não a simular)
   if(!G.fired)captainMoodTick(preMy);        // descontentamento do capitão (banco/substituições)
-  if(!G.fired && !G.press && Math.random()<0.55){                                  // conferência de imprensa pós-jogo
+  if(!G.fired && !SIM && !G.press && Math.random()<0.55){                          // conferência de imprensa pós-jogo
     const res=myDivObj().results[myDivObj().results.length-1]||[]; const my=res.find(x=>x.h===G.myId||x.a===G.myId);
     let r="draw"; if(my){ const isH=my.h===G.myId, gf=isH?my.hg:my.ag, ga=isH?my.ag:my.hg; r=gf>ga?"win":gf<ga?"loss":"draw"; }
     const pr=buildPress("post",{result:r}); if(pr)G.press=pr;
@@ -951,8 +952,8 @@ function daysToMatch(){ ensureDays(); return Math.max(0,(G.dayGap||0)-(G.dayCurs
 function dayTick(){                                              // o que pode acontecer num dia entre jogos
   if(G.fired)return null;
   const busy=(G.discipline&&G.discipline.active)||G.event||(G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.press&&G.press.active)||(G.playerReq&&G.playerReq.active);
-  if(!busy && !G.pressPreDone && daysToMatch()<=2 && Math.random()<0.55){ const pr=buildPress("pre"); if(pr){ G.press=pr; G.pressPreDone=true; return "press"; } }   // conferência da véspera
-  if(!busy){ const rq=maybePlayerRequest(); if(rq)return rq; }   // pedido de um jogador ambicioso
+  if(!busy && !SIM && !G.pressPreDone && daysToMatch()<=2 && Math.random()<0.55){ const pr=buildPress("pre"); if(pr){ G.press=pr; G.pressPreDone=true; return "press"; } }   // conferência da véspera (não a simular)
+  if(!busy && !SIM){ const rq=maybePlayerRequest(); if(rq)return rq; }   // pedido de um jogador ambicioso (não a simular)
   if(!busy && Math.random()<0.2){ maybeDiscipline(); if(G.discipline&&G.discipline.active)return "discipline"; }
   const o=transferDayTick(); if(o)return o;                     // proposta recebida (paragem "soft")
   return null;
@@ -1134,7 +1135,7 @@ function newSeason(){
   const kitty=budgetForObjective(G.myTier,me().objective);            // verba nova conforme aspiração desta época
   me().budget=Math.round((me().budget+kitty)*100)/100;              // soma à que transitou (incl. prémios)
   G.seasonStartBudget=me().budget; G.budgetGranted=0;
-  refreshFreeAgents(); G.wageBase=wageBill(me());
+  refreshFreeAgents(); G.wageBase=wageBill(me()); G.wageBoost=0;
   addNews("Verba de transferências para a época: "+money(me().budget)+" (aspiração: "+me().objective.label+").");
   if(myMove==="up")addNews("Subiste de divisão!");
   else if(myMove==="down")addNews("Desceste de divisão.");
@@ -1784,9 +1785,26 @@ function wageHead(){ const obj=me().objective||{};
   return {title:1.75,promo:1.60,top:1.48,mid:1.38,survive:1.25}[obj.type]||1.42;  // folga sobre a massa de arranque, conforme aspiração
 }
 function ensureWageBase(){ if(G.wageBase==null||G.wageBase<=0)G.wageBase=wageBill(me()); return G.wageBase; }  // massa salarial no início da época (referência fixa)
-function wageCapFor(){ return Math.round(ensureWageBase()*wageHead()*100)/100; }
+function wageCapFor(){ return Math.round((ensureWageBase()*wageHead()+(G.wageBoost||0))*100)/100; }   // + reforço financiado pela verba
 function ensureWageCap(){ return wageCapFor(); }
 function wageRoom(){ return Math.round((wageCapFor()-wageBill(me()))*100)/100; }
+function adjustWageCap(delta){                          // mover verba <-> teto salarial (delta>0: verba->teto; delta<0: teto->verba)
+  delta=Math.round((delta||0)*100)/100; if(!delta)return {ok:false,msg:""};
+  const meC=me();
+  if(delta>0){
+    if((meC.budget||0) < delta)return {ok:false,msg:"Verba insuficiente."};
+    meC.budget=Math.round((meC.budget-delta)*100)/100; G.wageBoost=Math.round(((G.wageBoost||0)+delta)*100)/100;
+    addNews("💼 Passaste "+money(delta)+" da verba para o teto salarial.");
+  } else {
+    const back=-delta;
+    const room=wageRoom();                              // não podes baixar o teto abaixo da massa salarial atual
+    const canRemove=Math.min(back, (G.wageBoost||0), Math.max(0,room));
+    if(canRemove<=0.005)return {ok:false,msg:"Sem folga no teto para devolver à verba."};
+    G.wageBoost=Math.round(((G.wageBoost||0)-canRemove)*100)/100; meC.budget=Math.round((meC.budget+canRemove)*100)/100;
+    addNews("💼 Devolveste "+money(canRemove)+" do teto salarial à verba de transferências.");
+  }
+  save(); return {ok:true};
+}
 function ensureFreeAgents(){ if(!G.freeAgents)G.freeAgents=[]; return G.freeAgents; }
 function makeFreeAgent(level){ const p=makePlayer(pick(POSITIONS.filter(x=>x!=="GR"||Math.random()<0.12)), level); if(p.age<22)p.age=ri(22,30); p.contractYears=0; p.transferListed=false; p.onLoan=false; return p; }
 function seedFreeAgents(n,level){ const A=ensureFreeAgents(); for(let k=0;k<n;k++)A.push(makeFreeAgent(clamp(level+ri(-2,2),4,15))); }
@@ -2152,7 +2170,7 @@ if(typeof module!=="undefined"&&module.exports){
     buyAsk,makeBid,completeBuy,
     offRateFrom,createLive,liveStep,liveSub,liveSetTactic,aiMaybeSub,liveBench,liveResult,liveApplyEnergy,liveMaxSubs,liveReg,liveHalftime,liveDispMin,
     transferFee,transferWindow,transferWindowOpen,transferTick,transferWindowState,transferDayTick,makeOneOffer,aiTransfer,makePlayerOffers,acceptOffer,rejectOffer,
-    ensureDays,startGap,matchDay,daysToMatch,dayTick,advanceDay,advanceToNextStop,flushToMatch,
+    ensureDays,startGap,matchDay,daysToMatch,dayTick,advanceDay,advanceToNextStop,flushToMatch,setSim,adjustWageCap,
     toggleLoanList,acceptLoanOffer,loanInList,loanInPlayer,loanInOk,squadRefLevel,returnLoans,trainingInjuryTick,
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     rollInjury,injuryLabel,applyMatchSuspensions,
