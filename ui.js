@@ -1775,7 +1775,12 @@ function initAnalytics(){
     document.head.appendChild(sc);
   }catch(e){}
 }
-function track(path,title){ try{ if(window.goatcounter&&window.goatcounter.count) window.goatcounter.count({path:path,title:title||path,event:true}); }catch(e){} }
+function track(path,title){ try{ if(window.goatcounter&&window.goatcounter.count){
+  // token único para o GoatCounter NÃO deduplicar (conta TODOS os jogos, não só o 1º da sessão).
+  // Com "Collect query parameters" desligado (predefinição) o painel agrupa na mesma por "jogo/CAC".
+  const uniq=path+(path.indexOf("?")<0?"?":"&")+"n="+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  window.goatcounter.count({path:uniq,title:title||path,event:true});
+} }catch(e){} }
 // chamado pelo motor a cada jogo do campeonato — conta jogos jogados por equipa (com treinador no título)
 function onManagerMatch(){ try{ if(typeof G!=="undefined"&&G&&G.manager) track("jogo/"+me().short, G.manager.name+" · "+me().name+" ("+myDivObj().name+")"); }catch(e){} }
 
