@@ -28,3 +28,9 @@ clube a clube — quem não tiver emblema aqui continua com o losango das cores.
 - Se o caminho estiver errado ou o ficheiro faltar, o jogo volta automaticamente às cores do clube — nunca fica um espaço vazio.
 - `exemplo.svg` é só uma demonstração; podes apagá-lo quando tiveres emblemas reais.
 - Guarda aqui apenas emblemas de clubes que deram autorização.
+
+
+cd C:\Projetos\GestorFutebol
+git add data.js crests/
+git commit -m "Simbolos adicionados"
+git push

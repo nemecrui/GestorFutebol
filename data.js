@@ -139,7 +139,8 @@ const GAME_DATA = {
   crests: {
     // "Cachapuz WLS": "crests/cachapuz.svg",
     // "CD Maximinense": "crests/maximinense.png"
-	"AD Oliveirense": "crests/AD_Oliveirense.png"
+    "AD Oliveirense": "crests/AD_Oliveirense.png",
+    "Sequeirense FC": "crests/Sequeirense_FC.png"
   },
 
   /* ---- ADICIONAR clubes novos a uma divisão ----
