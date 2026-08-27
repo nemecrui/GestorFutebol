@@ -142,7 +142,12 @@ const GAME_DATA = {
     "AD Oliveirense": "crests/AD_Oliveirense.png",
     "Sequeirense FC": "crests/Sequeirense_FC.png",
 	"ACRD Arsenal Crespos": "crests/ArsenalCrespos.png",
-	"GD Serzedelo": "crests/GD_Serzedelo.png"
+	"GD Serzedelo": "crests/GD_Serzedelo.png",
+	"CDC Viatodos": "crests/CDC_Viatodos.png",
+	"Realense FC": "crests/Realense_FC.png",
+	"GDU Torcatense": "crests/GDU_Torcatense.png",
+	"ACDR Oleiros": "crests/ACDR_Oleiros.png",
+	"GD Adaúfe": "crests/GD_Adaufe.png"
   },
 
   /* ---- ADICIONAR clubes novos a uma divisão ----
