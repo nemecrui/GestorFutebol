@@ -6,6 +6,28 @@
 
 let TAB="home", tacSel=null, squadFilter="all", marketPos="all", tableTab="table", leagueDiv=null, squadTab="main", marketTab="clubs";
 let _lastTab=null, _prevCash=null;
+let deferredPrompt=null, installDismissed=false;   // instalação como app (PWA)
+function isStandalone(){ try{ return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone===true; }catch(e){ return false; } }
+function isIOSdev(){ try{ const ua=navigator.userAgent||""; return /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && "ontouchend" in document); }catch(e){ return false; } }
+function canInstall(){ return !isStandalone() && !installDismissed && (!!deferredPrompt || isIOSdev()); }
+function doInstall(){
+  if(deferredPrompt){ const dp=deferredPrompt; deferredPrompt=null; try{ dp.prompt(); if(dp.userChoice)dp.userChoice.then(()=>{ if(G)render(); }); }catch(e){ openInstallHelp(); } }
+  else { openInstallHelp(); }
+}
+function openInstallHelp(){
+  const ios=isIOSdev();
+  const mo=document.createElement("div");mo.className="modal";
+  mo.innerHTML=`<div class="box"><button class="close" id="ihClose">✕</button>
+    <div style="font-weight:800;font-size:16px;margin-bottom:8px">📲 Instalar como aplicação</div>
+    ${ios
+      ? `<div style="font-size:13px;line-height:1.6">1. Toca no botão <b>Partilhar</b> (o quadrado com a seta ⬆), na barra do Safari.<br>2. Desce e escolhe <b>“Adicionar ao ecrã inicial”</b>.<br>3. Confirma em <b>Adicionar</b>.</div>`
+      : `<div style="font-size:13px;line-height:1.6">No menu do browser (⋮, canto superior), escolhe <b>“Instalar aplicação”</b> ou <b>“Adicionar ao ecrã inicial”</b> e confirma.</div>`}
+    <div class="muted" style="font-size:12px;margin-top:10px">Fica com ícone próprio no telemóvel e abre em ecrã inteiro, como uma app — sem passar por nenhuma loja.</div>
+    <button class="btn" id="ihOk" style="margin-top:12px">Percebi</button></div>`;
+  document.body.appendChild(mo);
+  const close=()=>mo.remove();
+  mo.querySelector("#ihClose").onclick=close; mo.querySelector("#ihOk").onclick=close; mo.onclick=e=>{if(e.target===mo)close();};
+}
 const $=s=>document.querySelector(s);
 /* ---------- animações / dinamismo ---------- */
 let ANIM=true; try{ ANIM=(localStorage.getItem("gf_anim")!=="0"); }catch(e){}
@@ -408,6 +430,13 @@ function viewHome(){
   const rank=table.findIndex(x=>x.id===G.myId)+1;
   const next=nextFixture(), done=d.week>=d.fixtures.length;
   let h="";
+  if(canInstall()){
+    h+=`<div class="card" style="border-color:var(--accent);display:flex;gap:10px;align-items:center">
+      <div style="font-size:28px">📲</div>
+      <div style="flex:1"><div style="font-weight:800;font-size:14px">Instala no telemóvel</div><div class="muted" style="font-size:11px">Ícone próprio e ecrã inteiro, como uma app — sem loja.</div></div>
+      <button class="btn small" id="btnInstall">Instalar</button>
+      <button class="btn sec small" id="btnInstallX" title="Agora não" style="padding:6px 10px">✕</button></div>`;
+  }
   if(G.event && !G.fired) h+=eventCardHtml(G.event);
   if(G.fired){
     let fh=`<div class="card center"><h2 style="color:var(--red);justify-content:center">Foste despedido</h2>
@@ -595,6 +624,7 @@ function viewHome(){
     </div>`;
   }
   h+=`<div class="card"><button class="btn sec small" id="btnTut" style="width:100%;margin-bottom:8px">❓ Como jogar (guia rápido)</button>
+    ${!isStandalone()?`<button class="btn sec small" id="btnInstall2" style="width:100%;margin-bottom:8px">📲 Instalar como aplicação</button>`:""}
     <button class="btn sec small" id="btnAnim" style="width:100%;margin-bottom:8px">✨ Animações: ${ANIM?"ligadas":"desligadas"}</button>
     <button class="btn sec small" id="btnNews" style="width:100%;margin-bottom:8px">🔔 Novidades${hasNewsNew()?' <span style="color:var(--red);font-weight:900">•</span>':''}</button>
     <button class="btn sec small" id="btnSaves" style="width:100%;margin-bottom:8px">💾 Gravações · exportar / importar / trocar</button>
@@ -1606,6 +1636,9 @@ function bindView(){
   const bec=$("#btnEventCont");if(bec)bec.onclick=()=>{dismissEvent();render();};
   const bn=$("#btnNewSeason");if(bn)bn.onclick=()=>{newSeason();track("nova-epoca", G.manager.name+" · "+me().name+" ("+myDivObj().name+")");TAB="home";render();};
   const btt=$("#btnTut");if(btt)btt.onclick=()=>openTutorial();
+  const bin=$("#btnInstall");if(bin)bin.onclick=()=>doInstall();
+  const binx=$("#btnInstallX");if(binx)binx.onclick=()=>{ installDismissed=true; render(); };
+  const bin2=$("#btnInstall2");if(bin2)bin2.onclick=()=>doInstall();
   const ban=$("#btnAnim");if(ban)ban.onclick=()=>{ setAnim(!ANIM); toast("Animações "+(ANIM?"ligadas":"desligadas")); render(); };
   const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();
@@ -1797,6 +1830,10 @@ function initPWA(){
   // instalar como app real (WebAPK, sem o crachá do Chrome). Aqui só registamos o service worker.
   try{
     if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+  }catch(e){}
+  try{
+    window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferredPrompt=e; if(typeof G!=="undefined"&&G&&TAB==="home")render(); });   // guarda o convite do Android/Chrome
+    window.addEventListener("appinstalled", ()=>{ deferredPrompt=null; installDismissed=true; try{toast("App instalada! 🎉");}catch(e){} if(typeof G!=="undefined"&&G)render(); });
   }catch(e){}
 }
 function iconDataURL(size){
