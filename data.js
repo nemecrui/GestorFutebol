@@ -148,7 +148,11 @@ const GAME_DATA = {
 	"Realense FC": "crests/Realense_FC.png",
 	"GDU Torcatense": "crests/GDU_Torcatense.png",
 	"ACDR Oleiros": "crests/ACDR_Oleiros.png",
-	"GD Adaúfe": "crests/GD_Adaufe.png"
+	"GD Adaúfe": "crests/GD_Adaufe.png",
+	"Soarense SC": "crests/Soarense_SC.png",
+	"GD Gemeos": "crests/GD_Gemeos.png",
+	"FC Prazins Corvite": "crests/FC_Prazins_Corvite.png",
+	"GDC Serafão": "crests/GDC_Serafão.png"
   },
 
   /* ---- ADICIONAR clubes novos a uma divisão ----

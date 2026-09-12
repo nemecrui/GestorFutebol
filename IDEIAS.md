@@ -71,3 +71,16 @@ Ideias novas (discutidas, ainda por entrar):
 5. 🔧 **Cromos do plantel** — coleção de cartas dos jogadores para partilhar.
 6. 🔧–🏗️ **Instalações/infraestruturas** — treino, dep. médico (menos lesões), academia, estádio (receita).
 7. ⚡ **Resumo/destaques do jogo** — recap em texto dos momentos-chave (bom para quem simula).
+
+## Símbolos
+Já no jogo (emblema): Oliveirense, Sequeirense, Arsenal Crespos, Serzedelo, Viatodos, Realense, Torcatense, Oleiros, Adaúfe, **Soarense, Gémeos, Prazins/Corvite, Serafão** ✅
+
+Falta o **plantel real** (nomes verdadeiros) destes, quando tiveres as listas:
+1. Gémeos
+2. Prazins/Corvite
+3. Serafão
+4. Soarense
+
+A contactar (autorização de emblema): Caldelas (gdcaldelas@sapo.pt), Académico de Martim (academicofcmartim@gmail.com), Santo Adrião (geral@udcsantoadriao.pt).
+
+
