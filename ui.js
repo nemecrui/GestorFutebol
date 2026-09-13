@@ -1266,12 +1266,14 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     if(e.side)setPossTint(possSide=e.side);
     if(!seq){ processEvent(e); lastSeqAt=Date.now(); drainQueue(); return; }
     playSeq(seq.build, ()=>{
-      processEvent(e);
-      if(e.type==="goal"){                                               // deixa o festejo brilhar, mostra o relato quando desvanece
-        const rc=seq.reveal;
-        if(rc)setTimeout(()=>{ if(mo.parentNode && !seqActive){ setComment(rc,0); pauseUntil=Date.now()+Math.max(2600,dwell(rc)); if(mp)showAnim(mp.kind,mp.branch,e.side); } },1250);
+      if(e.type==="goal"){                                               // a animação + o relato SÃO a revelação; o festejo (banner/resultado) vem logo a seguir
+        if(mp)showAnim(mp.kind,mp.branch,e.side);
+        const rc=seq.reveal; if(rc)setComment(rc,0);
+        pauseUntil=Date.now()+Math.max(3200,(rc?dwell(rc):0)+1200);
+        setTimeout(()=>{ if(mo.parentNode)processEvent(e); }, 1050);     // banner/resultado/festejo quando a bola entra
         return null;
       }
+      processEvent(e);
       if(mp)showAnim(mp.kind,mp.branch,e.side);
       return seq.reveal;
     }); }
