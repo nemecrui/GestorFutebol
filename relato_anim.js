@@ -23,6 +23,8 @@ function relatoAnimType(kind, branch){
     if(kind==="header")   return "header_goal";
     if(kind==="own")      return "own_goal";
     if(kind==="latedrama")return "late_goal";
+    if(kind==="solo")     return "solo_goal";
+    if(kind==="counter")  return "counter_goal";
     return "goal";
   }
   if(branch==="save" || branch==="wall" || branch==="cleared") return (kind==="penalty") ? "pk_save" : "save";
@@ -35,6 +37,8 @@ function relatoAnimType(kind, branch){
 function relatoFolcloreAnim(lines){
   const t=(Array.isArray(lines)?lines.join(" "):String(lines||"")).toLowerCase();
   if(/\bc[ãa]o\b|cachorr/.test(t)) return "dog";
+  if(/galinha/.test(t)) return "chicken";
+  if(/pato/.test(t)) return "duck";
   if(/gaivota|pombo/.test(t)) return "bird";
   return null;
 }
@@ -133,6 +137,30 @@ body.noanim .gfra .conf{display:none}
 @keyframes gfra_rollBall{0%{transform:translate(20px,150px) rotate(0);opacity:1}92%{transform:translate(288px,150px) rotate(760deg);opacity:1}100%{opacity:0}}
 .gfra .bird{transform-origin:center;animation:gfra_birdBob 1.3s ease-in-out infinite}
 .gfra .rollBall{animation:gfra_rollBall 3s linear 1 both}
+
+/* isolado (1x1) */
+@keyframes gfra_soloBall{0%{transform:translate(50px,110px);opacity:1}30%{transform:translate(120px,104px)}50%{transform:translate(162px,78px)}70%{transform:translate(210px,94px) scale(.8);opacity:1}86%{transform:translate(210px,94px) scale(.8)}92%{opacity:0}100%{opacity:0}}
+@keyframes gfra_soloKeeper{0%,24%{transform:translate(0,0) rotate(0)}54%{transform:translate(-30px,12px) rotate(-26deg)}100%{transform:translate(-30px,12px) rotate(-26deg)}}
+.gfra .soloBall{animation:gfra_soloBall 2.8s cubic-bezier(.4,0,.5,1) 1 both}
+.gfra .soloKeeper{transform-origin:150px 100px;animation:gfra_soloKeeper 2.8s ease-in-out 1 both}
+
+/* contra-ataque */
+@keyframes gfra_ctrBall{0%{transform:translate(58px,112px);opacity:1}22%{transform:translate(116px,110px)}32%{transform:translate(116px,110px)}64%{transform:translate(210px,82px) scale(.78);opacity:1}86%{transform:translate(210px,82px) scale(.78)}92%{opacity:0}100%{opacity:0}}
+@keyframes gfra_speed{0%,12%{opacity:0;transform:translateX(0)}28%{opacity:.75}55%{opacity:0;transform:translateX(46px)}100%{opacity:0}}
+.gfra .ctrBall{animation:gfra_ctrBall 2.8s cubic-bezier(.3,0,.5,1) 1 both}
+.gfra .speed{animation:gfra_speed 2.8s ease-out 1 both}
+
+/* folclore: galinha */
+@keyframes gfra_chickWalk{0%{transform:translate(-34px,0)}100%{transform:translate(300px,0)}}
+@keyframes gfra_chickBob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-2px) rotate(5deg)}}
+.gfra .chick{animation:gfra_chickWalk 2.8s linear 1 both}
+.gfra .chickB{transform-origin:center;animation:gfra_chickBob .34s ease-in-out infinite}
+
+/* folclore: pato na poça */
+@keyframes gfra_duckBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes gfra_ripple{0%{transform:scale(.5);opacity:.55}100%{transform:scale(1.5);opacity:0}}
+.gfra .duck{transform-origin:center;animation:gfra_duckBob 1.1s ease-in-out infinite}
+.gfra .ripple{transform-origin:center;animation:gfra_ripple 2.2s ease-out infinite}
 `;
 
 function _raEnsureCSS(){
@@ -326,6 +354,63 @@ function relatoAnimSVG(type, color){
           <line x1="169" y1="55" x2="169" y2="61" stroke="#f2c200" stroke-width="2"/>
         </g>
         ${_ball("rollBall",8)}
+      `)}</div>`;
+    case "solo_goal": {
+      const conf=[[48,color],[56,"#34d399"],[62,"#fff"]].map((c,i)=>`<i class="conf" style="left:${c[0]}%;background:${c[1]};animation-delay:${0.9+i*0.05}s"></i>`).join("");
+      return `<div class="gfra">${stage(`
+        <ellipse class="glow" cx="150" cy="80" rx="120" ry="60" fill="${color}" opacity=".14"/>
+        ${_raGoal(150,250,45)}
+        <ellipse class="netBulge" style="transform-origin:210px 94px" cx="210" cy="94" rx="15" ry="12" fill="#fff"/>
+        <g class="soloKeeper">
+          <rect x="142" y="88" width="16" height="34" rx="8" fill="#22c55e" stroke="#0a1020" stroke-width="1.5"/>
+          <circle cx="150" cy="80" r="10" fill="#f0c39a" stroke="#0a1020" stroke-width="1.5"/>
+          <rect x="122" y="92" width="22" height="9" rx="4" fill="#22c55e"/>
+        </g>
+        ${_ball("soloBall",8)}
+      `)}<div class="confbox">${conf}</div></div>`;
+    }
+    case "counter_goal": {
+      const conf=[[48,color],[56,"#34d399"],[62,"#fff"]].map((c,i)=>`<i class="conf" style="left:${c[0]}%;background:${c[1]};animation-delay:${0.9+i*0.05}s"></i>`).join("");
+      return `<div class="gfra">${stage(`
+        <ellipse class="glow" cx="150" cy="80" rx="120" ry="60" fill="${color}" opacity=".14"/>
+        ${_raGoal(150,250,45)}
+        <ellipse class="netBulge" style="transform-origin:210px 82px" cx="210" cy="82" rx="15" ry="12" fill="#fff"/>
+        <g class="speed" stroke="#cfd6e2" stroke-width="3" stroke-linecap="round" opacity=".7">
+          <line x1="40" y1="92" x2="70" y2="92"/><line x1="34" y1="104" x2="72" y2="104"/><line x1="42" y1="116" x2="66" y2="116"/>
+        </g>
+        <g fill="#f2c200" stroke="#0a1020" stroke-width="1.5">
+          <g><rect x="58" y="96" width="14" height="34" rx="7"/><circle cx="65" cy="88" r="9"/></g>
+          <g><rect x="108" y="96" width="14" height="34" rx="7"/><circle cx="115" cy="88" r="9"/></g>
+        </g>
+        ${_ball("ctrBall",8)}
+      `)}<div class="confbox">${conf}</div></div>`;
+    }
+    case "chicken":
+      return `<div class="gfra">${stage(`
+        ${_raGoal(150,250,50)}
+        <g class="chick"><g transform="translate(40,110)"><g class="chickB">
+          <path d="M-2 3 q-10 -3 -14 3 q9 2 14 -3Z" fill="#e7ddc7"/>
+          <ellipse cx="0" cy="4" rx="15" ry="11" fill="#f6f0e2" stroke="#0a1020" stroke-width="1.5"/>
+          <circle cx="11" cy="-6" r="7" fill="#f6f0e2" stroke="#0a1020" stroke-width="1.5"/>
+          <path d="M8 -12 q3 -5 6 -1 q3 -4 4 1" fill="#ef4444"/>
+          <path d="M17 -6 l7 1 -6 3 Z" fill="#f2a200"/>
+          <circle cx="13" cy="-7" r="1.3" fill="#0a1020"/>
+          <line x1="-3" y1="14" x2="-3" y2="22" stroke="#f2a200" stroke-width="2"/>
+          <line x1="5" y1="14" x2="5" y2="22" stroke="#f2a200" stroke-width="2"/>
+        </g></g></g>
+      `)}</div>`;
+    case "duck":
+      return `<div class="gfra">${stage(`
+        ${_raGoal(150,250,50)}
+        <ellipse cx="150" cy="126" rx="46" ry="9" fill="#2a6cc9" opacity=".5"/>
+        <ellipse class="ripple" cx="150" cy="126" rx="30" ry="6" fill="none" stroke="#7fb3ff" stroke-width="2"/>
+        <g transform="translate(150,108)"><g class="duck">
+          <path d="M-20 4 q-10 -6 -18 -2 q9 4 18 2Z" fill="#e6e6e2"/>
+          <ellipse cx="0" cy="8" rx="22" ry="13" fill="#f2f2f0" stroke="#0a1020" stroke-width="1.5"/>
+          <circle cx="18" cy="-4" r="9" fill="#f2f2f0" stroke="#0a1020" stroke-width="1.5"/>
+          <path d="M25 -4 l9 1 -8 4 Z" fill="#f2a200"/>
+          <circle cx="20" cy="-6" r="1.4" fill="#0a1020"/>
+        </g></g>
       `)}</div>`;
   }
   return "";

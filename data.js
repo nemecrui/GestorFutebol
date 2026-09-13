@@ -24,6 +24,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-09-13", texto:"🎬 Relato ao vivo com animações! Nos momentos-chave aparece agora uma pequena animação a ilustrar o lance: golo (com a rede a abanar e confete na cor do clube), penálti, livre, cabeça, isolado, contra-ataque, autogolo e golo no último minuto (90+), além de defesa, poste, bola para fora e cartão vermelho. Até o folclore ganhou vida — cão, gaivota, galinha e pato entram em campo. Podes ligar/desligar tudo no botão «Animações» do painel (respeita o 'reduzir movimento' do telemóvel)." },
     { data:"2026-08-17", texto:"📲 Agora é mais fácil instalar: aparece um convite para instalar o Gestor de Futebol como aplicação no telemóvel (com ícone próprio e ecrã inteiro). No iPhone há um guia passo a passo. Também tens sempre o botão «Instalar como aplicação» no painel." },
     { data:"2026-08-16", texto:"🧑‍💼 Chegou o treinador-mascote! Uma personagem que festeja nas conquistas, fala nas conferências de imprensa e fica desanimada nas derrotas — com a gravata na cor do teu clube." },
     { data:"2026-08-16", texto:"✨ Mais vida e dinamismo: os ecrãs entram em cascata, as barras e o dinheiro animam, os golos trazem tremor e confete nas cores do clube, e há celebração de ecrã inteiro quando és campeão, sobes de divisão ou ganhas uma taça. Podes ligar/desligar as animações no painel (respeita também o 'reduzir movimento' do telemóvel)." },
