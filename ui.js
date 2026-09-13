@@ -1087,6 +1087,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   const tlFill=mo.querySelector("#liveTLfill"),tlEl=mo.querySelector("#liveTL"),momH=mo.querySelector("#liveMomH"),momA=mo.querySelector("#liveMomA"),commentEl=mo.querySelector("#liveComment"),animEl=mo.querySelector("#liveAnim");
   function hideAnim(){ if(animEl){ if(animEl._raT)clearTimeout(animEl._raT); animEl.hidden=true; animEl.innerHTML=""; } }
   function showAnim(kind,branch,side){ if(typeof showRelatoAnim!=="function"||!animEl)return; const cl=side==="H"?home:away; showRelatoAnim(animEl,kind,branch,cl&&cl.c1); }
+  function showAnimType(type){ if(typeof showRelatoAnimType!=="function"||!animEl||!type)return; showRelatoAnimType(animEl,type,"#f2c200"); }
   let timer,pauseUntil=0,paused=false,htDone=false,mom=50,momSumH=0,momSumA=0,commentHold=0,windowsUsed=0;
   let seqActive=false,seqTimer=null,seqSkip=null,evQueue=[],lastSeqAt=-99999,possSide=null,speed=1;
   const aiSide = userSide==="H"?"A":userSide==="A"?"H":null;
@@ -1286,7 +1287,8 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   function startFolclore(side){ if(typeof relatoFolclore!=="function")return false;
     const lines=relatoFolclore(mkCtx(side,{})); if(!lines||!lines.length)return false;
     if(side)setPossTint(possSide=side);
-    playSeq(lines, null); return true; }
+    const at=(typeof relatoFolcloreAnim==="function")?relatoFolcloreAnim(lines):null;
+    playSeq(lines, at?(()=>{ showAnimType(at); return null; }):null); return true; }
   function drainQueue(){ if(seqActive)return;
     while(evQueue.length){ const e=evQueue.shift();
       if(isKeyMoment(e)){ startEventSeq(e); return; } else processEvent(e); } }
