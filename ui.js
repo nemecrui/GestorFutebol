@@ -1071,6 +1071,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     <div id="liveTL"><i id="liveTLfill"></i></div>
     <div id="liveMom"><i id="liveMomH"></i><i id="liveMomA"></i></div>
     <div class="livecomment" id="liveComment">Apito inicial — rola a bola!</div>
+    <div id="liveAnim" style="margin:4px 0" hidden></div>
     <div class="livestats" id="liveStats">
       <div class="statline"><b id="posH">50%</b><span class="lbl">Posse</span><b id="posA">50%</b></div>
       <div class="statline"><b id="shH">0</b><span class="lbl">Remates</span><b id="shA">0</b></div>
@@ -1083,7 +1084,9 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     <button class="btn sec small" id="liveSkip" style="width:100%;margin-top:8px">Saltar</button></div>`;
   document.body.appendChild(mo);
   const evBox=mo.querySelector("#liveEv"),scoreEl=mo.querySelector("#liveScore"),minEl=mo.querySelector("#liveMin"),goalBanner=mo.querySelector("#goalBanner");
-  const tlFill=mo.querySelector("#liveTLfill"),tlEl=mo.querySelector("#liveTL"),momH=mo.querySelector("#liveMomH"),momA=mo.querySelector("#liveMomA"),commentEl=mo.querySelector("#liveComment");
+  const tlFill=mo.querySelector("#liveTLfill"),tlEl=mo.querySelector("#liveTL"),momH=mo.querySelector("#liveMomH"),momA=mo.querySelector("#liveMomA"),commentEl=mo.querySelector("#liveComment"),animEl=mo.querySelector("#liveAnim");
+  function hideAnim(){ if(animEl){ if(animEl._raT)clearTimeout(animEl._raT); animEl.hidden=true; animEl.innerHTML=""; } }
+  function showAnim(kind,branch,side){ if(typeof showRelatoAnim!=="function"||!animEl)return; const cl=side==="H"?home:away; showRelatoAnim(animEl,kind,branch,cl&&cl.c1); }
   let timer,pauseUntil=0,paused=false,htDone=false,mom=50,momSumH=0,momSumA=0,commentHold=0,windowsUsed=0;
   let seqActive=false,seqTimer=null,seqSkip=null,evQueue=[],lastSeqAt=-99999,possSide=null,speed=1;
   const aiSide = userSide==="H"?"A":userSide==="A"?"H":null;
@@ -1198,7 +1201,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     function fin(){ if(subsThisOpen>0 && !atHT)windowsUsed++; cm.remove(); paused=false; renderSquad(false); }
     draw(); document.body.appendChild(cm);
   }
-  function finish(){ clearInterval(timer); if(seqTimer){clearTimeout(seqTimer);seqTimer=null;} seqActive=false; seqSkip=null; evQueue=[];
+  function finish(){ clearInterval(timer); if(seqTimer){clearTimeout(seqTimer);seqTimer=null;} seqActive=false; seqSkip=null; evQueue=[]; hideAnim();
     const r=liveResult(st); r.userLine=userLine; liveApplyEnergy(st);
     scoreEl.textContent=st.hg+" - "+st.ag;minEl.textContent="Final";setW(tlFill,100);showPhase("Final");sndWhistle(3);vib([40,50,40,50,80]);setComment("Apito final. "+home.name+" "+st.hg+"–"+st.ag+" "+away.name,0);
     if(userSide)renderSquad(true);
@@ -1235,7 +1238,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     commentEl.style.borderLeft=(side==="H"?"4px solid "+c:"none"); commentEl.style.borderRight=(side==="A"?"4px solid "+c:"none"); }
   function fadeComment(){ if(commentEl.textContent){ commentEl.style.opacity="0"; setTimeout(()=>{ if(commentEl.style.opacity==="0")commentEl.textContent=""; },300); } }
   function playSeq(buildLines,onReveal){
-    seqActive=true; paused=true; let i=0, done=false;
+    seqActive=true; paused=true; let i=0, done=false; hideAnim();
     function reveal(){ if(done)return; done=true; if(seqTimer){clearTimeout(seqTimer);seqTimer=null;} seqSkip=null;
       let hold=1300; if(onReveal){const rc=onReveal(); if(rc){setComment(rc,0); hold=Math.max(hold,dwell(rc));}}
       seqActive=false; paused=false; lastSeqAt=Date.now(); pauseUntil=Date.now()+hold; drainQueue(); }
@@ -1265,20 +1268,21 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       processEvent(e);
       if(e.type==="goal"){                                               // deixa o festejo brilhar, mostra o relato quando desvanece
         const rc=seq.reveal;
-        if(rc)setTimeout(()=>{ if(mo.parentNode && !seqActive){ setComment(rc,0); pauseUntil=Date.now()+Math.max(1700,dwell(rc)); } },1250);
+        if(rc)setTimeout(()=>{ if(mo.parentNode && !seqActive){ setComment(rc,0); pauseUntil=Date.now()+Math.max(2600,dwell(rc)); if(mp)showAnim(mp.kind,mp.branch,e.side); } },1250);
         return null;
       }
+      if(mp)showAnim(mp.kind,mp.branch,e.side);
       return seq.reveal;
     }); }
   function startFailedChance(side){ if(typeof relatoSeq!=="function")return false;
-    const ctx=mkCtx(side,{}); let seq=null, isSave=false;
-    if(typeof relatoLance==="function" && Math.random()<0.22){ seq=relatoLance("miss",ctx); }  // ocasião estragada pelo insólito
+    const ctx=mkCtx(side,{}); let seq=null, isSave=false, animKind=null, animBranch=null;
+    if(typeof relatoLance==="function" && Math.random()<0.22){ seq=relatoLance("miss",ctx); animBranch="out"; }  // ocasião estragada pelo insólito
     if(!seq){ const kind=pick(["chance","solo","header","counter"]);
       const branch=pick(kind==="chance"?["save","post","out","cleared"]:["save","out"]);
-      isSave=(branch==="save"); seq=relatoSeq(kind,branch,ctx); }
+      isSave=(branch==="save"); seq=relatoSeq(kind,branch,ctx); animKind=kind; animBranch=branch; }
     if(!seq)return false;
     setPossTint(possSide=side); stat[side].sh++; if(isSave)stat[side].sot++;
-    playSeq(seq.build, ()=>seq.reveal); return true; }
+    playSeq(seq.build, ()=>{ showAnim(animKind,animBranch,side); return seq.reveal; }); return true; }
   function startFolclore(side){ if(typeof relatoFolclore!=="function")return false;
     const lines=relatoFolclore(mkCtx(side,{})); if(!lines||!lines.length)return false;
     if(side)setPossTint(possSide=side);
