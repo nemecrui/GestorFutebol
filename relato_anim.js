@@ -17,11 +17,26 @@
 function relatoAnimType(kind, branch){
   if(kind==="red")    return (branch==="yellowonly") ? null : "red";
   if(kind==="injury") return "injury";
-  if(branch==="goal"){ return kind==="penalty" ? "pk_goal" : "goal"; }
+  if(branch==="goal"){
+    if(kind==="penalty")  return "pk_goal";
+    if(kind==="freekick") return "fk_goal";
+    if(kind==="header")   return "header_goal";
+    if(kind==="own")      return "own_goal";
+    if(kind==="latedrama")return "late_goal";
+    return "goal";
+  }
   if(branch==="save" || branch==="wall" || branch==="cleared") return (kind==="penalty") ? "pk_save" : "save";
   if(branch==="post") return "post";
   if(branch==="out" || branch==="miss") return "out";
   return null; // disallowed, second-amarelo-only, etc. → sem animação
+}
+
+/* folclore (frases sem desfecho): escolhe animação pela frase. null = só texto */
+function relatoFolcloreAnim(lines){
+  const t=(Array.isArray(lines)?lines.join(" "):String(lines||"")).toLowerCase();
+  if(/\bc[ãa]o\b|cachorr/.test(t)) return "dog";
+  if(/gaivota|pombo/.test(t)) return "bird";
+  return null;
 }
 
 /* CSS injetado uma vez */
@@ -77,6 +92,47 @@ body.noanim .gfra .conf{display:none}
 .gfra .rcCard{animation:gfra_rcGlow 2.6s ease-in-out 1 both}
 .gfra .injCross{transform-origin:214px 52px;animation:gfra_cross 1.5s ease-in-out infinite}
 .gfra .injBody{transform-origin:110px 140px;animation:gfra_twitch 2.6s ease-in-out 1 both}
+
+/* bulge de rede genérico (origem via style inline) */
+.gfra .netBulge{animation:gfra_netBulge 2.8s ease-in-out 1 both}
+
+/* livre */
+@keyframes gfra_fkBall{0%{transform:translate(55px,150px) scale(1);opacity:1}20%{transform:translate(100px,74px) scale(.92)}40%{transform:translate(150px,46px) scale(.82)}62%{transform:translate(210px,80px) scale(.72);opacity:1}86%{transform:translate(210px,80px) scale(.72)}92%{opacity:0}100%{opacity:0}}
+.gfra .fkBall{animation:gfra_fkBall 2.8s cubic-bezier(.35,0,.5,1) 1 both}
+
+/* cabeça */
+@keyframes gfra_hdBall{0%{transform:translate(38px,60px);opacity:1}42%{transform:translate(148px,56px)}70%{transform:translate(206px,96px) scale(.8);opacity:1}86%{transform:translate(206px,96px) scale(.8)}92%{opacity:0}100%{opacity:0}}
+@keyframes gfra_hdJump{0%,28%{transform:translateY(0)}44%{transform:translateY(-16px)}72%{transform:translateY(0)}100%{transform:translateY(0)}}
+.gfra .hdBall{animation:gfra_hdBall 2.8s ease-in-out 1 both}
+.gfra .hdFig{transform-origin:150px 128px;animation:gfra_hdJump 2.8s ease-in-out 1 both}
+
+/* autogolo */
+@keyframes gfra_ogBall{0%,14%{transform:translate(150px,102px);opacity:1}56%{transform:translate(208px,92px) scale(.78);opacity:1}82%{transform:translate(208px,92px) scale(.78)}90%{opacity:0}100%{opacity:0}}
+@keyframes gfra_ogTurn{0%,18%{transform:rotate(0)}42%{transform:rotate(-13deg)}72%{transform:rotate(-8deg)}100%{transform:rotate(0)}}
+@keyframes gfra_ogMark{0%,42%{opacity:0;transform:translateY(8px) scale(.5)}54%{opacity:1;transform:translateY(0) scale(1)}86%{opacity:1}100%{opacity:0}}
+.gfra .ogBall{animation:gfra_ogBall 2.8s ease-in 1 both}
+.gfra .ogFig{transform-origin:150px 122px;animation:gfra_ogTurn 2.8s ease-in-out 1 both}
+.gfra .ogMark{transform-origin:206px 44px;animation:gfra_ogMark 2.8s ease-out 1 both}
+
+/* último minuto (90+) */
+@keyframes gfra_clockShake{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(-2px,0) rotate(-4deg)}40%{transform:translate(2px,0) rotate(3deg)}60%{transform:translate(-2px,1px) rotate(-3deg)}80%{transform:translate(1px,0) rotate(2deg)}}
+.gfra .clock{transform-origin:150px 84px;animation:gfra_clockShake .5s ease-in-out infinite}
+
+/* folclore: cão */
+@keyframes gfra_dogRun{0%{transform:translate(-60px,0)}100%{transform:translate(330px,0)}}
+@keyframes gfra_dogLeg{0%,100%{transform:rotate(20deg)}50%{transform:rotate(-20deg)}}
+@keyframes gfra_dogLeg2{0%,100%{transform:rotate(-20deg)}50%{transform:rotate(20deg)}}
+@keyframes gfra_tail{0%,100%{transform:rotate(14deg)}50%{transform:rotate(-14deg)}}
+.gfra .dog{animation:gfra_dogRun 2.7s linear 1 both}
+.gfra .dLegA{transform-origin:top center;animation:gfra_dogLeg .28s linear infinite}
+.gfra .dLegB{transform-origin:top center;animation:gfra_dogLeg2 .28s linear infinite}
+.gfra .dTail{transform-origin:left center;animation:gfra_tail .3s ease-in-out infinite}
+
+/* folclore: gaivota/pombo no travessão */
+@keyframes gfra_birdBob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3px) rotate(-6deg)}}
+@keyframes gfra_rollBall{0%{transform:translate(20px,150px) rotate(0);opacity:1}92%{transform:translate(288px,150px) rotate(760deg);opacity:1}100%{opacity:0}}
+.gfra .bird{transform-origin:center;animation:gfra_birdBob 1.3s ease-in-out infinite}
+.gfra .rollBall{animation:gfra_rollBall 3s linear 1 both}
 `;
 
 function _raEnsureCSS(){
@@ -189,16 +245,97 @@ function relatoAnimSVG(type, color){
           <rect x="202" y="44" width="24" height="8" rx="2" fill="#ef4444"/>
         </g>
       `)}</div>`;
+    case "fk_goal": {
+      const conf=[[46,color],[54,"#34d399"],[60,"#fff"]].map((c,i)=>`<i class="conf" style="left:${c[0]}%;background:${c[1]};animation-delay:${0.95+i*0.05}s"></i>`).join("");
+      return `<div class="gfra">${stage(`
+        <ellipse class="glow" cx="150" cy="80" rx="120" ry="60" fill="${color}" opacity=".14"/>
+        ${_raGoal(150,250,45)}
+        <ellipse class="netBulge" style="transform-origin:210px 80px" cx="210" cy="80" rx="16" ry="13" fill="#fff"/>
+        <g fill="#cfd6e2" stroke="#0a1020" stroke-width="1.5">
+          <g><rect x="96" y="92" width="12" height="36" rx="6"/><circle cx="102" cy="86" r="7"/></g>
+          <g><rect x="112" y="92" width="12" height="36" rx="6"/><circle cx="118" cy="86" r="7"/></g>
+          <g><rect x="128" y="92" width="12" height="36" rx="6"/><circle cx="134" cy="86" r="7"/></g>
+        </g>
+        ${_ball("fkBall",8)}
+      `)}<div class="confbox">${conf}</div></div>`;
+    }
+    case "header_goal": {
+      const conf=[[48,color],[56,"#34d399"],[62,"#fff"]].map((c,i)=>`<i class="conf" style="left:${c[0]}%;background:${c[1]};animation-delay:${0.85+i*0.05}s"></i>`).join("");
+      return `<div class="gfra">${stage(`
+        <ellipse class="glow" cx="150" cy="80" rx="120" ry="60" fill="${color}" opacity=".14"/>
+        ${_raGoal(150,250,45)}
+        <ellipse class="netBulge" style="transform-origin:206px 96px" cx="206" cy="96" rx="15" ry="12" fill="#fff"/>
+        <g class="hdFig">
+          <rect x="128" y="86" width="16" height="42" rx="8" fill="#f2c200" stroke="#0a1020" stroke-width="1.5"/>
+          <circle cx="136" cy="76" r="11" fill="#f0c39a" stroke="#0a1020" stroke-width="1.5"/>
+        </g>
+        ${_ball("hdBall",8)}
+      `)}<div class="confbox">${conf}</div></div>`;
+    }
+    case "own_goal":
+      return `<div class="gfra">${stage(`
+        ${_raGoal(150,250,45)}
+        <ellipse class="netBulge" style="transform-origin:208px 92px" cx="208" cy="92" rx="15" ry="12" fill="#fff"/>
+        <g class="ogFig">
+          <rect x="132" y="92" width="16" height="38" rx="8" fill="#ef4444" stroke="#0a1020" stroke-width="1.5"/>
+          <circle cx="140" cy="82" r="10" fill="#f0c39a" stroke="#0a1020" stroke-width="1.5"/>
+        </g>
+        <g class="ogMark"><circle cx="206" cy="44" r="13" fill="#f2c200"/><rect x="203" y="37" width="6" height="11" rx="2" fill="#0a1020"/><circle cx="206" cy="52" r="2.4" fill="#0a1020"/></g>
+        ${_ball("ogBall",8)}
+      `)}</div>`;
+    case "late_goal": {
+      const conf=[[40,color],[48,"#34d399"],[56,"#fff"],[64,color],[34,"#60a5fa"]].map((c,i)=>`<i class="conf" style="left:${c[0]}%;background:${c[1]};animation-delay:${0.1+i*0.05}s"></i>`).join("");
+      return `<div class="gfra">${stage(`
+        <ellipse class="glow" cx="150" cy="82" rx="130" ry="66" fill="${color}" opacity=".18"/>
+        <g class="clock">
+          <rect x="144" y="40" width="12" height="8" rx="2" fill="#e5e9f0"/>
+          <line x1="150" y1="40" x2="150" y2="34" stroke="#e5e9f0" stroke-width="4"/>
+          <circle cx="150" cy="86" r="34" fill="#12203a" stroke="#f2c200" stroke-width="4"/>
+          <line x1="150" y1="86" x2="150" y2="66" stroke="#fff" stroke-width="3"/>
+          <line x1="150" y1="86" x2="165" y2="92" stroke="#f2c200" stroke-width="3"/>
+          <text x="150" y="110" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="15" fill="#f2c200">90+</text>
+        </g>
+      `)}<div class="confbox">${conf}</div></div>`;
+    }
+    case "dog":
+      return `<div class="gfra">${stage(`
+        ${_raGoal(150,250,50)}
+        <g class="dog"><g transform="translate(40,104)">
+          <g class="dTail" style="transform-origin:-2px 2px"><path d="M0 2 q-14 -6 -20 -14" fill="none" stroke="#8a5a34" stroke-width="6" stroke-linecap="round"/></g>
+          <ellipse cx="14" cy="6" rx="22" ry="11" fill="#a06a3c"/>
+          <circle cx="36" cy="-2" r="10" fill="#a06a3c"/>
+          <path d="M30 -10 l-3 -9 8 5 Z" fill="#8a5a34"/>
+          <circle cx="41" cy="-3" r="1.7" fill="#0a1020"/>
+          <path d="M46 0 l7 -1 -6 4 Z" fill="#0a1020"/>
+          <rect class="dLegA" x="2" y="14" width="5" height="16" rx="2" fill="#8a5a34"/>
+          <rect class="dLegB" x="12" y="14" width="5" height="16" rx="2" fill="#8a5a34"/>
+          <rect class="dLegA" x="22" y="14" width="5" height="16" rx="2" fill="#8a5a34"/>
+          <rect class="dLegB" x="30" y="14" width="5" height="16" rx="2" fill="#8a5a34"/>
+        </g></g>
+      `)}</div>`;
+    case "bird":
+      return `<div class="gfra">${stage(`
+        <path class="gline" d="M100 130 L100 55 L232 55 L232 130"/>
+        <g class="bird" style="transform-origin:166px 55px">
+          <ellipse cx="166" cy="48" rx="14" ry="9" fill="#8fa3bf"/>
+          <circle cx="179" cy="42" r="6" fill="#8fa3bf"/>
+          <path d="M183 41 l7 -2 -5 5 Z" fill="#f2c200"/>
+          <circle cx="180" cy="41" r="1.4" fill="#0a1020"/>
+          <path d="M153 48 q-10 -4 -16 2 q10 2 16 -2Z" fill="#748ba9"/>
+          <line x1="163" y1="55" x2="163" y2="61" stroke="#f2c200" stroke-width="2"/>
+          <line x1="169" y1="55" x2="169" y2="61" stroke="#f2c200" stroke-width="2"/>
+        </g>
+        ${_ball("rollBall",8)}
+      `)}</div>`;
   }
   return "";
 }
 
-/* Mostra a animação no container. Devolve true se mostrou algo. */
-function showRelatoAnim(container, kind, branch, color, opts){
+/* Mostra a animação de um TIPO já resolvido. Devolve true se mostrou algo. */
+function showRelatoAnimType(container, type, color, opts){
   opts = opts || {};
   if(!container) return false;
   if(typeof animOn==="function" && !animOn()){ container.hidden=true; container.innerHTML=""; return false; }
-  const type = relatoAnimType(kind, branch);
   if(!type){ container.hidden=true; container.innerHTML=""; return false; }
   _raEnsureCSS();
   const html = relatoAnimSVG(type, color);
@@ -212,6 +349,11 @@ function showRelatoAnim(container, kind, branch, color, opts){
   return true;
 }
 
+/* Mostra a animação de um desfecho (kind,branch). Devolve true se mostrou algo. */
+function showRelatoAnim(container, kind, branch, color, opts){
+  return showRelatoAnimType(container, relatoAnimType(kind, branch), color, opts);
+}
+
 if(typeof module!=="undefined" && module.exports){
-  module.exports = { relatoAnimType, relatoAnimSVG, showRelatoAnim };
+  module.exports = { relatoAnimType, relatoFolcloreAnim, relatoAnimSVG, showRelatoAnim, showRelatoAnimType };
 }
