@@ -131,7 +131,7 @@ const GAME_DATA = {
 	"FC Prazins Corvite": [
 		{n:"Fábio Freitas", p:"GR", idade:24},
 		{n:"Pedro Pereira", p:"GR", idade:19},
-		{n:"Afonso Machado"; p:"GR", idade:18},
+		{n:"Rodrigo Machado"; p:"GR", idade:18},
 		{n:"Gonçalo Ferreira", p:"DC", idade:24},
 		{n:"Leonel Batista", p:"DC", idade:26},
 		{n:"João Mendes", p:"LD", idade:23},
@@ -144,7 +144,7 @@ const GAME_DATA = {
 		{n:"Lucas Martin", p:"MC", idade:31},
 		{n:"Luís Fernandes", p:"MDC", idade:21},
 		{n:"Josué Pereira", p:"MDC", idade:24},
-		{n:"Ricardo Pereira", p:"MC", idade:26},
+		{n:"Ricardo Ribeiro", p:"MC", idade:26},
 		{n:"Miguel Jordão", p:"MC", idade:28},
 		{n:"Leandro Pinheiro", p:"MC", idade:39},
 		{n:"Rui Trina", p:"ED", idade:29},
