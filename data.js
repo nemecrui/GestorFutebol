@@ -30,22 +30,6 @@ const GAME_DATA = {
     { data:"2026-08-16", texto:"✨ Mais vida e dinamismo: os ecrãs entram em cascata, as barras e o dinheiro animam, os golos trazem tremor e confete nas cores do clube, e há celebração de ecrã inteiro quando és campeão, sobes de divisão ou ganhas uma taça. Podes ligar/desligar as animações no painel (respeita também o 'reduzir movimento' do telemóvel)." },
     { data:"2026-08-16", texto:"🧠 Progressão do treinador: ganhas XP a jogar, vencer, subir de divisão e desbloquear conquistas; sobes de nível (com licenças D→Pro) e ganhas pontos para desbloquear perks permanentes — Motivador, Tático e Formador. Vê tudo no botão «Treinador» do painel." },
     { data:"2026-08-16", texto:"🔁 Empréstimos mais realistas: clubes e jogadores recusam vir de divisões muito superiores ou quando são muito melhores do que o teu plantel — deixa de ser possível encher a equipa de reforços da divisão de topo." },
-    { data:"2026-08-16", texto:"🎤 Conferências de imprensa melhoradas: podem ter várias perguntas, mostram o efeito de cada resposta (moral, direção, reputação, rival) e trazem perguntas inusitadas/cómicas que às vezes lançam boatos. Os jogos da Taça passam a ter conversa de balneário antes do apito, e os pedidos de jogadores ambiciosos são agora mais espaçados." },
-    { data:"2026-08-15", texto:"🏅 Conquistas & desafios: há 16 conquistas para desbloqueares ao longo da carreira (campeão, invicto, vencer a Taça, remontadas, goleadas, dérbis, formar jovens...) com ecrã próprio no painel do treinador. E cada jornada traz um desafio opcional (vencer sem sofrer, marcar 3+, jogo limpo...) que dá recompensa se o cumprires." },
-    { data:"2026-08-15", texto:"🎛️ Instruções táticas rápidas: define Pressão (bloco/normal/alta), Ritmo (cauto/normal/rápido), Foco (equilibrado/alas/meio) e Entradas (normais/duras) — na Tática e a meio do jogo. Cada opção tem o seu custo (energia, cartões) e influencia tanto os jogos ao vivo como os simulados." },
-    { data:"2026-08-14", texto:"🎤 Balneário & media: os jogadores têm agora traços de personalidade (líder, ambicioso, boa-vida, cria-caso...) que mexem na moral e na indisciplina. Há conferências de imprensa (véspera e pós-jogo) com respostas à tua escolha, e os jogadores ambiciosos no banco pedem-te mais minutos. Vê os traços na ficha de cada jogador." },
-    { data:"2026-08-14", texto:"🗓️ Novo ritmo de jogo: entre partidas passam dias e o botão «Continuar» avança até acontecer algo (uma proposta, um caso a decidir) ou chegar o dia de jogo. «Simular» continua a saltar direto para o resultado." },
-    { data:"2026-08-13", texto:"🤝 Já podes RECEBER jogadores por empréstimo: novo separador 'Empréstimos' no mercado (nas janelas). Sem custo de transferência, escolhes pagar o salário todo ou dividir 50/50, e o jogador regressa ao clube de origem no fim da época." },
-    { data:"2026-08-13", texto:"🧢 Papéis de equipa: escolhe capitão, marcador de penáltis, livres e cantos (na Tática). Um bom penaltista/batedor de livres converte mais. O capitão dá um empurrão à equipa — mas se o deixares no banco cria mau ambiente, reunião com a direção e até protesto. E há casos de indisciplina para resolveres (com desculpas que às vezes são de rir), com castigo à tua escolha ou perdão." },
-    { data:"2026-08-13", texto:"🎛️ Controlo de velocidade (1×/2×/3×) no jogo ao vivo, botão para simular só uma jornada, e 📖 História de carreira do treinador (palmarés, clubes e época a época)." },
-    { data:"2026-08-12", texto:"🎙️ Relato ao vivo renovado: nos momentos-chave o tempo pára e o relato constrói a tensão frase a frase — o desfecho (golo, defesa, poste, falhanço...) só se revela no fim. Muitas situações novas, algumas caricatas (bichos em campo, frangos, bolas para as couves...). Toca no relato para avançar. E agora há tempo de compensação: 45+x e 90+x." },
-    { data:"2026-08-11", texto:"🔁 Janelas de transferências a sério: só contratas de outros clubes no início da época (até fim de setembro) e em janeiro. Fora das janelas só assinas jogadores sem clube. As propostas chegam aos poucos, não todas de uma vez." },
-    { data:"2026-08-11", texto:"🤝 Empréstimos: podes disponibilizar um jogador (ou jovem) só para empréstimo ou para venda + empréstimo. O emprestado não paga transferência e regressa no fim da época; o salário pode ser pago 100% pelo clube que recebe ou dividido 50/50." },
-    { data:"2026-08-11", texto:"📈 Evolução por minutos: quem joga evolui mais (mesmo com poucos minutos). Jovens evoluem mais depressa; ao banco cresce-se pouco. 🤕 Passam a existir lesões esporádicas nos treinos, mesmo com energia alta." },
-    { data:"2026-08-02", texto:"🏟️ GRANDE ATUALIZAÇÃO — competições reformuladas! Agora com os clubes reais da AF Braga: Pró-Nacional (18), Divisão de Honra em 2 séries, 1ª Divisão em 6 séries e 2ª Divisão. Jogas na tua série e sobes/desces entre elas. Nova carreira obrigatória (a estrutura mudou)." },
-    { data:"2026-08-02", texto:"🏆 Finalíssima da Divisão de Honra (vencedor da Série A vs Série B pelo título) e Supertaça (campeão do Pró-Nacional vs vencedor da Taça) — jogáveis quando estás envolvido." },
-    { data:"2026-08-02", texto:"📲 Novo símbolo da app (prancheta tática) e instalação como aplicação a sério no telemóvel (Adicionar ao ecrã inicial), com ícone próprio." },
-    { data:"2026-08-01", texto:"🟥 Suspensões e lesões: 5 amarelos = 1 jogo de castigo, vermelho direto = 2 jogos (2º amarelo = 1). As lesões passam a ter gravidade variável (de ligeira a muito grave). Vês os castigos e o aviso de amarelos no plantel e na ficha do jogador." },
   ],
 
   /* ---- ALTERAR clubes já existentes (por sigla) ----
@@ -131,7 +115,7 @@ const GAME_DATA = {
 	"FC Prazins Corvite": [
 		{n:"Fábio Freitas", p:"GR", idade:24},
 		{n:"Pedro Pereira", p:"GR", idade:19},
-		{n:"Rodrigo Machado"; p:"GR", idade:18},
+		{n:"Rodrigo Machado", p:"GR", idade:18},
 		{n:"Gonçalo Ferreira", p:"DC", idade:24},
 		{n:"Leonel Batista", p:"DC", idade:26},
 		{n:"João Mendes", p:"LD", idade:23},
@@ -206,6 +190,20 @@ const GAME_DATA = {
 	"GD Gemeos": "crests/GD_Gemeos.png",
 	"FC Prazins Corvite": "crests/FC_Prazins_Corvite.png",
 	"GDC Serafão": "crests/GDC_Serafão.png"
+  },
+
+  /* ---- TREINADORES (nome do treinador e adjuntos por clube) ----
+     A chave é o NOME EXATO do clube (tal como aparece no jogo), igual aos emblemas.
+     Valor pode ser:
+       • só o nome do treinador   →   "GD Gemeos": "Zé Manel",
+       • nome + adjuntos          →   "GD Gemeos": { n:"Zé Manel", adjuntos:["Chico", "Toni"] }
+     Quem NÃO estiver aqui recebe um nome gerado automaticamente.
+     A tua equipa usa sempre o teu nome de treinador (o que escreveste ao começar). */
+  treinadores: {
+    // "GD Gemeos": "Nome do Treinador",
+    // "FC Prazins Corvite": { n:"Nome do Treinador", adjuntos:["Adjunto 1", "Adjunto 2"] }
+	"FC Prazins Corvite": { n:"Adriano Araújo", adjuntos:["Miguel Oliveira", "Marcos Pereira"] }
+
   },
 
   /* ---- ADICIONAR clubes novos a uma divisão ----

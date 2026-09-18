@@ -2041,9 +2041,13 @@ const COACH_PERKS={
 function queueCelebrate(kind,title,sub){ if(!G.celebrate)G.celebrate=[]; G.celebrate.push({kind,title,sub}); }
 function ensureCoach(){ if(!G.coach)G.coach={xp:0,level:1,points:0,perks:{},nn:[]}; if(!G.coach.perks)G.coach.perks={}; if(!G.coach.nn)G.coach.nn=[]; return G.coach; }
 function ensureSupport(){ if(!G.support){ const o=(typeof me==="function"&&me())?me().objective:null; const base=o?clamp(Math.round(50+((o.baseConf||55)-55)/2),30,68):50; G.support={approval:base}; } if(typeof G.support.approval!=="number")G.support.approval=50; return G.support; }
-function ensureCoaches(){                                          // nomes de treinador + adjuntos para todas as equipas (figurantes)
+function ensureCoaches(){                                          // nomes de treinador + adjuntos para todas as equipas
+  const OV=(typeof CFG!=="undefined"&&CFG&&CFG.treinadores)?CFG.treinadores:null;   // override do data.js (por NOME EXATO do clube)
   (G.divisions||[]).forEach(d=>(d.clubs||[]).forEach(c=>{
+    const ov=OV?OV[c.name]:null;
     if(c.id===G.myId){ if(G.manager&&G.manager.name)c.coach=G.manager.name; else if(!c.coach)c.coach=randName(); }
+    else if(ov){ const nm=(typeof ov==="string")?ov:ov.n; if(nm)c.coach=nm;
+      if(ov.adjuntos&&ov.adjuntos.length)c.assistants=ov.adjuntos.slice(0,2); }
     else if(!c.coach)c.coach=randName();
     if(!c.assistants||!c.assistants.length)c.assistants=[randName(), randName()];
   }));
