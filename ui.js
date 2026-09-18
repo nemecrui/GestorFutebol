@@ -486,7 +486,7 @@ function viewHome(){
     const ptie=me().c1, pfig=(typeof coachSVG==="function")?`<div style="width:46px;height:60px;flex-shrink:0">${coachSVG("talk",ptie)}</div>`:"";
     h+=`<div class="card" style="border-color:#3b8cff"><div class="row" style="gap:8px;align-items:center"><h2 style="color:#3b8cff;flex:1">🎤 Conferência de imprensa${P.when==="pre"?" · véspera":" · pós-jogo"}</h2>${pfig}</div>`;
     P.qs.forEach((Q,qi)=>{
-      h+=`<div style="margin-bottom:9px"><div style="font-size:13px;margin-bottom:6px">${Q.q}</div>`;
+      h+=`<div style="margin-bottom:9px"><div style="font-size:13px;margin-bottom:6px">${Q.q}</div>${Q.pstat?`<div class="muted" style="font-size:11px;margin:-2px 0 6px">📊 ${Q.pstat}</div>`:""}`;
       if(Q.answered)h+=`<div style="font-size:12px"><span style="color:var(--accent)">▸ ${Q.opts[Q.choice].label}</span>${effChip(Q.eff)}</div>`;
       else h+=Q.opts.map((o,oi)=>`<button class="btn sec small" data-press="${qi}" data-po="${oi}" style="width:100%;margin-bottom:5px">${o.label}</button>`).join("");
       h+=`</div>`;
@@ -544,6 +544,7 @@ function viewHome(){
       <div class="row between" style="margin-bottom:6px"><span class="muted">Objetivo</span><b>${me().objective?me().objective.label:"—"}</b></div>
       <div class="row between" style="margin-bottom:2px"><span class="muted">Confiança da direção</span><b>${conf}%</b></div>
       <div class="barwrap"><div class="bar" style="width:${conf}%;background:${confColor}"></div></div>
+      ${(function(){ const sup=(typeof ensureSupport==="function"?ensureSupport().approval:(G.support?G.support.approval:50)); const sColor=sup>=55?"var(--green2)":sup>=30?"var(--accent)":"var(--red)"; return `<div class="row between" style="margin:8px 0 2px"><span class="muted">Apoio dos adeptos</span><b>${sup}%</b></div><div class="barwrap"><div class="bar" style="width:${sup}%;background:${sColor}"></div></div>`; })()}
       <div class="row between" style="margin-top:8px"><span class="muted">Contrato</span><b>${G.contract?G.contract.seasonsLeft:"—"} época(s)</b></div>
       <div class="row between"><span class="muted">Reputação</span><b>${G.manager.reputation}</b></div></div>`;
   }
@@ -1741,7 +1742,7 @@ function boot(){
   document.getElementById("splash")?.remove();
   applyAnimClass();                          // respeita a preferência de animações / reduzir movimento
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();if(typeof ensureCoach==="function")ensureCoach();if(G.press&&!G.press.qs)G.press=null;TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();if(typeof ensureCoach==="function")ensureCoach();if(typeof ensureSupport==="function")ensureSupport();if(typeof ensureCoaches==="function")ensureCoaches();if(G.press&&!G.press.qs)G.press=null;TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }

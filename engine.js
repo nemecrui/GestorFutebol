@@ -338,6 +338,8 @@ function newGame(divIdx,clubIdx,managerName){
   ensureInstr();                                                      // instruções táticas rápidas
   ensureAch();                                                        // conquistas
   ensureCoach();                                                      // progressão do treinador
+  ensureSupport();                                                    // apoio dos adeptos
+  ensureCoaches();                                                    // nomes de treinadores/adjuntos (todas as equipas)
   startGap();                                                         // abre o período de dias até ao 1º jogo (pré-época)
   addNews(G.manager.name+" assume o comando do "+me().name+" ("+myDivObj().name+").");
   addNews("Objetivo da direção: "+me().objective.label+".");
@@ -602,20 +604,45 @@ function _pressPools(){
            post:[{q:"O que dizes do resultado?",opts:[{label:"Assumo a responsabilidade",fx:{board:1}},{label:"Seguimos em frente",fx:{}}]}] };
 }
 function lastNameOf(n){ return String(n||"").split(" ").slice(-1)[0]; }
-function _buildPressQ(tpl){                                        // resolve placeholders de uma pergunta
-  const c=me(); const ctx={ clube:c.name, adv:nextOppName(), rival:(G.rival?G.rival.name:"o rival") };
-  let targetPid=null;
-  const mentions=/\{jogador\}/.test(tpl.q)||(tpl.opts||[]).some(o=>/\{jogador\}/.test(o.label)||(o.rumor&&/\{jogador\}/.test(o.rumor)));
-  if(mentions){ const p=pick(c.squad); ctx.jogador=lastNameOf(p.name); targetPid=p.id; }
-  const fill=s=>String(s).replace(/\{(\w+)\}/g,(m,k)=>ctx[k]!=null?ctx[k]:m);
-  return { q:fill(tpl.q), opts:(tpl.opts||[]).map(o=>({label:fill(o.label), fx:o.fx||{}, rumor:o.rumor?fill(o.rumor):null})), targetPid, answered:false, choice:null, eff:null };
+function nextOppClub(){ const d=myDivObj(); if(!d||d.week>=d.fixtures.length)return null;
+  for(const [h,a] of d.fixtures[d.week]){ if(h===G.myId)return d.clubs[a]; if(a===G.myId)return d.clubs[h]; } return null; }
+function _abil(p){ return (typeof ability==="function")?ability(p):(p.potential||50); }
+function _pickPressPlayer(c,target){                              // escolhe um jogador conforme o tipo de pergunta
+  const outfield=c.squad.filter(p=>p.pos!=="GR"); const pool=outfield.length?outfield:c.squad.slice();
+  if(target==="bench"){ const s=pool.slice().sort((a,b)=>(a.apps||0)-(b.apps||0)); return pick(s.slice(0,Math.max(3,Math.ceil(s.length*0.4)))); }
+  if(target==="star"){ const s=pool.slice().sort((a,b)=>_abil(b)-_abil(a)); return pick(s.slice(0,Math.max(3,Math.ceil(s.length*0.35)))); }
+  return pick(pool);
 }
-function buildPress(when,opts){                                    // conferência com 1 a 3 perguntas
+function _playerStatLine(p){                                      // resumo estatístico da época
+  const apps=p.apps||0, g=p.goals||0, yc=p.yc||0, rc=p.rc||0, rts=p.ratings||[];
+  const avg=rts.length?(rts.reduce((s,x)=>s+x,0)/rts.length):null;
+  const parts=[apps+" jogo"+(apps===1?"":"s")];
+  parts.push(g+" golo"+(g===1?"":"s"));
+  parts.push(yc+"🟨"); if(rc>0)parts.push(rc+"🟥");
+  if(avg!=null)parts.push("média "+avg.toFixed(1));
+  return parts.join(" · ");
+}
+function _buildPressQ(tpl){                                        // resolve placeholders de uma pergunta
+  const c=me(), opp=nextOppClub();
+  const ctx={ clube:c.name, adv:nextOppName(), rival:(G.rival?G.rival.name:"o rival"),
+              tradv:(opp&&opp.coach?lastNameOf(opp.coach):"o adversário") };
+  let targetPid=null, pstat=null;
+  const mentions=/\{jogador\}/.test(tpl.q)||(tpl.opts||[]).some(o=>/\{jogador\}/.test(o.label)||(o.rumor&&/\{jogador\}/.test(o.rumor)));
+  if(mentions){ const p=_pickPressPlayer(c,tpl.target); if(p){ ctx.jogador=lastNameOf(p.name); targetPid=p.id; pstat=_playerStatLine(p); } }
+  const fill=s=>String(s).replace(/\{(\w+)\}/g,(m,k)=>ctx[k]!=null?ctx[k]:m);
+  return { q:fill(tpl.q), opts:(tpl.opts||[]).map(o=>({label:fill(o.label), fx:o.fx||{}, rumor:o.rumor?fill(o.rumor):null})), targetPid, pstat, answered:false, choice:null, eff:null };
+}
+function buildPress(when,opts){                                    // conferência com 1 a 4 perguntas
   const P=_pressPools(); let base=(when==="pre"?P.pre:P.post)||[]; const misc=P.misc||[];
-  if(when==="post" && opts&&opts.result){ const f=base.filter(t=>!t.cond||t.cond==="any"||t.cond===opts.result); if(f.length)base=f; }
+  if(when==="post" && opts&&opts.result){ const R=opts.result;
+    const ok=t=>{ if(!t.cond||t.cond==="any")return true; const c=t.cond;
+      if(c==="win")return R==="win"||R==="bigwin"; if(c==="loss")return R==="loss"||R==="bigloss"; return c===R; };
+    const f=base.filter(ok); if(f.length)base=f; }
   const cp=base.slice(), chosen=[]; const n=Math.min(cp.length, 1+(Math.random()<0.5?1:0));   // 1-2 de base
   for(let i=0;i<n&&cp.length;i++)chosen.push(cp.splice(Math.floor(Math.random()*cp.length),1)[0]);
-  if(misc.length && Math.random()<0.5)chosen.push(pick(misc));     // + eventual pergunta inusitada/boato
+  if((P.tatica||[]).length && Math.random()<0.4)chosen.push(pick(P.tatica));        // + eventual pergunta tática
+  if((P.banco||[]).length && Math.random()<0.3)chosen.push(pick(P.banco));          // + eventual pergunta sobre jogador pouco usado
+  if(misc.length && Math.random()<0.4)chosen.push(pick(misc));                       // + eventual pergunta inusitada/boato
   const qs=chosen.map(_buildPressQ); if(!qs.length)return null;
   return { active:true, when, qs };
 }
@@ -628,6 +655,7 @@ function resolvePress(qi,oi){                                      // responde a
   if(fx.board && G.board){ G.board.confidence=clamp(G.board.confidence+fx.board,0,100); eff.push(["🏛️",fx.board]); }
   if(fx.rep){ G.manager.reputation=clamp((G.manager.reputation||40)+fx.rep,0,100); eff.push(["⭐",fx.rep]); }
   if(fx.rival && G.rival){ G.rival.mood=clamp((G.rival.mood||0)+fx.rival,-10,10); eff.push(["😠",fx.rival]); }
+  if(fx.fans){ ensureSupport(); G.support.approval=clamp(G.support.approval+fx.fans,0,100); eff.push(["📣",fx.fans]); }
   if(o.rumor)addNews("📰 Boato: "+o.rumor);
   Q.answered=true; Q.choice=oi; Q.eff=eff;
   addNews("🎤 «"+o.label+"»");
@@ -931,7 +959,7 @@ function playWeek(preMy){
   if(!G.fired)captainMoodTick(preMy);        // descontentamento do capitão (banco/substituições)
   if(!G.fired && !SIM && !G.press && Math.random()<0.55){                          // conferência de imprensa pós-jogo
     const res=myDivObj().results[myDivObj().results.length-1]||[]; const my=res.find(x=>x.h===G.myId||x.a===G.myId);
-    let r="draw"; if(my){ const isH=my.h===G.myId, gf=isH?my.hg:my.ag, ga=isH?my.ag:my.hg; r=gf>ga?"win":gf<ga?"loss":"draw"; }
+    let r="draw"; if(my){ const isH=my.h===G.myId, gf=isH?my.hg:my.ag, ga=isH?my.ag:my.hg, m=gf-ga; r = m>=3?"bigwin":m>0?"win":m<=-3?"bigloss":m<0?"loss":"draw"; }
     const pr=buildPress("post",{result:r}); if(pr)G.press=pr;
   }
   if(G.grace>0)G.grace--;                    // margem após assumir um clube a meio da época
@@ -1281,6 +1309,16 @@ function boardAfterUserMatch(){
   const rank=sortedTable(d).findIndex(c=>c.id===G.myId)+1, target=me().objective?me().objective.target:d.clubs.length;
   if(rank<=target)delta+=2; else delta-=Math.min(6,(rank-target)*0.8);
   G.board.confidence=clamp(Math.round(G.board.confidence+delta),0,100);
+  // apoio dos adeptos — mais volátil que a direção (reage a golos, dérbis e à classificação)
+  ensureSupport();
+  let fdelta = gf>ga?7 : gf===ga?-1 : -7;
+  if(gf-ga>=3)fdelta+=4; else if(ga-gf>=3)fdelta-=4;
+  if(derby)fdelta += gf>ga?8 : gf<ga?-8 : 0;
+  if(rank<=Math.ceil(target/2))fdelta+=2; else if(rank>target)fdelta-=3;
+  G.support.approval=clamp(Math.round(G.support.approval+fdelta),0,100);
+  if(G.support.approval<18){ G.board.confidence=clamp(G.board.confidence-1,0,100);   // pressão suave
+    if(Math.random()<0.5)addNews("📣 Contestação nas bancadas: os adeptos exigem uma reação."); }
+  else if(G.support.approval>86 && Math.random()<0.3)addNews("📣 Os adeptos estão rendidos ao trabalho do treinador.");
 }
 function evaluateBoard(meRank){
   const obj=me().objective||{target:myDivObj().clubs.length,label:"—"};
@@ -2002,6 +2040,14 @@ const COACH_PERKS={
 };
 function queueCelebrate(kind,title,sub){ if(!G.celebrate)G.celebrate=[]; G.celebrate.push({kind,title,sub}); }
 function ensureCoach(){ if(!G.coach)G.coach={xp:0,level:1,points:0,perks:{},nn:[]}; if(!G.coach.perks)G.coach.perks={}; if(!G.coach.nn)G.coach.nn=[]; return G.coach; }
+function ensureSupport(){ if(!G.support){ const o=(typeof me==="function"&&me())?me().objective:null; const base=o?clamp(Math.round(50+((o.baseConf||55)-55)/2),30,68):50; G.support={approval:base}; } if(typeof G.support.approval!=="number")G.support.approval=50; return G.support; }
+function ensureCoaches(){                                          // nomes de treinador + adjuntos para todas as equipas (figurantes)
+  (G.divisions||[]).forEach(d=>(d.clubs||[]).forEach(c=>{
+    if(c.id===G.myId){ if(G.manager&&G.manager.name)c.coach=G.manager.name; else if(!c.coach)c.coach=randName(); }
+    else if(!c.coach)c.coach=randName();
+    if(!c.assistants||!c.assistants.length)c.assistants=[randName(), randName()];
+  }));
+}
 function coachNeed(level){ return 150+(level-1)*100; }              // XP para subir do 'level' ao seguinte
 function coachLevelInfo(){ const C=ensureCoach(); let lvl=1, rem=C.xp||0; while(rem>=coachNeed(lvl)){ rem-=coachNeed(lvl); lvl++; } return {level:lvl, into:rem, need:coachNeed(lvl)}; }
 function coachLicense(level){ return level>=12?"Pro":level>=9?"A":level>=6?"B":level>=3?"C":"D"; }
