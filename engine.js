@@ -630,7 +630,8 @@ function _buildPressQ(tpl){                                        // resolve pl
   const mentions=/\{jogador\}/.test(tpl.q)||(tpl.opts||[]).some(o=>/\{jogador\}/.test(o.label)||(o.rumor&&/\{jogador\}/.test(o.rumor)));
   if(mentions){ const p=_pickPressPlayer(c,tpl.target); if(p){ ctx.jogador=lastNameOf(p.name); targetPid=p.id; pstat=_playerStatLine(p); } }
   const fill=s=>String(s).replace(/\{(\w+)\}/g,(m,k)=>ctx[k]!=null?ctx[k]:m);
-  return { q:fill(tpl.q), opts:(tpl.opts||[]).map(o=>({label:fill(o.label), fx:o.fx||{}, rumor:o.rumor?fill(o.rumor):null})), targetPid, pstat, answered:false, choice:null, eff:null };
+  const orgao=(typeof pickMedia==="function")?pickMedia():null;   // órgão de comunicação que faz a pergunta
+  return { q:fill(tpl.q), opts:(tpl.opts||[]).map(o=>({label:fill(o.label), fx:o.fx||{}, rumor:o.rumor?fill(o.rumor):null})), targetPid, pstat, orgao, answered:false, choice:null, eff:null };
 }
 function buildPress(when,opts){                                    // conferência com 1 a 4 perguntas
   const P=_pressPools(); let base=(when==="pre"?P.pre:P.post)||[]; const misc=P.misc||[];

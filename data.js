@@ -208,6 +208,22 @@ const GAME_DATA = {
 
   },
 
+  /* ---- ÓRGÃOS DE COMUNICAÇÃO (conferências de imprensa) ----
+     Nas conferências, cada pergunta é feita por um órgão (com logótipo + nome).
+     Já vêm 4 órgãos FICTÍCIOS por defeito (Tribuna Minhota, Rádio Cávado,
+     Bola do Ave, Bracara TV). Quando um órgão REAL autorizar o nome/logo,
+     acrescenta-o aqui e ele entra na rotação das conferências.
+     Cada órgão:
+       { nome:"...", tipo:"Jornal" | "Rádio" | "Televisão" | "Desporto",
+         cor:"#hex",                         (cor do crachá, se não houver logo)
+         logo:"media/ficheiro.png"           (imagem na pasta "media/", PNG ou SVG)
+         // ou, em alternativa à imagem:
+         svg:"<svg ...>...</svg>" }           (logótipo em SVG inline)
+     Sem logo nem svg, mostra um crachá com as iniciais na cor "cor". */
+  orgaos: [
+    // { nome:"Correio do Exemplo", tipo:"Jornal", cor:"#c1121f", logo:"media/exemplo.png" }
+  ],
+
   /* ---- ADICIONAR clubes novos a uma divisão ----
      Acrescenta ao fim da lista dessa divisão. Mantém, de preferência,
      um número PAR de equipas por divisão. Podes incluir um "roster". */

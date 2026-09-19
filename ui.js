@@ -486,7 +486,7 @@ function viewHome(){
     const ptie=me().c1, pfig=(typeof coachSVG==="function")?`<div style="width:46px;height:60px;flex-shrink:0">${coachSVG("talk",ptie)}</div>`:"";
     h+=`<div class="card" style="border-color:#3b8cff"><div class="row" style="gap:8px;align-items:center"><h2 style="color:#3b8cff;flex:1">🎤 Conferência de imprensa${P.when==="pre"?" · véspera":" · pós-jogo"}</h2>${pfig}</div>`;
     P.qs.forEach((Q,qi)=>{
-      h+=`<div style="margin-bottom:9px"><div style="font-size:13px;margin-bottom:6px">${Q.q}</div>${Q.pstat?`<div class="muted" style="font-size:11px;margin:-2px 0 6px">📊 ${Q.pstat}</div>`:""}`;
+      h+=`<div style="margin-bottom:11px">${(Q.orgao&&typeof orgaoLogoHTML==="function")?`<div class="row" style="gap:7px;align-items:center;margin-bottom:5px">${orgaoLogoHTML(Q.orgao,24)}<b style="font-size:12px">${Q.orgao.nome}</b>${Q.orgao.tipo?`<span class="muted" style="font-size:10px">· ${Q.orgao.tipo}</span>`:""}</div>`:""}<div style="font-size:13px;margin-bottom:6px">${Q.q}</div>${Q.pstat?`<div class="muted" style="font-size:11px;margin:-2px 0 6px">📊 ${Q.pstat}</div>`:""}`;
       if(Q.answered)h+=`<div style="font-size:12px"><span style="color:var(--accent)">▸ ${Q.opts[Q.choice].label}</span>${effChip(Q.eff)}</div>`;
       else h+=Q.opts.map((o,oi)=>`<button class="btn sec small" data-press="${qi}" data-po="${oi}" style="width:100%;margin-bottom:5px">${o.label}</button>`).join("");
       h+=`</div>`;
