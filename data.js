@@ -191,7 +191,9 @@ const GAME_DATA = {
 	"Soarense SC": "crests/Soarense_SC.png",
 	"GD Gemeos": "crests/GD_Gemeos.png",
 	"FC Prazins Corvite": "crests/FC_Prazins_Corvite.png",
-	"GDC Serafão": "crests/GDC_Serafão.png"
+	"GDC Serafão": "crests/GDC_Serafão.png",
+	"GCD Águias Negras Tabuadelo": "crests/GCD_Aguias_Negras_Tabuadelo.png",
+	"FC Roriz": "crests/FC_Roriz.png"
   },
 
   /* ---- TREINADORES (nome do treinador e adjuntos por clube) ----
