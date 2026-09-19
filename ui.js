@@ -846,6 +846,9 @@ function viewTactics(){
   if(!iss.ok){
     h+=`<div class="card" style="border-color:var(--red);padding:10px"><div style="color:var(--red);font-size:13px">⚠ Onze inválido${iss.sus?` — ${iss.sus} suspenso(s) em campo`:""}${iss.vac?`${iss.sus?" e":" —"} ${iss.vac} posição(ões) vazia(s)`:""}. Corrige antes de jogar.</div></div>`;
   }
+  h+=`<div class="card"><h2>👔 Equipa técnica</h2>
+    <div class="row between" style="margin-bottom:4px"><span class="muted">Treinador</span><b>${c.coach||(G.manager?G.manager.name:"—")}</b></div>
+    <div class="row between"><span class="muted">Adjuntos</span><b style="text-align:right">${(c.assistants&&c.assistants.length)?c.assistants.join(" · "):"—"}</b></div></div>`;
   h+=`<div class="card"><h2>Campo · ${G.formation}</h2>${pitchHTML(c)}</div>`;
   h+=`<div class="card"><h2>Suplentes ${iss.sus?'<span style="color:var(--red);font-size:11px">(há suspensos)</span>':''}</h2>${benchHTML(c)}</div>`;
   h+=`<div class="card"><h2>Formação</h2><select id="selForm">${Object.keys(FORMATIONS).map(f=>`<option ${f===G.formation?'selected':''}>${f}</option>`).join("")}</select></div>`;
@@ -1403,7 +1406,7 @@ function openPreMatch(next, startFn){
     <div class="center"><h2 style="justify-content:center">Antevisão${next.cup?" · Taça":""} · ${next.home?"em casa":"fora"}</h2></div>
     ${derby?`<div class="center" style="margin:2px 0 8px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:12px;padding:3px 12px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
     <div class="scorebug"><div class="t">${clubTag(c)}</div><div class="sc" style="font-size:15px">VS</div><div class="t a">${clubTag(opp)}</div></div>
-    <div class="muted center" style="font-size:12px;margin-bottom:8px">${opp.name}${oppPos?" · "+oppPos+"º":""} · forma: ${fmtForm(form)}</div>
+    <div class="muted center" style="font-size:12px;margin-bottom:8px">${opp.name}${oppPos?" · "+oppPos+"º":""}${opp.coach?" · 👔 "+opp.coach:""} · forma: ${fmtForm(form)}</div>
     <div class="card" style="padding:9px;margin-bottom:8px">
       ${bar("Ataque",Math.round(myS.atk),Math.round(opS.atk))}${bar("Meio-campo",Math.round(myS.mid),Math.round(opS.mid))}${bar("Defesa",Math.round(myS.def),Math.round(opS.def))}
       <div class="center" style="font-size:11px;margin-top:5px"><b>${favTxt}</b> · <span style="color:var(--green2)">tu</span> vs <span style="color:var(--red)">eles</span></div></div>
