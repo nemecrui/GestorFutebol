@@ -302,8 +302,14 @@ Poucas, mais controladas. A interrupção causa (ou tira) uma ocasião.
 
 # A FAZER / IDEIAS PARA ENCHER
 
-- Mais construções por categoria (objetivo: 8–12 cada, para nunca repetir).
-- Variantes regionais / de sotaque (se quiseres dar cor local a Braga).
-- Categoria "grande defesa do NOSSO guarda-redes" (perspetiva defensiva).
-- Categoria "contra-ataque relâmpago".
-- Reações do banco e do treinador como frase extra opcional no fim da sequência.
+## Próximas (prioritárias)
+- [ ] **Grande defesa do NOSSO guarda-redes** (perspetiva defensiva) — categoria dedicada a valorizar as defesas da nossa equipa, e não só as ocasiões falhadas do adversário.
+- [ ] **Reações do banco e do treinador** como frase extra opcional no fim da sequência (ex.: o {trein} festeja de punho no ar / leva as mãos à cabeça / abana a cabeça no banco).
+
+## Outras ideias
+- [ ] Mais construções por categoria (objetivo: 8–12 cada, para nunca repetir).
+- [ ] Variantes regionais / de sotaque (dar cor local a Braga).
+
+## Já feito
+- [x] Categoria **contra-ataque relâmpago** — implementada em `relato.js` (`seq.counter`).
+- [x] Passagem das frases novas/melhoradas do catálogo para `relato.js` + extras (set. 2026): remate, penálti, livre, canto/cabeça, isolado, vermelho, lesão, autogolo, último minuto e folclore.
