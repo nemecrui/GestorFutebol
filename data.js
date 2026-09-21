@@ -186,6 +186,7 @@ const GAME_DATA = {
 	"CDC Viatodos": "crests/CDC_Viatodos.png",
 	"Realense FC": "crests/Realense_FC.png",
 	"GDU Torcatense": "crests/GDU_Torcatense.png",
+	"GDU Torcatense "B"": "crests/GDU_Torcatense.png",
 	"ACDR Oleiros": "crests/ACDR_Oleiros.png",
 	"GD Adaúfe": "crests/GD_Adaufe.png",
 	"Soarense SC": "crests/Soarense_SC.png",
