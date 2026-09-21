@@ -34,6 +34,7 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 - [s] {jog2} serve {jog} de primeira, que se prepara para rematar...
 - [c] {jog} pede a bola aos gritos, o {trein} tapa os olhos no banco...
 - [c] A bancada já se levanta a meio do lance...
+- [c] {jog} levanta a cabeça, {trein} grita para meter a bola na direita mas ele mete na esquerda...
 
 **Desfecho — GOLO**
 - [s] ...e coloca-a rasteira ao canto, imparável. GOLOOO do {clube}!
@@ -47,6 +48,7 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 - [s] ...defesa monumental do {gr}, com a ponta dos dedos!
 - [s] ...o {gr} fecha o ângulo e a bola bate-lhe no corpo.
 - [c] ...o {gr} defendeu sem saber como; ficou ele próprio surpreendido.
+- [c] ...chutou na atmosfera e o {gr} defende sem qualquer problema.
 
 **Desfecho — POSTE / TRAVE**
 - [s] ...a bola bate no ferro e sai a escorrer pela linha!
@@ -58,10 +60,16 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 - [s] ...manda-a muito por cima, ocasião desperdiçada.
 - [c] ...e envia a bola para a segunda plateia. Levou as mãos à cara.
 - [c] ...o remate saiu tão torto que o extremo do lado quase apanha a bola.
+- [c] ...e manda a bola para couves!!! Que tijolos!
+- [c] ...chutou uma toupeira e a bola sai torta, enrolada e devagar pela linha de fundo.
+- [c] ...tenta o remate de primeira mas pega nas orelhas da bola e manda ao lado.
+- [c] ...remata com o pé mais fraco... não é só o pé que é fraco, o remate também. Isto foi um remate?
+
 
 **Desfecho — DEFESA NA LINHA / CORTE**
 - [s] ...mas aparece {def} a cortar mesmo em cima da linha!
 - [s] ...tapado à última fração por um corte providencial.
+- [c] ...finta 1, finta 2, finta 3, finta-se a ele e o defesa manda a bola para a bouça
 
 ---
 
@@ -74,15 +82,19 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 - [s] O {gr} salta em cima da linha a tentar intimidar...
 - [c] {jog} olha para a marca, olha para o {gr}, olha para o céu...
 - [c] Toda a gente atrás da baliza a fazer barulho para desconcentrar...
+- [c] Do lado de fora um adepto oferece uma cerveja ao {jog} para ele falhar o penálti
+- [c] Pede-se que o árbitro vá ao VAR nas bancadas... ou será ao BAR?
 
 **Desfecho — GOLO**
 - [s] ...bate com frieza ao canto, o {gr} foi para o outro lado. Golo!
 - [s] ...meio-chapa ao meio, o {gr} atirou-se cedo. Está lá dentro!
 - [c] ...picadinha ao meio com uma lata do tamanho do estádio. Golo!
+- [s] ...faz a paradinha, o {gr} foi à vida dele e está la dentro. Golo!
 
 **Desfecho — DEFESA**
 - [s] ...mas o {gr} voa e defende! Que penálti agarrado!
 - [s] ...o {gr} adivinha o canto e trava tudo! Herói do dia!
+- [s] ...o {gr} atira-se cedo, adivinha o lado e defende com os pés!
 
 **Desfecho — FALHA**
 - [s] ...e atira por cima da barra! Desperdiçou por completo.
@@ -96,12 +108,14 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 **Construção**
 - [s] Falta perigosa à entrada da área, boa posição para o livre...
 - [s] {jog} coloca a bola, mede a barreira, dá uns passos atrás...
-- [s] A barreira salta, o {gr} organiza os companheiros...
+- [s] A barreira orienta-se, o {gr} organiza os companheiros...
 - [c] {jog} pede à barreira que salte menos; a barreira ignora-o.
+- [c] o {gr} pede mais um elemento na barreira, o apanha-bolas entra em campo... o árbitro pede que saia
 
 **Desfecho — GOLO**
 - [s] ...e faz uma curva perfeita por cima da barreira! Golaço!
 - [s] ...rasteiro por baixo da barreira, o {gr} ficou pregado. Golo!
+- [c] ...que tiraço, até furou a barreira. Golo!
 
 **Desfecho — BARREIRA / DEFESA**
 - [s] ...mas a bola bate na barreira e afasta-se.
@@ -109,7 +123,8 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 
 **Desfecho — FORA**
 - [s] ...e manda-a a rasar o poste, por centímetros!
-- [c] ...a bola foi tão por cima que quase acertou no relógio do estádio.
+- [s] ...bate com estrondo na barra e sobra para o {gr}! Ainda se ouve a barrar a tremer.
+- [c] ...a bola foi tão por cima que quase acertou no relógio do estádio! A sorte é estar atrasado!
 
 ---
 
@@ -119,14 +134,17 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 - [s] Canto para o {clube}, sobem os centrais para a área...
 - [s] Cruzamento fechado, confusão na pequena área...
 - [c] O {gr} grita "minha!" e depois arrepende-se a meio do salto.
+- [c] o {gr} grita "estou!" e da bancada ouve-se "batido"...
 
 **Desfecho — GOLO (cabeça)**
 - [s] ...{jog} cabeceia para o fundo das redes! Golo de bola parada!
 - [s] ...desvio ao primeiro poste e a bola entra! Golo!
+- [c] ...meio com a cabeça, meio com ombro, mas o que conta é que está lá dentro! Golo!
 
 **Desfecho — DEFESA / FORA**
 - [s] ...mas o {gr} sai bem e agarra no ar.
 - [s] ...cabeceamento ao lado, escapou a boa ocasião.
+- [s] ...grande confusão na área vários jogadores no chão, o {gr} acaba por agarrar a bola com tranquilidade. Segue jogo!
 
 ---
 
@@ -137,18 +155,25 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 - [s] {jog} ganha as costas ao último defesa e parte sozinho para a baliza...
 - [s] Só o {gr} pela frente, o estádio prende a respiração...
 - [c] {jog} tem tanto tempo que quase pede indicações ao banco.
+- [s] {jog} olha para o árbitro assistente, a bandeirola fica em baixo...
+- [s] {jog} parece uma flecha em direção à baliza...
+- [c] rapidissimo o {jog}, parece o Speddy Gonzales
 
 **Desfecho — GOLO**
 - [s] ...atira-o à figura do {gr} e ainda encosta no ressalto! Golo!
 - [s] ...espera, espera e coloca ao canto. Que sangue-frio! Golo!
+- [s] ...faz uma simulação o {gr} deita-se, contorna-o e encosta para Golo!
+- [s] ...o {gr} tenta a mancha, mas pica-lhe a bola e que belo chapéu! Golaço!
 
 **Desfecho — GR GANHA O DUELO**
 - [s] ...mas o {gr} sai dos postes e fecha-lhe o ângulo. Defesa enorme!
 - [c] ...pensou tanto que o {gr} teve tempo de lhe roubar a bola dos pés.
+- [c] ...trocou os pés, chutou o chão e a bola sobra para o {gr}
 
 **Desfecho — FALHA**
 - [s] ...e, sozinho, atira ao lado! Impossível de explicar.
 - [c] ...tenta o chapéu e manda a bola para o parque de estacionamento.
+- [c] ...trocou os pés, chutou o chão e mandou a bola para bem longe da baliza!
 
 ---
 
@@ -160,14 +185,19 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 - [c] {jog} já pede desculpa antes de o árbitro decidir o que fazer.
 
 **Desfecho — VERMELHO DIRETO**
-- [s] ...cartão vermelho! {jog} deixa o {clube} com dez!
+- [s] ...cartão vermelho! {jog} deixa o {clube} com dez! 
 - [s] ...expulso! Entrada demasiado dura, não há discussão.
+- [c] ...vermelho! O {trein} ri mas com cara de quem só lhe apetece chorar e beber para esquecer.
+- [c] ...Bremeilho! Bermelho! Encarnado!Rojo... que poliglota... Rua!
 
 **Desfecho — SEGUNDO AMARELO**
 - [s] ...segundo amarelo e rua! {jog} vai chorar as pitas para o balneário.
+- [c] ...amarelo + amarelo = vermelho! É a vida, segue jogo agora com menos um do {clube}
 
 **Desfecho — SÓ AMARELO (alívio)**
 - [s] ...fica-se pelo amarelo. {jog} respira de alívio.
+- [s] ...amarelo! O povo não gosta, queria outra cor.
+- [s] ...é amarelo, aqui, na Lua e em Marte!
 
 ---
 
@@ -179,9 +209,12 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 
 **Desfecho — LIGEIRA**
 - [s] ...recupera e continua, foi apenas um susto.
+- [c] ...talvez tenha ficado com os 2 pés mais direitos.
+- [c] ...nada que o spray milagroso não resolva
 
 **Desfecho — GRAVE**
 - [s] ...sai de maca, não tem condições para continuar. Má notícia para o {clube}.
+- [s] ...vai ter de sair, não dá mais, é grave.
 
 ---
 
@@ -194,6 +227,7 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 **Desfecho**
 - [c] ...e faz o autogolo mais bonito da jornada! O banco não quer acreditar.
 - [c] ...corta para a própria baliza, o {gr} nem teve tempo de protestar.
+- [c] ...acerta nas orelhas da bola e enfia-a no ângulo.
 
 ---
 
@@ -210,6 +244,8 @@ defensiva), ficar a apanhar bonés (GR sai ao cruzamento e não apanha).
 
 **Desfecho — FALHADO**
 - [s] ...{jog} atira por cima na última bola do jogo. Ficou pela vontade.
+- [s] ...bola no ferro e sai. Quase, quase!!
+- [c] ...a bola sobra para {jog}, tem a baliza escancarada e... atira ao lado! Nem consegue acreditar!
 
 ---
 

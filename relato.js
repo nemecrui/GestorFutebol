@@ -32,7 +32,10 @@ const RELATO = {
         "{jog} recebe de costas, gira sobre o defesa e encara a baliza...",
         "Bola em profundidade, {jog} entra na área a todo o gás...",
         "{jog} finta um, finta dois e procura ângulo para o remate...",
-        "Passe atrasado para a entrada da área, {jog} chega a rematar de primeira..."
+        "Passe atrasado para a entrada da área, {jog} chega a rematar de primeira...",
+        "{jog} pede a bola aos gritos e o {trein} tapa os olhos no banco...",
+        "A bancada já se levanta a meio do lance, pressente golo...",
+        "{trein} grita \"à direita!\" e {jog} arma logo para a esquerda..."
       ],
       goal: [
         "...e coloca-a rasteira ao canto, imparável. GOLOOO do {clube}!",
@@ -42,14 +45,18 @@ const RELATO = {
         "...a bola vai tão colada ao poste que o {gr} nem se mexeu. GOLO!",
         "...fuzila o {gr} de pé esquerdo! Golaço do {clube}!",
         "...desvia ao segundo poste e a bola beija a rede. Golo!",
-        "...nem ele acredita — festeja a olhar para o banco de boca aberta!"
+        "...nem ele acredita — festeja a olhar para o banco de boca aberta!",
+        "...tira um coelho da cartola e enrola o {gr} rasteiro. Golo do {clube}!",
+        "...bomba de fora da área que entra a abrir. Que míssil! Golo!"
       ],
       save: [
         "...mas o {gr} cresce na baliza e adivinha tudo!",
         "...defesa monumental do {gr}, com a ponta dos dedos!",
         "...o {gr} fecha o ângulo e a bola bate-lhe no corpo.",
         "...o {gr} voa e tira-a de junto do poste! Que defesa!",
-        "...grande mão do {gr} a mandar para canto!"
+        "...grande mão do {gr} a mandar para canto!",
+        "...o {gr} defende sem saber como e fica ele próprio surpreendido!",
+        "...{jog} chuta à atmosfera e o {gr} agarra sem qualquer problema."
       ],
       post: [
         "...a bola bate no ferro e sai a escorrer pela linha!",
@@ -62,12 +69,18 @@ const RELATO = {
         "...manda-a para as couves, ninguém sabe onde a bola caiu.",
         "...envia-a para a segunda plateia. Levou as mãos à cara.",
         "...ao lado do poste, a bola morre no fundo da baliza pelo lado de fora.",
-        "...e o remate sai tão torto que quase acerta na bandeirola de canto."
+        "...e o remate sai tão torto que quase acerta na bandeirola de canto.",
+        "...o remate sai tão torto que o extremo do lado quase apanha a bola.",
+        "...manda a bola para as couves!!! Que tijolada!",
+        "...chuta uma toupeira e a bola sai enrolada e devagarinho pela linha de fundo.",
+        "...pega nas orelhas da bola de primeira e atira ao lado.",
+        "...remata de pé fraco... e não é só o pé que é fraco. Isto foi um remate?"
       ],
       cleared: [
         "...mas aparece {def} a cortar mesmo em cima da linha!",
         "...tapado à última fração por um corte providencial de {def}.",
-        "...{def} atira-se de carrinho e manda para canto!"
+        "...{def} atira-se de carrinho e manda para canto!",
+        "...finta um, finta dois, finta três, finta-se a si próprio e {def} alivia para a bouça!"
       ],
       disallowed: [
         "...a bola entra... mas o árbitro assinala fora de jogo! Anulado.",
@@ -87,14 +100,17 @@ const RELATO = {
         "O árbitro aponta para a marca de grande penalidade — protestos do {adv}...",
         "{jog} limpa a marca com o pé, coloca a bola, afasta-se uns passos...",
         "O {gr} tenta ganhar tempo e conversa com o árbitro...",
-        "Tensão máxima: a época do {clube} pode passar por aqui..."
+        "Tensão máxima: a época do {clube} pode passar por aqui...",
+        "Lá de fora, um adepto oferece uma cerveja a {jog} para ele falhar...",
+        "Pede-se VAR nas bancadas... ou será ao BAR? Ninguém percebe..."
       ],
       goal: [
         "...bate com frieza ao canto, o {gr} foi para o outro lado. Golo!",
         "...meio-chapa ao meio, o {gr} atirou-se cedo. Está lá dentro!",
         "...encosta a bola ao poste, o {gr} nem se mexeu. Golo!",
         "...pé cheio ao ângulo, indefensável. Está lá dentro!",
-        "...picadinha ao meio com uma lata do tamanho do estádio. Golo!"
+        "...picadinha ao meio com uma lata do tamanho do estádio. Golo!",
+        "...faz a paradinha, o {gr} já se tinha atirado, e encosta com calma. Golo!"
       ],
       save: [
         "...mas o {gr} voa e defende! Que penálti agarrado!",
@@ -105,7 +121,8 @@ const RELATO = {
         "...e atira por cima da barra! Desperdiçou por completo.",
         "...bate no poste e sai! Não acredita no que fez.",
         "...manda a bola para as couves! Falhou um penálti incrível.",
-        "...escorrega no momento do remate e a bola vai mansa para as mãos do {gr}."
+        "...escorrega no momento do remate e a bola vai mansa para as mãos do {gr}.",
+        "...atira a um metro do poste, o {gr} nem se mexeu. Que falhanço!"
       ]
     },
 
@@ -119,7 +136,8 @@ const RELATO = {
         "Livre em zona frontal, a uns 20 metros. Perigo para o {adv}...",
         "{jog} e {jog2} discutem quem vai bater o livre...",
         "O árbitro conta os passos da barreira, o estádio em silêncio...",
-        "A barreira do {adv} nervosa, salta antes de tempo..."
+        "A barreira do {adv} nervosa, salta antes de tempo...",
+        "O {gr} pede mais um na barreira; o apanha-bolas entra em campo e o árbitro manda-o sair..."
       ],
       goal: [
         "...e faz uma curva perfeita por cima da barreira! Golaço!",
@@ -138,7 +156,8 @@ const RELATO = {
       out: [
         "...e manda-a a rasar o poste, por centímetros!",
         "...manda-a para as couves, por cima de tudo e de todos.",
-        "...a bola foi tão por cima que quase acertou no relógio do estádio."
+        "...a bola foi tão por cima que quase acertou no relógio do estádio. A sorte é estar atrasado!",
+        "...bate com estrondo na barra e sobra para o {gr}! Ainda se ouve o ferro a tremer."
       ]
     },
 
@@ -152,18 +171,21 @@ const RELATO = {
         "Livre lateral para a área, sobem os gigantes do {clube}...",
         "Cruzamento tenso ao segundo poste, {jog} ataca a bola...",
         "Pontapé de canto ensaiado do {clube}, a defesa desorganiza-se...",
-        "A bola sobra na área após o canto, confusão total..."
+        "A bola sobra na área após o canto, confusão total...",
+        "O {gr} grita \"é minha!\" e da bancada responde-se \"batido!\"..."
       ],
       goal: [
         "...{jog} cabeceia para o fundo das redes! Golo de bola parada!",
         "...o {gr} sai da baliza e fica a apanhar bonés — {jog} cabeceia para o golo!",
         "...cabeceamento picado, a bola bate no chão e sobe para dentro! Golo!",
-        "...desvio ao primeiro poste e a bola entra! Golo!"
+        "...desvio ao primeiro poste e a bola entra! Golo!",
+        "...meio de cabeça, meio de ombro — o que conta é que está lá dentro! Golo!"
       ],
       save: [
         "...mas o {gr} sai bem e agarra no ar.",
         "...o {gr} soca para longe e desfaz o perigo.",
-        "...o {gr} sai dos postes e faz a recolha segura."
+        "...o {gr} sai dos postes e faz a recolha segura.",
+        "...grande confusão na área, jogadores no chão, e o {gr} agarra com toda a tranquilidade. Segue jogo!"
       ],
       out: [
         "...cabeceamento ao lado, escapou a boa ocasião.",
@@ -182,22 +204,29 @@ const RELATO = {
         "Falha a linha defensiva do {adv} e {jog} fica em posição de golo!",
         "Bola nas costas dos centrais, {jog} corre atrás dela com o {gr} a sair...",
         "{jog} dribla o último homem e fica de baliza aberta...",
-        "Duelo individual: {jog} contra o {gr}, mano a mano..."
+        "Duelo individual: {jog} contra o {gr}, mano a mano...",
+        "{jog} olha para o fiscal de linha — a bandeirola fica em baixo, segue!",
+        "{jog} parece uma flecha lançada em direção à baliza...",
+        "Rapidíssimo, o {jog} — parece o Speedy Gonzales a caminho do golo..."
       ],
       goal: [
         "...atira à figura do {gr} e ainda encosta no ressalto! Golo!",
         "...espera, espera e coloca ao canto. Que sangue-frio! Golo!",
-        "...finta o {gr} e encosta para a baliza deserta. Golo!"
+        "...finta o {gr} e encosta para a baliza deserta. Golo!",
+        "...simula o remate, o {gr} deita-se, contorna-o e encosta. Golo!",
+        "...o {gr} tenta a mancha e {jog} pica-lhe a bola por cima. Que chapéu! Golaço!"
       ],
       save: [
         "...mas o {gr} sai dos postes e fecha-lhe o ângulo. Defesa enorme!",
         "...o {gr} faz-se enorme e fecha-lhe a baliza toda!",
-        "...pensou tanto que o {gr} teve tempo de lhe roubar a bola dos pés."
+        "...pensou tanto que o {gr} teve tempo de lhe roubar a bola dos pés.",
+        "...troca os pés, chuta o chão e a bola sobra mansa para o {gr}."
       ],
       out: [
         "...e, sozinho, atira ao lado! Impossível de explicar.",
         "...com a baliza à sua frente, atira para as couves! Inacreditável.",
-        "...tenta o chapéu e manda a bola muito por cima. Que falhanço!"
+        "...tenta o chapéu e manda a bola muito por cima. Que falhanço!",
+        "...troca os pés, chuta o chão e manda a bola para bem longe da baliza!"
       ]
     },
 
@@ -245,16 +274,20 @@ const RELATO = {
       direct: [
         "...cartão vermelho! {jog} deixa o {clube} com dez!",
         "...expulso! Entrada demasiado dura, não há discussão.",
-        "...vermelho direto! Não havia outra decisão. {clube} reduzido a dez."
+        "...vermelho direto! Não havia outra decisão. {clube} reduzido a dez.",
+        "...vermelho! O {trein} ri, mas com cara de quem só lhe apetece chorar.",
+        "...Bremeilho! Bermelho! Encarnado! Rojo... que poliglota... Rua!"
       ],
       second: [
         "...segundo amarelo e rua! {jog} vai para o balneário mais cedo.",
-        "...amarelo que é o segundo — está expulso! O {clube} fica com menos um."
+        "...amarelo que é o segundo — está expulso! O {clube} fica com menos um.",
+        "...amarelo mais amarelo dá vermelho! É a vida — segue jogo, com menos um do {clube}."
       ],
       yellowonly: [
         "...fica-se pelo amarelo. {jog} respira de alívio.",
         "...só admoestação verbal, o árbitro perdoa desta vez.",
-        "...mostra só o amarelo. Ficou muito perto do vermelho."
+        "...mostra só o amarelo. Ficou muito perto do vermelho.",
+        "...é amarelo — aqui, na Lua e em Marte!"
       ]
     },
 
@@ -270,7 +303,9 @@ const RELATO = {
       light: [
         "...recupera e continua, foi apenas um susto.",
         "...levanta-se, sacode a poeira e volta ao jogo.",
-        "...faz uns alongamentos e segue em frente. Falso alarme."
+        "...faz uns alongamentos e segue em frente. Falso alarme.",
+        "...talvez tenha ficado até com os dois pés mais direitos.",
+        "...nada que o spray milagroso não resolva."
       ],
       grave: [
         "...sai de maca, não tem condições para continuar. Má notícia para o {clube}.",
@@ -290,7 +325,8 @@ const RELATO = {
       goal: [
         "...e faz o autogolo mais bonito da jornada! O banco não quer acreditar.",
         "...corta para a própria baliza, o {gr} nem teve tempo de protestar.",
-        "...o alívio sai torto e engana o próprio guarda-redes. Autogolo!"
+        "...o alívio sai torto e engana o próprio guarda-redes. Autogolo!",
+        "...acerta nas orelhas da bola e enfia-a no seu próprio ângulo. Autogolo de coleção!"
       ]
     },
 
@@ -312,7 +348,8 @@ const RELATO = {
       miss: [
         "...{jog} atira por cima na última bola do jogo. Ficou pela vontade.",
         "...o {gr} agarra em cima da hora e segura o resultado. Fim!",
-        "...a última bola do jogo sai ao lado. Fim: ficou o que ficou."
+        "...a última bola do jogo sai ao lado. Fim: ficou o que ficou.",
+        "...a bola sobra para {jog}, baliza escancarada e... atira ao lado! Nem ele acredita!"
       ]
     }
   },
@@ -559,7 +596,9 @@ const RELATO = {
     ["Um adepto atira um cachecol para o relvado e {jog} devolve-o com um sorriso."],
     ["A bola vai para a bancada e o adepto recusa-se a devolvê-la. Negociação em curso."],
     ["Rebenta um petardo de alegria nas bancadas — susto geral, jogo parado."],
-    ["{jog} amarra os atacadores com tanta calma que o árbitro já espera por ele."]
+    ["{jog} amarra os atacadores com tanta calma que o árbitro já espera por ele."],
+        ["{jog} celebra um golo... que estava fora de jogo há três minutos."],
+        ["O árbitro leva com a bola em cheio e finge que foi tudo planeado."]
   ],
 
   /* ---- INSÓLITAS LIGADAS AO LANCE (mexem no resultado) ---- */
