@@ -186,7 +186,7 @@ const GAME_DATA = {
 	"CDC Viatodos": "crests/CDC_Viatodos.png",
 	"Realense FC": "crests/Realense_FC.png",
 	"GDU Torcatense": "crests/GDU_Torcatense.png",
-	"GDU Torcatense "B"": "crests/GDU_Torcatense.png",
+	"GDU Torcatense \"B\"": "crests/GDU_Torcatense.png",
 	"ACDR Oleiros": "crests/ACDR_Oleiros.png",
 	"GD Adaúfe": "crests/GD_Adaufe.png",
 	"Soarense SC": "crests/Soarense_SC.png",
@@ -194,7 +194,9 @@ const GAME_DATA = {
 	"FC Prazins Corvite": "crests/FC_Prazins_Corvite.png",
 	"GDC Serafão": "crests/GDC_Serafão.png",
 	"GCD Águias Negras Tabuadelo": "crests/GCD_Aguias_Negras_Tabuadelo.png",
-	"FC Roriz": "crests/FC_Roriz.png"
+	"FC Roriz": "crests/FC_Roriz.png",
+	"Antas FC": "crests/Antas_FC.png",
+	"ATL Cabeceirense": "crests/ATL_Cabeceirense.png"
   },
 
   /* ---- TREINADORES (nome do treinador e adjuntos por clube) ----
