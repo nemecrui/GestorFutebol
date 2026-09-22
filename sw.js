@@ -1,6 +1,6 @@
 /* Service worker — Gestor de Futebol
    Network-first (fica sempre atualizado quando há net) com fallback à cache (funciona offline). */
-const CACHE = "gestor-v3";
+const CACHE = "gestor-v4";
 const CORE = [
   "./", "./index.html", "./engine.js", "./ui.js", "./data.js",
   "./leagues.js", "./relato.js", "./relato_anim.js", "./chars.js", "./media.js",
