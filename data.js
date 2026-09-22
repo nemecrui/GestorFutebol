@@ -139,7 +139,7 @@ const GAME_DATA = {
 		{n:"José Gabriel", p:"PL", idade:20},
 		{n:"Bruno Meira", p:"ED", idade:27},
 		{n:"Zé Marco", p:"EE", idade:31},
-		{n:"Rui Fernandes", p:"PL", idade:33},
+		{n:"Rui Fernandes", p:"PL", idade:33}
 	],
     "GD Gemeos":[
 		{n:"Matheus Jesus", p:"GR", idade:22},
@@ -165,6 +165,34 @@ const GAME_DATA = {
 		{n:"António Ricas", p:"PL", idade:24},
 		{n:"Ângelo Faria", p:"PL", idade:24},
 		{n:"Joenderson Barbosa", p:"PL", idade:30}
+	],
+	"ATL Cabeceirense":[
+		{n:"Rafael Basto", p:"GR", idade:31},
+		{n:"Diogo Martins", p:"GR", idade:26},
+		{n:"Afonso Andrade", p:"GR", idade:18},
+		{n:"Sérgio Teixeira", p:"LD", idade:19},
+		{n:"Cândido", p:"LE", idade:22},
+		{n:"João Leite", p:"DC", idade:24},
+		{n:"Zé Pedro", p:"DC", idade:36},
+		{n:"Júlio Oliveira", p:"LD", idade:18},
+		{n:"Daniel Oliveira", p:"DC", idade:28},
+		{n:"Tiago Gonçalves", p:"DC", idade:22},
+		{n:"Zé Nuno", p:"LE", idade:30},
+		{n:"António Lopes", p:"ME", idade:35},
+		{n:"Fábio Leite", p:"MC", idade:30},
+		{n:"Dany Gonçalves", p:"MDC", idade:36},
+		{n:"Tiago Silva", p:"MDC", idade:25},
+		{n:"Gustavo Pacheco", p:"MC", idade:22},
+		{n:"Luís Arada", p:"MC", idade:24},
+		{n:"João Miguel", p:"MC", idade:44},
+		{n:"Ivan Portilha", p:"MO", idade:27},
+		{n:"Paulo Castro", p:"MO", idade:30},
+		{n:"André Kofi", p:"ED", idade:26},
+		{n:"Chipy", p:"PL", idade:32},
+		{n:"Daniel Silva", p:"PL", idade:28},
+		{n:"Diogo Luís", p:"EE", idade:25},
+		{n:"Fábio Barroso", p:"PL", idade:18},
+		{n:"Miguel Pinto", p:"EE", idade:19}
 	]
   },
 
@@ -209,8 +237,8 @@ const GAME_DATA = {
   treinadores: {
     // "GD Gemeos": "Nome do Treinador",
     // "FC Prazins Corvite": { n:"Nome do Treinador", adjuntos:["Adjunto 1", "Adjunto 2"] }
-	"FC Prazins Corvite": { n:"Adriano Araújo", adjuntos:["Miguel Oliveira", "Marcos Pereira"] }
-
+	"FC Prazins Corvite": { n:"Adriano Araújo", adjuntos:["Miguel Oliveira", "Marcos Pereira"] },
+	"ATL Cabeceirense": { n:"Zé Rui Moreira", adjuntos:["Zé Henrique", "Nuno Costa", "Filipe Coelho", "Bernardino Salsinha"] }
   },
 
   /* ---- ÓRGÃOS DE COMUNICAÇÃO (conferências de imprensa) ----
