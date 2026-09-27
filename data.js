@@ -193,6 +193,33 @@ const GAME_DATA = {
 		{n:"Diogo Luís", p:"EE", idade:25},
 		{n:"Fábio Barroso", p:"PL", idade:18},
 		{n:"Miguel Pinto", p:"EE", idade:19}
+	],
+	"AD Esposende": [
+		{n:"Afonso Souto", p:"GR", idade:20},
+		{n:"Tiago Coelho", p:"GR", idade:21},
+		{n:"Francisco Longras", p:"GR", idade:22},
+		{n:"Gonçalo Faneco", p:"DC", idade:22},
+		{n:"Rodrigo Ferreira", p:"LD", idade:19},
+		{n:"Ivo Rodrigues", p:"DC", idade:18},
+		{n:"Christian Rocha", p:"DC", idade:21},
+		{n:"Paulo Correia", p:"DC", idade:17},
+		{n:"Nuno Vasconcelos", p:"DC", idade:22},
+		{n:"Edvander Mecongo", p:"LE", idade:23},
+		{n:"Adérito Santos", p:"LE", idade:23},
+		{n:"Tiago Torres", p:"MD", idade:23},
+		{n:"Sérgio Azevedo", p:"MC", idade:24},
+		{n:"Pazito", p:"MC", idade:22},
+		{n:"Simão Silva", p:"MC", idade:18},
+		{n:"Raul Araújo", p:"MO", idade:21},
+		{n:"Diogo Soares", p:"ME", idade:20},
+		{n:"Renato Faria", p:"PL", idade:18},
+		{n:"João Correia", p:"ED", idade:19},
+		{n:"Tomás Pinto", p:"EE", idade:23},
+		{n:"Guilherme Reis", p:"ED", idade:21},
+		{n:"Santiago Faria", p:"ED", idade:20},
+		{n:"José Silva", p:"MD", idade:20},
+		{n:"Danilo Azevedo", p:"PL", idade:22},
+		{n:"Alexandre Pinto", p:"PL", idade:20}
 	]
   },
 
@@ -224,7 +251,8 @@ const GAME_DATA = {
 	"GCD Águias Negras Tabuadelo": "crests/GCD_Aguias_Negras_Tabuadelo.png",
 	"FC Roriz": "crests/FC_Roriz.png",
 	"Antas FC": "crests/Antas_FC.png",
-	"ATL Cabeceirense": "crests/ATL_Cabeceirense.png"
+	"ATL Cabeceirense": "crests/ATL_Cabeceirense.png",
+	"AD Esposende": "crests/AD_Esposende.png"
   },
 
   /* ---- TREINADORES (nome do treinador e adjuntos por clube) ----
@@ -238,7 +266,8 @@ const GAME_DATA = {
     // "GD Gemeos": "Nome do Treinador",
     // "FC Prazins Corvite": { n:"Nome do Treinador", adjuntos:["Adjunto 1", "Adjunto 2"] }
 	"FC Prazins Corvite": { n:"Adriano Araújo", adjuntos:["Miguel Oliveira", "Marcos Pereira"] },
-	"ATL Cabeceirense": { n:"Zé Rui Moreira", adjuntos:["Zé Henrique", "Nuno Costa", "Filipe Coelho", "Bernardino Salsinha"] }
+	"ATL Cabeceirense": { n:"Zé Rui Moreira", adjuntos:["Zé Henrique", "Nuno Costa", "Filipe Coelho", "Bernardino Salsinha"] },
+	"AD Esposende": { n:"Alexandre Oliveira", adjuntos:["Aldemir", "Fernando Pinto", "Marco Fernandes"] }
   },
 
   /* ---- ÓRGÃOS DE COMUNICAÇÃO (conferências de imprensa) ----
