@@ -53,7 +53,7 @@ const MEDIA = [
 function mediaPool(){
   let extra=[];
   try{ if(typeof GAME_DATA!=="undefined" && GAME_DATA && Array.isArray(GAME_DATA.orgaos)) extra=GAME_DATA.orgaos; }catch(e){}
-  const norm=extra.map((o,i)=>({ id:"cfg"+i, nome:o.nome||"Órgão", tipo:o.tipo||"", cor:o.cor||"#f2c200", svg:o.svg||null, logo:o.logo||null }))
+  const norm=extra.map((o,i)=>({ id:"cfg"+i, nome:o.nome||"Órgão", tipo:o.tipo||"", cor:o.cor||"#f2c200", svg:o.svg||null, logo:o.logo||null, jornalista:o.jornalista||null }))
     .filter(o=>o.nome);
   return MEDIA.concat(norm);
 }
@@ -63,7 +63,7 @@ function pickMedia(){ const p=mediaPool(); return p.length? p[Math.floor(Math.ra
 function orgaoLogoHTML(o,size){ size=size||34; if(!o)return "";
   const box=`display:inline-flex;flex:0 0 auto;width:${size}px;height:${size}px;align-items:center;justify-content:center`;
   if(o.svg)  return `<span class="orglogo" style="${box}">${o.svg}</span>`;
-  if(o.logo) return `<img class="orglogo" src="${o.logo}" alt="${o.nome||''}" style="${box};object-fit:contain;border-radius:8px">`;
+  if(o.logo) return `<img class="orglogo" src="${o.logo}" alt="${o.nome||''}" onerror="this.style.display='none'" style="${box};object-fit:contain;border-radius:8px">`;
   const ini=(o.nome||"?").split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase();
   return `<span class="orglogo" style="${box};background:${o.cor||'#888'};color:#fff;border-radius:8px;font-weight:800;font-size:${Math.round(size*0.42)}px">${ini}</span>`;
 }
