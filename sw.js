@@ -1,9 +1,9 @@
 /* Service worker — Gestor de Futebol
    Network-first (fica sempre atualizado quando há net) com fallback à cache (funciona offline). */
-const CACHE = "gestor-v4";
+const CACHE = "gestor-v5";
 const CORE = [
   "./", "./index.html", "./engine.js", "./ui.js", "./data.js",
-  "./leagues.js", "./relato.js", "./relato_anim.js", "./chars.js", "./media.js",
+  "./leagues.js", "./relato.js", "./relato_anim.js", "./chars.js", "./media.js", "./feedback.js",
   "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png",
   "./apple-touch-icon.png", "./favicon-32.png"

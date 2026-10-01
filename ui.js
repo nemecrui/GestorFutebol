@@ -644,6 +644,7 @@ function viewHome(){
     <button class="btn sec small" id="btnAnim" style="width:100%;margin-bottom:8px">✨ Animações: ${ANIM?"ligadas":"desligadas"}</button>
     <button class="btn sec small" id="btnNews" style="width:100%;margin-bottom:8px">🔔 Novidades${hasNewsNew()?' <span style="color:var(--red);font-weight:900">•</span>':''}</button>
     <button class="btn sec small" id="btnSaves" style="width:100%;margin-bottom:8px">💾 Gravações · exportar / importar / trocar</button>
+    <button class="btn sec small" id="btnFeedback" style="width:100%;margin-bottom:8px">💬 Reportar bug / Sugestão</button>
     <button class="btn warn small" id="btnReset" style="width:100%">↺ Novo jogo (apaga este slot)</button></div>`;
   return h;
 }
@@ -1669,6 +1670,7 @@ function bindView(){
   const ban=$("#btnAnim");if(ban)ban.onclick=()=>{ setAnim(!ANIM); toast("Animações "+(ANIM?"ligadas":"desligadas")); render(); };
   const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();
+  const bfb=$("#btnFeedback");if(bfb&&typeof openFeedback==="function")bfb.onclick=()=>openFeedback();
   const br=$("#btnReset");if(br)br.onclick=()=>{if(confirm("Apagar o jogo atual e começar de novo?")){wipe();boot();}};
   document.querySelectorAll("[data-job]").forEach(b=>b.onclick=()=>{takeNewJob(+b.dataset.job);TAB="home";render();});
   const bjr=$("#btnJobRestart");if(bjr)bjr.onclick=()=>{if(confirm("Recomeçar carreira do zero?")){wipe();boot();}};

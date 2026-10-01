@@ -20,6 +20,20 @@ const GAME_DATA = {
      Vês tudo no painel: CODIGO.goatcounter.com  (visitas + eventos "nova-carreira" e "nova-epoca"). */
   goatcounter: "nemecrui",
 
+  /* ---- FEEDBACK / REPORTAR BUG (webhook) ----
+     Recebe o feedback dos jogadores sem eles saírem do jogo nem se registarem.
+     tipo: "discord" (webhook de um canal) ou "telegram" (bot).
+       Discord : no canal → Definições → Integrações → Webhooks → Novo webhook → Copiar URL.
+                 Cola esse URL em "webhook".
+       Telegram: cria um bot no @BotFather, põe o TOKEN em "webhook" e o id do chat/canal em "chatId".
+     "email" (opcional): se o envio falhar (sem net), abre o email já preenchido para este endereço. */
+  feedback: {
+    tipo: "discord",
+    webhook: "https://discord.com/api/webhooks/1555331217774223490/7GlUwyR6XMO6Uy_qBL5-koqzn-dljZphn7Nh9mFTyPewCRQ_Wv1t653DfA_WJgGBgfdr",
+    chatId: "",
+    email: "ruimxavir@gmail.com"
+  },
+
   /* ---- NOVIDADES (aparecem no painel 🔔 do jogo) ----
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
