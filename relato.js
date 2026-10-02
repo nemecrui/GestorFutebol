@@ -83,8 +83,17 @@ const RELATO = {
         "...finta um, finta dois, finta três, finta-se a si próprio e {def} alivia para a bouça!"
       ],
       disallowed: [
-        "...a bola entra... mas o árbitro assinala fora de jogo! Anulado.",
-        "...festejam nas bancadas... mas havia falta no início do lance. Nada feito."
+        "...a bola entra... mas {ast} assinala fora de jogo! Anulado.",
+        "...festejam nas bancadas... mas havia falta no início do lance. Nada feito.",
+        "...a bola entra, mas a bandeira de {ast} já estava no ar. Fora de jogo!",
+        "...golo anulado por falta no início da jogada. Nada feito.",
+        "...festa travada: fora de jogo milimétrico assinalado por {ast}."
+      ],
+      mistake: [
+        "...a bola entra... e {ast} levanta a bandeira! A repetição mostra que estava DENTRO. Golo mal anulado!",
+        "...anulado por um fora de jogo que só {ast} viu. O {clube} não quer acreditar!",
+        "...fora de jogo no fígado! Nem com uma régua se percebe o que {ast} viu.",
+        "...{ast} dormiu na bandeirada — golo limpo atirado para o caixote. Escândalo!"
       ]
     },
 
@@ -102,7 +111,9 @@ const RELATO = {
         "O {gr} tenta ganhar tempo e conversa com o árbitro...",
         "Tensão máxima: a época do {clube} pode passar por aqui...",
         "Lá de fora, um adepto oferece uma cerveja a {jog} para ele falhar...",
-        "Pede-se VAR nas bancadas... ou será ao BAR? Ninguém percebe..."
+        "Pede-se VAR nas bancadas... ou será ao BAR? Ninguém percebe...",
+        "A bancada pede penálti aos berros e {arb}... aponta para a marca! O {adv} protesta tudo.",
+        "Lance dividido na área, o avançado deixa-se cair, e {arb} apita penálti muito contestado..."
       ],
       goal: [
         "...bate com frieza ao canto, o {gr} foi para o outro lado. Golo!",
@@ -269,7 +280,9 @@ const RELATO = {
         "Carrinho por trás de {jog} — o estádio levanta-se a protestar...",
         "Cotovelada na disputa de bola, o árbitro viu tudo...",
         "{jog} trava o contra-ataque com falta tática, era a última linha...",
-        "O árbitro chama {jog} e leva a mão ao bolso muito devagar..."
+        "O árbitro chama {jog} e leva a mão ao bolso muito devagar...",
+        "Entrada dividida e {arb} corre 40 metros só para mostrar o cartão...",
+        "Falta que ninguém viu — mas {arb} já levou a mão ao bolso. O {trein} do {adv} nem protesta de tão surpreendido."
       ],
       direct: [
         "...cartão vermelho! {jog} deixa o {clube} com dez!",
@@ -598,7 +611,13 @@ const RELATO = {
     ["Rebenta um petardo de alegria nas bancadas — susto geral, jogo parado."],
     ["{jog} amarra os atacadores com tanta calma que o árbitro já espera por ele."],
         ["{jog} celebra um golo... que estava fora de jogo há três minutos."],
-        ["O árbitro leva com a bola em cheio e finge que foi tudo planeado."]
+        ["O árbitro leva com a bola em cheio e finge que foi tudo planeado."],
+    ["Pede-se o VAR... mas isto é o distrital. {arb} vai ao BAR beber um fino e volta já.", "Segue o jogo!"],
+    ["{ast} dá a bandeirada mais lenta do distrito — já ninguém sabe o que assinalou."],
+    ["{arb} perde o apito algures no bolso e o jogo continua sem ninguém perceber porquê."],
+    ["Protestos de toda a gente a {arb}; ele responde mostrando o relógio e a paciência a zero."],
+    ["Invasão pacífica: um peregrino de mochila às costas atravessa o relvado a passo de caminhada.", "Ninguém o pára — nem ele sabe se vai a Fátima ou a Santiago de Compostela."],
+    ["Um grupo de turistas entra no relvado, máquina fotográfica ao peito, e fotografa tudo.", "Baliza, bandeirola e até {arb}, que posa sem saber porquê. O jogo espera."]
   ],
 
   /* ---- INSÓLITAS LIGADAS AO LANCE (mexem no resultado) ---- */

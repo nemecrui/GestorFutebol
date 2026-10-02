@@ -1249,7 +1249,9 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   function someAttacker(side){ const cl=side==="H"?home:away, ln=st[side].line;
     const a=ln.map(id=>cl.squad.find(x=>x.id===id)).filter(p=>p&&GROUP[p.pos]!=="GK"); return a.length?lastName(pick(a).name):"o avançado"; }
   function mkCtx(side,extra){ const o=otherSide(side);
-    const c={clube:nameOf(side),adv:nameOf(o),gr:oppGKName(side),trein:(side===userSide&&typeof G!=="undefined"&&G.manager?G.manager.name:"o treinador"),jog:someAttacker(side),jog2:someAttacker(side),def:"o defesa"};
+    const _rf=(typeof st!=="undefined"&&st&&st.ref)?st.ref:null;
+    const c={clube:nameOf(side),adv:nameOf(o),gr:oppGKName(side),trein:(side===userSide&&typeof G!=="undefined"&&G.manager?G.manager.name:"o treinador"),jog:someAttacker(side),jog2:someAttacker(side),def:"o defesa",
+      arb:(_rf&&_rf.n)||"o árbitro", ast:(_rf&&_rf.assist&&_rf.assist.length)?pick(_rf.assist).n:"o assistente"};
     if(extra)Object.assign(c,extra); return c; }
   function relAmb(key,side){ side=side||"H"; if(typeof relatoAmbient==="function"){const s=relatoAmbient(key,mkCtx(side,{}));if(s)return s;}
     return key==="balance"?pick(BAL):phrase(PRESS,side); }
@@ -1279,7 +1281,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     if(e.type==="penmiss"){ if(e.pid)ctx.jog=nmPid(e.side,e.pid); return {kind:"penalty",branch:(Math.random()<0.55?"miss":"save"),ctx}; }
     if(e.type==="fkmiss"){ if(e.pid)ctx.jog=nmPid(e.side,e.pid); return {kind:"freekick",branch:pick(["wall","save","out"]),ctx}; }
     if(e.type==="red"){ if(e.pid)ctx.jog=nmPid(e.side,e.pid); return {kind:"red",branch:(e.second?"second":"direct"),ctx}; }
-    if(e.type==="disallowed"){ return {kind:"chance",branch:"disallowed",ctx}; }
+    if(e.type==="disallowed"){ return {kind:"chance",branch:(e.controv?"mistake":"disallowed"),ctx}; }
     return null; }
   function startEventSeq(e){ const mp=(typeof relatoSeq==="function")?mapEvent(e):null;
     let seq=mp?relatoSeq(mp.kind,mp.branch,mp.ctx):null;

@@ -300,6 +300,39 @@ Poucas, mais controladas. A interrupção causa (ou tira) uma ocasião.
 
 ---
 
+## Arbitragem (trio: árbitro + 2 assistentes)
+
+`{arb}` = nome do árbitro · `{ast}` = nome de um assistente. A polémica do golo mal anulado só sai quando o motor marca o lance como erro de arbitragem contra o utilizador.
+
+**Golo anulado — legítimo** (`chance.disallowed`)
+- [s] ...a bola entra, mas a bandeira de {ast} já estava no ar. Fora de jogo!
+- [s] ...golo anulado por falta no início da jogada. Nada feito.
+- [s] ...festa travada: fora de jogo milimétrico assinalado por {ast}.
+
+**Golo MAL anulado — polémica** (`chance.mistake`)
+- [s] ...a bola entra... e {ast} levanta a bandeira! A repetição mostra que estava DENTRO. Golo mal anulado!
+- [s] ...anulado por um fora de jogo que só {ast} viu. O {clube} não quer acreditar!
+- [c] ...fora de jogo no fígado! Nem com uma régua se percebe o que {ast} viu.
+- [c] ...{ast} dormiu na bandeirada — golo limpo atirado para o caixote. Escândalo!
+
+**Penálti polémico** (`penalty.build`)
+- [c] A bancada pede penálti aos berros e {arb}... aponta para a marca! O {adv} protesta tudo.
+- [c] Lance dividido na área, o avançado deixa-se cair, e {arb} apita penálti muito contestado...
+
+**Vermelho polémico** (`red.build`)
+- [c] Entrada dividida e {arb} corre 40 metros só para mostrar o cartão...
+- [c] Falta que ninguém viu — mas {arb} já levou a mão ao bolso. O {trein} do {adv} nem protesta de tão surpreendido.
+
+**Folclore de arbitragem / invasões** (`folclore`)
+- [c] Pede-se o VAR... mas isto é o distrital. {arb} vai ao BAR beber um fino e volta já. Segue o jogo!
+- [c] {ast} dá a bandeirada mais lenta do distrito — já ninguém sabe o que assinalou.
+- [c] {arb} perde o apito algures no bolso e o jogo continua sem ninguém perceber porquê.
+- [c] Protestos de toda a gente a {arb}; ele responde mostrando o relógio e a paciência a zero.
+- [c] Invasão pacífica: um peregrino de mochila às costas atravessa o relvado... nem ele sabe se vai a Fátima ou a Santiago de Compostela.
+- [c] Um grupo de turistas entra no relvado e fotografa tudo — baliza, bandeirola e até {arb}, que posa sem saber porquê.
+
+---
+
 # A FAZER / IDEIAS PARA ENCHER
 
 ## Próximas (prioritárias)
