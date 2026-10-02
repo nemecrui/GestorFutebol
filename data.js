@@ -38,6 +38,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-10-01", texto:"🧑‍⚖️ Equipa de arbitragem! Cada jogo passa a ter um árbitro e dois assistentes, com características próprias (cartão fácil, caseiro, deixa jogar, despistado…) que influenciam de forma MODERADA cartões, descontos, penáltis e foras-de-jogo. Vês o trio na antevisão. Se a arbitragem te prejudicar mesmo, culpá-la na conferência agora cai bem nos adeptos — usada como desculpa, nem por isso. Podes ajustar a intensidade (moderada/suave/desligada) no painel." },
     { data:"2026-10-01", texto:"💬 A tua voz conta! Já podes reportar bugs, dar sugestões ou deixar a tua opinião sem sair do jogo nem te registares — toca no botão 💬 (canto inferior direito) ou em «Reportar bug / Sugestão» no painel. Lemos tudo e ajuda-nos a melhorar o jogo." },
     { data:"2026-09-18", texto:"🎤 Conferências de imprensa muito mais ricas: mais perguntas e respostas, com temas de tática e sobre jogadores pouco utilizados. Quando a pergunta é sobre um jogador, vês agora as estatísticas dele (jogos, golos, cartões e média de pontuação). E há um novo indicador — «Apoio dos adeptos» — no painel, mais volátil que a confiança da direção: sobe e desce com os resultados e com as respostas que dás nas conferências." },
     { data:"2026-09-18", texto:"👔 Equipa técnica: todas as equipas passam a ter treinador e adjuntos. Vês a tua equipa técnica no separador «Tática» e o treinador adversário na antevisão do jogo." },
@@ -300,6 +301,34 @@ const GAME_DATA = {
   orgaos: [
     // { nome:"Correio do Exemplo", tipo:"Jornal", cor:"#c1121f", logo:"media/exemplo.png" }
     { nome:"Grande Área – Rádio Alto Ave", tipo:"Rádio", cor:"#0ea5e9", jornalista:"António Silva", logo:"media/radio_alto_ave.png" }
+  ],
+
+  /* ---- ARBITRAGEM ----
+     Cada jogo tem um trio: 1 árbitro + 2 assistentes. Influência MODERADA e previsível
+     (vês o árbitro na antevisão). Atributos 1–20:
+       sev=severidade (cartão fácil) · crit=critério/competência · casa=caseirice (cede à bancada)
+       vant=deixa jogar (vantagem) · desc=gestão de descontos · ego=protagonismo
+     Assistentes: prec=precisão de fora-de-jogo · atencao=posicionamento.
+     "fama" é a etiqueta mostrada na antevisão. Para já são fictícios; mais tarde entram nomes reais.
+     Intensidade global: "moderada" (predef.) · "suave" · "off".  (o jogador também pode mudar no painel) */
+  arbitragem: "moderada",
+  arbitros: [
+    { n:"António Faria",     fama:"cartão fácil",     sev:17, crit:12, casa:10, vant:7,  desc:11, ego:13,
+      assist:[ {n:"Rui Matos", prec:11, atencao:12}, {n:"Hélder Dias", prec:13, atencao:10} ] },
+    { n:"Jorge Mendonça",    fama:"deixa jogar",      sev:7,  crit:13, casa:9,  vant:17, desc:10, ego:8,
+      assist:[ {n:"Paulo Sá", prec:13, atencao:13}, {n:"Nuno Lopes", prec:12, atencao:12} ] },
+    { n:"Ricardo Catité",    fama:"caseiro",          sev:12, crit:10, casa:17, vant:10, desc:14, ego:12,
+      assist:[ {n:"Tiago Alves", prec:10, atencao:11}, {n:"Bruno Reis", prec:9, atencao:10} ] },
+    { n:"Paulo Bastos",      fama:"compensador",      sev:13, crit:11, casa:12, vant:9,  desc:12, ego:14,
+      assist:[ {n:"André Cruz", prec:12, atencao:11}, {n:"Vítor Pena", prec:11, atencao:12} ] },
+    { n:"Hélder Malheiro",   fama:"protagonista",     sev:14, crit:10, casa:11, vant:8,  desc:13, ego:18,
+      assist:[ {n:"Diogo Sousa", prec:11, atencao:10}, {n:"Marco Lima", prec:10, atencao:11} ] },
+    { n:"Nuno Quintas",      fama:"rigoroso e justo", sev:13, crit:18, casa:7,  vant:12, desc:10, ego:9,
+      assist:[ {n:"Pedro Faria", prec:16, atencao:15}, {n:"Luís Gomes", prec:15, atencao:15} ] },
+    { n:"Fernando Pité",     fama:"despistado",       sev:10, crit:6,  casa:12, vant:10, desc:12, ego:11,
+      assist:[ {n:"Zé Carlos", prec:7, atencao:8}, {n:"Rúben Maia", prec:8, atencao:7} ] },
+    { n:"Sérgio Antunes",    fama:"equilibrado",      sev:11, crit:13, casa:10, vant:11, desc:11, ego:10,
+      assist:[ {n:"João Pinto", prec:13, atencao:12}, {n:"Carlos Sá", prec:12, atencao:13} ] }
   ],
 
   /* ---- ADICIONAR clubes novos a uma divisão ----

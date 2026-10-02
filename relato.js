@@ -449,7 +449,7 @@ const RELATO = {
                {label:"Respeito ao adversário, foi cruel", fx:{fans:-1, rep:1}} ] },
       { cond:"loss", q:"Como explicas este resultado negativo?",
         opts:[ {label:"Assumo a responsabilidade", fx:{board:2, morale:2, fans:2}},
-               {label:"Fomos prejudicados na arbitragem", fx:{rep:1, board:-1, rival:1, fans:1}},
+               {label:"Fomos prejudicados na arbitragem", refctx:true, fx:{rep:1, board:-1, rival:1, fans:1}},
                {label:"A equipa não esteve à altura", fx:{morale:-4, board:1, fans:-3}} ] },
       { cond:"loss", q:"Ouviram-se assobios no final. Preocupa-te?",
         opts:[ {label:"Têm todo o direito, vamos corrigir", fx:{fans:3, board:1}},

@@ -261,6 +261,8 @@ function textOn(hex){const c=hex.replace("#","");const r=parseInt(c.substr(0,2),
 function ratingClass(v){return v>=72?"r-hi":v>=60?"r-mid":"r-lo";}
 function posClass(pos){return "pos-"+GROUP[pos];}
 function crestOf(cl){ return (cl&&cl.crest) || (typeof GAME_DATA!=="undefined"&&GAME_DATA.crests&&cl&&GAME_DATA.crests[cl.name])||null; }
+function refModeNow(){ try{ return String((G&&G.refMode)||(typeof GAME_DATA!=="undefined"&&GAME_DATA&&GAME_DATA.arbitragem)||"moderada").toLowerCase(); }catch(e){ return "moderada"; } }
+function refModeLabel(m){ m=(m||refModeNow()); return m==="off"?"desligada":(m==="suave"?"suave":"moderada"); }
 function crestAlt(cl){ return String((cl&&cl.name)||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
 function showCrestBig(src, name){
   const mo=document.createElement("div"); mo.className="modal crestlb";
@@ -642,6 +644,7 @@ function viewHome(){
   h+=`<div class="card"><button class="btn sec small" id="btnTut" style="width:100%;margin-bottom:8px">❓ Como jogar (guia rápido)</button>
     ${!isStandalone()?`<button class="btn sec small" id="btnInstall2" style="width:100%;margin-bottom:8px">📲 Instalar como aplicação</button>`:""}
     <button class="btn sec small" id="btnAnim" style="width:100%;margin-bottom:8px">✨ Animações: ${ANIM?"ligadas":"desligadas"}</button>
+    <button class="btn sec small" id="btnRef" style="width:100%;margin-bottom:8px">🧑‍⚖️ Arbitragem: ${refModeLabel()}</button>
     <button class="btn sec small" id="btnNews" style="width:100%;margin-bottom:8px">🔔 Novidades${hasNewsNew()?' <span style="color:var(--red);font-weight:900">•</span>':''}</button>
     <button class="btn sec small" id="btnSaves" style="width:100%;margin-bottom:8px">💾 Gravações · exportar / importar / trocar</button>
     <button class="btn sec small" id="btnFeedback" style="width:100%;margin-bottom:8px">💬 Reportar bug / Sugestão</button>
@@ -1406,6 +1409,7 @@ function showPostMatch(st, r, onClose){
 }
 function openPreMatch(next, startFn){
   const c=me(), opp=next.oppClub||myClubs()[next.opp];
+  const refCrew=(typeof assignMatchRef==="function")?assignMatchRef():null;
   const myLine=availableLineup(c,G.lineup,G.formation), oppLine=aiPickLineup(opp,"4-4-2");
   const myS=teamStrength(c,myLine,G.formation,G.mentality), opS=teamStrength(opp,oppLine,"4-4-2","Equilibrado");
   const fav=favTier(myS.overall,opS.overall), form=clubRecentForm(opp,5);
@@ -1423,6 +1427,7 @@ function openPreMatch(next, startFn){
     ${derby?`<div class="center" style="margin:2px 0 8px"><span style="background:linear-gradient(180deg,#ef4657,#b3121f);color:#fff;font-weight:800;font-size:12px;padding:3px 12px;border-radius:20px;letter-spacing:1px">🔥 DÉRBI</span></div>`:""}
     <div class="scorebug"><div class="t">${clubTag(c)}</div><div class="sc" style="font-size:15px">VS</div><div class="t a">${clubTag(opp)}</div></div>
     <div class="muted center" style="font-size:12px;margin-bottom:8px">${opp.name}${oppPos?" · "+oppPos+"º":""}${opp.coach?" · 👔 "+opp.coach:""} · forma: ${fmtForm(form)}</div>
+    ${refCrew?`<div class="muted center" style="font-size:11px;margin:-4px 0 8px">🧑‍⚖️ Árbitro: <b>${refCrew.n}</b>${refCrew.fama?` <span style="color:var(--accent)">(${refCrew.fama})</span>`:""} · 🚩 ${refCrew.assist.map(a=>a.n).join(", ")}</div>`:""}
     <div class="card" style="padding:9px;margin-bottom:8px">
       ${bar("Ataque",Math.round(myS.atk),Math.round(opS.atk))}${bar("Meio-campo",Math.round(myS.mid),Math.round(opS.mid))}${bar("Defesa",Math.round(myS.def),Math.round(opS.def))}
       <div class="center" style="font-size:11px;margin-top:5px"><b>${favTxt}</b> · <span style="color:var(--green2)">tu</span> vs <span style="color:var(--red)">eles</span></div></div>
@@ -1668,6 +1673,7 @@ function bindView(){
   const binx=$("#btnInstallX");if(binx)binx.onclick=()=>{ installDismissed=true; render(); };
   const bin2=$("#btnInstall2");if(bin2)bin2.onclick=()=>doInstall();
   const ban=$("#btnAnim");if(ban)ban.onclick=()=>{ setAnim(!ANIM); toast("Animações "+(ANIM?"ligadas":"desligadas")); render(); };
+  const brf=$("#btnRef");if(brf)brf.onclick=()=>{ const cur=refModeNow(); const nx=cur==="moderada"?"suave":(cur==="suave"?"off":"moderada"); G.refMode=nx; if(typeof save==="function")save(); toast("Arbitragem: "+refModeLabel(nx)); render(); };
   const bnw=$("#btnNews");if(bnw)bnw.onclick=()=>{openNews();render();};
   const bsv=$("#btnSaves");if(bsv)bsv.onclick=()=>openSaves();
   const bfb=$("#btnFeedback");if(bfb&&typeof openFeedback==="function")bfb.onclick=()=>openFeedback();
