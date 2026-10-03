@@ -752,7 +752,17 @@ function _rollClima(){ const r=Math.random(); return r<0.62?"sol":(r<0.82?"nubla
 function _effSurface(campo,clima){ campo=campo||"relva"; if(clima==="chuva")return campo==="pelado"?"pelado_molhado":"enlameado"; return campo; }
 function _mkPitch(campo){ const clima=_rollClima(); const eff=_effSurface(campo,clima); const s=PITCH_SURF[eff]||PITCH_SURF.relva;
   return {campo:campo||"relva", clima, eff, key:s.key, label:s.label, play:s.play, wear:s.wear, injury:s.injury}; }
-function assignMatchPitch(homeCampo, force){ if(typeof G==="undefined"||!G)return _mkPitch(homeCampo); if(force||!G.matchPitch)G.matchPitch=_mkPitch(homeCampo); return G.matchPitch; }
+function _pitchFor(homeClub){
+  const campo=(homeClub&&homeClub.campo)||"relva";
+  const tier=(homeClub&&homeClub.tier!=null)?homeClub.tier:2;
+  const p=_mkPitch(campo);
+  p.night = Math.random()<0.25;                                         // ~25% dos jogos à noite
+  let crowd=[0.68,0.52,0.42,0.32][tier]; if(crowd==null)crowd=0.4;        // bancada por escalão
+  try{ if(typeof G!=="undefined"&&G&&typeof me==="function"&&homeClub===me()&&G.support){ crowd+=(((G.support.approval!=null?G.support.approval:50)-50)/220); } }catch(e){}   // + apoio dos adeptos (só em casa)
+  p.crowd=Math.max(0.15,Math.min(0.85, crowd+(Math.random()-0.5)*0.1));
+  return p;
+}
+function assignMatchPitch(homeClub, force){ if(typeof G==="undefined"||!G)return _pitchFor(homeClub); if(force||!G.matchPitch)G.matchPitch=_pitchFor(homeClub); return G.matchPitch; }
 function ensurePitch(){ if(typeof G==="undefined"||!G||!G.divisions)return;
   G.divisions.forEach(d=>d.clubs.forEach(c=>{ if(!c.campo)c.campo=_assignCampo({n:c.name,s:c.short}, c.tier); 
     if(c.campo==="pelado"&&(c.tier==null||c.tier<2))c.campo="relva_gasta"; })); }
@@ -851,7 +861,7 @@ function createLive(home,away,hLine,aLine,cfg){
   const _crew=(typeof G!=="undefined"&&G&&G.matchRef)?G.matchRef:pickRefCrew();   // trio de arbitragem deste jogo
   const _refD=refDerived(_crew);
   sH=clamp(sH+(_refD.descBias||0),1,9); sA=clamp(sA+(_refD.descBias||0),1,9);      // descontos enviesados pelo árbitro
-  const _pitch=(typeof G!=="undefined"&&G&&G.matchPitch)?G.matchPitch:_mkPitch(home&&home.campo);   // piso + tempo deste jogo
+  const _pitch=(typeof G!=="undefined"&&G&&G.matchPitch)?G.matchPitch:_pitchFor(home);   // piso + tempo + ambiente deste jogo
   const st={ home,away, minute:0, stopH:sH, stopA:sA, ref:_crew, refD:_refD, refControv:0, refControvDone:false, pitch:_pitch, et:false, maxMin:(cfg.maxMin||90)+sH+sA, hg:0, ag:0, events:[], userSide:cfg.userSide||null,
     talkFactor:1, talkFrom:0, talkUntil:0,
     H:{line:hLine.slice(), form:cfg.hForm||"4-4-2", ment:cfg.hMent||"Equilibrado", subs:0, appeared:new Set(hLine), gone:[], off:new Set(), yc:{}},
@@ -2299,7 +2309,7 @@ if(typeof module!=="undefined"&&module.exports){
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     rollInjury,injuryLabel,applyMatchSuspensions,
     pickRefCrew,assignMatchRef,refDerived,refIntensity,
-    assignMatchPitch,ensurePitch,_mkPitch,_assignCampo,
+    assignMatchPitch,ensurePitch,_mkPitch,_pitchFor,_assignCampo,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,

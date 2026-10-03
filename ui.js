@@ -1113,7 +1113,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   function showAnim(kind,branch,side){ if(typeof showRelatoAnim!=="function"||!animEl)return; const cl=side==="H"?home:away; showRelatoAnim(animEl,kind,branch,cl&&cl.c1); }
   function showAnimType(type){ if(typeof showRelatoAnimType!=="function"||!animEl||!type)return; showRelatoAnimType(animEl,type,"#f2c200"); }
   const fieldEl=mo.querySelector("#liveField"); let mp=null;
-  if(fieldEl && typeof buildMiniPitch==="function" && animOn()){ mp=buildMiniPitch(fieldEl,(st.pitch&&st.pitch.key)||"relva"); mp.setAnim(animOn()); } else if(fieldEl){ fieldEl.style.display="none"; }
+  if(fieldEl && typeof buildMiniPitch==="function" && animOn()){ mp=buildMiniPitch(fieldEl,{ key:(st.pitch&&st.pitch.key)||"relva", night:!!(st.pitch&&st.pitch.night), crowd:(st.pitch&&st.pitch.crowd!=null)?st.pitch.crowd:0.4, homeC1:home.c1, homeC2:home.c2, awayC1:away.c1 }); mp.setAnim(animOn()); } else if(fieldEl){ fieldEl.style.display="none"; }
   let timer,pauseUntil=0,paused=false,htDone=false,mom=50,momSumH=0,momSumA=0,commentHold=0,windowsUsed=0;
   let seqActive=false,seqTimer=null,seqSkip=null,evQueue=[],lastSeqAt=-99999,possSide=null,speed=1;
   const aiSide = userSide==="H"?"A":userSide==="A"?"H":null;
@@ -1415,8 +1415,8 @@ function showPostMatch(st, r, onClose){
 function openPreMatch(next, startFn){
   const c=me(), opp=next.oppClub||myClubs()[next.opp];
   const refCrew=(typeof assignMatchRef==="function")?assignMatchRef():null;
-  const _homeCampo=((next.home?c:opp)||{}).campo;
-  const matchPitch=(typeof assignMatchPitch==="function")?assignMatchPitch(_homeCampo):null;
+  const _homeClub=(next.home?c:opp);
+  const matchPitch=(typeof assignMatchPitch==="function")?assignMatchPitch(_homeClub):null;
   const myLine=availableLineup(c,G.lineup,G.formation), oppLine=aiPickLineup(opp,"4-4-2");
   const myS=teamStrength(c,myLine,G.formation,G.mentality), opS=teamStrength(opp,oppLine,"4-4-2","Equilibrado");
   const fav=favTier(myS.overall,opS.overall), form=clubRecentForm(opp,5);
@@ -1435,7 +1435,7 @@ function openPreMatch(next, startFn){
     <div class="scorebug"><div class="t">${clubTag(c)}</div><div class="sc" style="font-size:15px">VS</div><div class="t a">${clubTag(opp)}</div></div>
     <div class="muted center" style="font-size:12px;margin-bottom:8px">${opp.name}${oppPos?" · "+oppPos+"º":""}${opp.coach?" · 👔 "+opp.coach:""} · forma: ${fmtForm(form)}</div>
     ${refCrew?`<div class="muted center" style="font-size:11px;margin:-4px 0 8px">🧑‍⚖️ Árbitro: <b>${refCrew.n}</b>${refCrew.fama?` <span style="color:var(--accent)">(${refCrew.fama})</span>`:""} · 🚩 ${refCrew.assist.map(a=>a.n).join(", ")}</div>`:""}
-    ${matchPitch?`<div class="muted center" style="font-size:11px;margin:-4px 0 8px">🌱 Campo: <b>${matchPitch.label}</b> · ${matchPitch.clima==="chuva"?"🌧️ Chuva":(matchPitch.clima==="nublado"?"⛅ Nublado":"☀️ Sol")}</div>`:""}
+    ${matchPitch?`<div class="muted center" style="font-size:11px;margin:-4px 0 8px">🌱 Campo: <b>${matchPitch.label}</b> · ${matchPitch.night?"🌙 Noite":(matchPitch.clima==="chuva"?"🌧️ Chuva":(matchPitch.clima==="nublado"?"⛅ Nublado":"☀️ Sol"))}</div>`:""}
     <div class="card" style="padding:9px;margin-bottom:8px">
       ${bar("Ataque",Math.round(myS.atk),Math.round(opS.atk))}${bar("Meio-campo",Math.round(myS.mid),Math.round(opS.mid))}${bar("Defesa",Math.round(myS.def),Math.round(opS.def))}
       <div class="center" style="font-size:11px;margin-top:5px"><b>${favTxt}</b> · <span style="color:var(--green2)">tu</span> vs <span style="color:var(--red)">eles</span></div></div>
