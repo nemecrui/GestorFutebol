@@ -72,6 +72,32 @@ Ideias novas (discutidas, ainda por entrar):
 6. 🔧–🏗️ **Instalações/infraestruturas** — treino, dep. médico (menos lesões), academia, estádio (receita).
 7. ⚡ **Resumo/destaques do jogo** — recap em texto dos momentos-chave (bom para quem simula).
 
+## Mais vida & entretenimento (gráfico) 🎬
+Ideias para dar mais imagem e diversão ao jogo (tudo viável no PWA, SVG/Canvas, sem backend).
+
+**Durante a partida**
+- ⬜ 🔧 **Mini-campo animado** — campo visto de cima com a bola a mover-se para a baliza nos ataques, a piscar no golo, e o lado a mudar conforme quem pressiona. O maior salto de "vida" no núcleo do jogo. *(protótipo visual feito — ver mock)*
+- ⬜ 🔧 **Ambiente de estádio** — bancada com público nas cores do clube, holofotes, e dia/noite + clima (sol, chuva, nevoeiro, que já aparece no folclore).
+- ⬜ 🏗️ **Tifos e coreografias** — coreografia animada da bancada nos jogos grandes (dérbi, decisão), ligada ao apoio dos adeptos.
+- ⬜ ⚡ **Comemorações de golo variadas** — além do confete, animações diferentes (deslize de joelhos, corrida ao banco, abraço de equipa) nas cores do clube.
+
+**Entretenimento e colecionismo**
+- ⬜ 🏗️ **Cromos / cartas de jogador** — estilo FIFA, com raridade e brilho, geradas dos dados + cores do clube. Grande potencial de retenção.
+- ⬜ 🔧 **Álbum de emblemas** — coleção dos clubes da AF Braga que se preenche à medida que entram no jogo.
+- ⬜ 🔧 **Sala de troféus / vitrine** — vitrine visual que enche com taças, medalhas e subidas, com brilho.
+
+**Gráficos que também divulgam**
+- ⬜ 🔧 **Cartão de fim de jogo partilhável** — resultado, marcadores, Homem do Jogo e emblema, pronto a partilhar (gera marketing automático).
+- ⬜ 🔧 **11 da Jornada** — gráfico automático da equipa da semana após cada ronda, partilhável.
+- ⬜ 🔧 **Capa de jornal animada** — primeira página (com os órgãos de comunicação, ex. Rádio Alto Ave) após grandes resultados.
+
+**Ordem sugerida:** 1) Mini-campo animado · 2) Cartão de fim de jogo partilhável · 3) Cromos/álbum (maior projeto, maior retenção).
+
+## Arbitragem (próximas fases)
+- ✅ 🏗️ **Equipa de arbitragem** — trio (árbitro + 2 assistentes) sorteado por jogo, com características (cartão fácil, caseiro, deixa jogar, despistado…) que influenciam de forma moderada cartões, penáltis, descontos e foras-de-jogo; visível na antevisão; conferência contextual; intensidade ajustável. Linhas de relato dedicadas (golo mal anulado, penálti/vermelho polémico, folclore e invasões).
+- ⬜ 🔧 **Nomes reais** de árbitros da AF Braga (com autorização, perfil aprovado por eles).
+- ⬜ 🔧 **Reputação / tabela de árbitros** — histórico, "árbitro da jornada", eventual rivalidade.
+
 ## Símbolos
 Já no jogo (emblema): Oliveirense, Sequeirense, Arsenal Crespos, Serzedelo, Viatodos, Realense, Torcatense, Oleiros, Adaúfe, **Soarense, Gémeos, Prazins/Corvite, Serafão** ✅
 
