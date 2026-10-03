@@ -1398,7 +1398,9 @@ function showPostMatch(st, r, onClose){
     <button class="btn sec small" id="pmrShare" style="width:100%;margin-top:10px">📸 Partilhar resultado</button>
     <button class="btn" id="pmrOk" style="margin-top:8px">Continuar</button></div>`;
   document.body.appendChild(mo);
-  const done=()=>{ mo.remove(); if(onClose)onClose(); };
+  const done=()=>{ mo.remove();
+    try{ if(typeof maybeNewspaper==="function"){ const _np=maybeNewspaper(st,r); if(_np){ openNewspaper(_np, ()=>{ if(onClose)onClose(); }); return; } } }catch(e){}
+    if(onClose)onClose(); };
   mo.querySelector("#pmrOk").onclick=done; mo.onclick=e=>{if(e.target===mo)done();};
   const bsh=mo.querySelector("#pmrShare");
   if(bsh)bsh.onclick=()=>{
@@ -1665,7 +1667,7 @@ function bindView(){
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}openPreMatch(nx,(boost)=>playMatchAnimated(boost));};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
   const bs=$("#btnSim");if(bs)bs.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça");TAB="home";render();return;}if(!ensureValidXI())return;const d=myDivObj();let n=0;if(typeof setSim==="function")setSim(true);try{while(d.week<d.fixtures.length){const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st)break;playWeek();n++;if((G.meeting&&G.meeting.active)||(G.capMeeting&&G.capMeeting.active)||(G.discipline&&G.discipline.active)||(G.event&&!G.fired)||G.fired||G.seasonDone)break;}}finally{if(typeof setSim==="function")setSim(false);}toast(n+" jornada(s) simulada(s)");render();};
-  const bs1=$("#btnSim1");if(bs1)bs1.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(typeof setSim==="function")setSim(true);try{const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}playWeek();}finally{if(typeof setSim==="function")setSim(false);}toast("Resultado: "+lastUserResultTxt());render();};
+  const bs1=$("#btnSim1");if(bs1)bs1.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}if(typeof setSim==="function")setSim(true);try{const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}playWeek();}finally{if(typeof setSim==="function")setSim(false);}toast("Resultado: "+lastUserResultTxt());render();if(typeof newspaperAfterSim==="function")newspaperAfterSim();};
   const brc=$("#btnRecords");if(brc)brc.onclick=()=>openRecords();
   const brc2=$("#btnRecords2");if(brc2)brc2.onclick=()=>openRecords();
   const bcar=$("#btnCareer");if(bcar)bcar.onclick=()=>openCareer();

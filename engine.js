@@ -324,7 +324,7 @@ function newGame(divIdx,clubIdx,managerName){
      week:0, season:1, date:"Set", formation:"4-4-2", mentality:"Equilibrado",
      lineup:[], news:[], seasonDone:false, midWindowDone:false, budgetAsked:false,
      chem:65, lastXI:[], trainFocus:"Equilibrado", meeting:null, shortObjective:null, grace:0,
-     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, wageBase:0, freeAgents:[], playoff:null, superCup:null, finalissima:null, event:null, eventCd:ri(1,2), rival:null, loans:[], windowOpen:false,
+     academy:{level:1,focus:"Equilibrado",youth:[]}, records:{}, awards:[], streakU:0, streakW:0, streakNoWin:0, wageBase:0, freeAgents:[], playoff:null, superCup:null, finalissima:null, event:null, eventCd:ri(1,2), rival:null, loans:[], windowOpen:false,
      manager:{name:(managerName||"Treinador").slice(0,28), reputation:40, seasons:0, trophies:[], stats:{P:0,W:0,D:0,L:0,GF:0,GA:0}},
      contract:{seasonsLeft:2}, board:{confidence:60}, fired:false, offers:null, transferOffers:[]};
   G.lineup=autoPickLineup(me(),G.formation);
@@ -1017,6 +1017,7 @@ function simRound(d,preMy,hasUser){
     if(userMatch){ const uc=(h===G.myId)?home:away, isH=(h===G.myId), played=r.userAppeared||userLine;
       recordManagerMatch(isH?r.hg:r.ag, isH?r.ag:r.hg);
       updateRecordsMatch(isH?r.hg:r.ag, isH?r.ag:r.hg, (h===G.myId?away:home).name);
+      G._lastUserMatch={hGid:home.gid,aGid:away.gid,userSide:isH?"H":"A",hg:r.hg,ag:r.ag,live:!!r.liveUser,events:(r.events||[]).map(e=>({type:e.type,side:e.side,scorer:e.scorer,gtype:e.gtype,ogSide:e.ogSide,ogPid:e.ogPid,m:e.m}))};
       if(!r.liveUser)processEnergyInjuries(uc,userLine);   // no jogo ao vivo a energia já foi tratada
       trainingInjuryTick(uc,false);                         // lesões de treino podem acontecer em qualquer jornada
       const opp=(h===G.myId?away:home), derby=isDerby(me().gid,opp.gid);
@@ -2052,7 +2053,7 @@ function requestBudget(){
 function recordManagerMatch(gf,ga){ const s=G.manager&&G.manager.stats; if(!s)return; s.P++; s.GF+=gf; s.GA+=ga; if(gf>ga)s.W++; else if(gf<ga)s.L++; else s.D++;
   if(typeof onManagerMatch==="function"){ try{ onManagerMatch(gf,ga); }catch(e){} } }   // hook opcional (a UI usa-o para analytics de jogos jogados)
 /* ---------- recordes de carreira + prémios de fim de época ---------- */
-function ensureRecords(){ if(!G.records)G.records={}; if(!G.awards)G.awards=[]; if(G.streakU==null)G.streakU=0; if(G.streakW==null)G.streakW=0; return G.records; }
+function ensureRecords(){ if(!G.records)G.records={}; if(!G.awards)G.awards=[]; if(G.streakU==null)G.streakU=0; if(G.streakW==null)G.streakW=0; if(G.streakNoWin==null)G.streakNoWin=0; return G.records; }
 /* ---------- História de carreira do treinador ---------- */
 function ensureCareer(){
   if(!G.career)G.career={spells:[],seasons:[]};
@@ -2148,11 +2149,11 @@ function coachBuy(perk){ const C=ensureCoach(); if(!COACH_PERKS[perk])return {ok
   C.perks[perk]=true; C.points--; addNews("🧠 Perk desbloqueado: "+COACH_PERKS[perk].t+" — "+COACH_PERKS[perk].d); save(); return {ok:true,msg:"Perk: "+COACH_PERKS[perk].t}; }
 function updateRecordsMatch(gf,ga,oppName){
   const R=ensureRecords();
-  if(gf>ga){ G.streakW++; G.streakU++; const m=gf-ga;
+  if(gf>ga){ G.streakW++; G.streakU++; G.streakNoWin=0; const m=gf-ga;
     if(!R.bigWin||m>R.bigWin.margin||(m===R.bigWin.margin&&gf>R.bigWin.gf))R.bigWin={gf,ga,opp:oppName,margin:m,season:G.season}; }
-  else if(gf<ga){ G.streakW=0; G.streakU=0; const m=ga-gf;
+  else if(gf<ga){ G.streakW=0; G.streakU=0; G.streakNoWin++; const m=ga-gf;
     if(!R.bigLoss||m>R.bigLoss.margin||(m===R.bigLoss.margin&&ga>R.bigLoss.ga))R.bigLoss={gf,ga,opp:oppName,margin:m,season:G.season}; }
-  else { G.streakW=0; G.streakU++; }
+  else { G.streakW=0; G.streakU++; G.streakNoWin++; }
   if(!R.bestUnbeaten||G.streakU>R.bestUnbeaten.n)R.bestUnbeaten={n:G.streakU,season:G.season};
   if(!R.bestWins||G.streakW>R.bestWins.n)R.bestWins={n:G.streakW,season:G.season};
 }

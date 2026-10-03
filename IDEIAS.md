@@ -90,7 +90,7 @@ Ideias para dar mais imagem e diversão ao jogo (tudo viável no PWA, SVG/Canvas
 **Gráficos que também divulgam**
 - ⬜ 🔧 **Cartão de fim de jogo partilhável** — resultado, marcadores, Homem do Jogo e emblema, pronto a partilhar (gera marketing automático).
 - ⬜ 🔧 **11 da Jornada** — gráfico automático da equipa da semana após cada ronda, partilhável.
-- ⬜ 🔧 **Capa de jornal animada** — primeira página (com os órgãos de comunicação, ex. Rádio Alto Ave) após grandes resultados.
+- ✅ 🔧 **Capa de jornal** — primeira página de jornal gerada em canvas e partilhável, **só jornais fictícios** (Tribuna Minhota / Bola do Ave) por agora. Aparece após o jogo nos **grandes momentos** (dérbi ganho, goleada/vitória gorda), nos **momentos menos bons** (derrota pesada, **série de jogos sem vencer** — novo contador `G.streakNoWin`) e **aleatoriamente** (~8%) nalguns jogos. Manchete, entrada, citação do treinador, emblemas e resultado adaptados ao momento. Surge tanto no jogo ao vivo (a seguir ao relatório) como após **Simular**. _Órgãos reais só com autorização, no futuro._
 
 **Ordem sugerida:** 1) Mini-campo animado · 2) Cartão de fim de jogo partilhável · 3) Cromos/álbum (maior projeto, maior retenção).
 
