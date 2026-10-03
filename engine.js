@@ -307,7 +307,7 @@ function buildGroups(){
         if(typeof CFG!=="undefined"&&CFG.rosters&&CFG.rosters[x.n])x.roster=CFG.rosters[x.n];   // plantel real por NOME do clube
         if(typeof CFG!=="undefined"&&CFG.crests&&CFG.crests[x.n])x.crest=CFG.crests[x.n];        // emblema real por NOME do clube (opt-in)
         return x; });
-      const clubs=defs.map((d,i)=>{ const c=clubFromDef(d,i); c.gid=GID++; c.tier=div.tier; c.serie=se.name; return c; });
+      const clubs=defs.map((d,i)=>{ const c=clubFromDef(d,i); c.gid=GID++; c.tier=div.tier; c.serie=se.name; c.campo=_assignCampo(d,div.tier); return c; });
       groups.push({name, tier:div.tier, serie:se.name, upSlots:slots.up, downSlots:slots.down,
         clubs, fixtures:buildFixtures(clubs.length), results:[], week:0});
     });
@@ -730,6 +730,33 @@ function refDerived(crew){ const k=refIntensity();
   };
 }
 
+/* ---------- PISO / RELVADO ---------- */
+const PITCH_SURF={
+  relva:{play:1.00,wear:1.00,injury:1.00,label:"Relva",key:"relva"},
+  relva_gasta:{play:0.98,wear:1.10,injury:1.12,label:"Relva gasta",key:"relva_gasta"},
+  enlameado:{play:0.94,wear:1.22,injury:1.30,label:"Relva enlameada",key:"mud"},
+  pelado:{play:0.96,wear:1.15,injury:1.20,label:"Pelado (terra)",key:"sand"},
+  pelado_molhado:{play:0.93,wear:1.26,injury:1.32,label:"Pelado molhado",key:"sand"}
+};
+function _assignCampo(def, tier){
+  let v=null;
+  try{ if(typeof CFG!=="undefined"&&CFG&&CFG.campos){ v=CFG.campos[def&&def.n]||CFG.campos[def&&def.s]||null; } }catch(e){}
+  if(v){ v=String(v).toLowerCase().replace(/[ -]/g,"_");
+    if(v==="pelado"&&(tier==null||tier<2))v="relva_gasta";          // pelado só na 1ª e 2ª divisão
+    if(["relva","relva_gasta","pelado"].indexOf(v)>=0)return v; }
+  const r=Math.random();
+  if(tier!=null&&tier>=2){ if(r<0.18)return "pelado"; if(r<0.52)return "relva_gasta"; return "relva"; }
+  return r<0.38?"relva_gasta":"relva";
+}
+function _rollClima(){ const r=Math.random(); return r<0.62?"sol":(r<0.82?"nublado":"chuva"); }
+function _effSurface(campo,clima){ campo=campo||"relva"; if(clima==="chuva")return campo==="pelado"?"pelado_molhado":"enlameado"; return campo; }
+function _mkPitch(campo){ const clima=_rollClima(); const eff=_effSurface(campo,clima); const s=PITCH_SURF[eff]||PITCH_SURF.relva;
+  return {campo:campo||"relva", clima, eff, key:s.key, label:s.label, play:s.play, wear:s.wear, injury:s.injury}; }
+function assignMatchPitch(homeCampo, force){ if(typeof G==="undefined"||!G)return _mkPitch(homeCampo); if(force||!G.matchPitch)G.matchPitch=_mkPitch(homeCampo); return G.matchPitch; }
+function ensurePitch(){ if(typeof G==="undefined"||!G||!G.divisions)return;
+  G.divisions.forEach(d=>d.clubs.forEach(c=>{ if(!c.campo)c.campo=_assignCampo({n:c.name,s:c.short}, c.tier); 
+    if(c.campo==="pelado"&&(c.tier==null||c.tier<2))c.campo="relva_gasta"; })); }
+
 /* ---------- motor de jogo ---------- */
 function simulate(home,away,hLine,aLine,eHome,eAway){
   eHome=eHome||1; eAway=eAway||1;
@@ -824,7 +851,8 @@ function createLive(home,away,hLine,aLine,cfg){
   const _crew=(typeof G!=="undefined"&&G&&G.matchRef)?G.matchRef:pickRefCrew();   // trio de arbitragem deste jogo
   const _refD=refDerived(_crew);
   sH=clamp(sH+(_refD.descBias||0),1,9); sA=clamp(sA+(_refD.descBias||0),1,9);      // descontos enviesados pelo árbitro
-  const st={ home,away, minute:0, stopH:sH, stopA:sA, ref:_crew, refD:_refD, refControv:0, refControvDone:false, et:false, maxMin:(cfg.maxMin||90)+sH+sA, hg:0, ag:0, events:[], userSide:cfg.userSide||null,
+  const _pitch=(typeof G!=="undefined"&&G&&G.matchPitch)?G.matchPitch:_mkPitch(home&&home.campo);   // piso + tempo deste jogo
+  const st={ home,away, minute:0, stopH:sH, stopA:sA, ref:_crew, refD:_refD, refControv:0, refControvDone:false, pitch:_pitch, et:false, maxMin:(cfg.maxMin||90)+sH+sA, hg:0, ag:0, events:[], userSide:cfg.userSide||null,
     talkFactor:1, talkFrom:0, talkUntil:0,
     H:{line:hLine.slice(), form:cfg.hForm||"4-4-2", ment:cfg.hMent||"Equilibrado", subs:0, appeared:new Set(hLine), gone:[], off:new Set(), yc:{}},
     A:{line:aLine.slice(), form:cfg.aForm||"4-4-2", ment:cfg.aMent||"Equilibrado", subs:0, appeared:new Set(aLine), gone:[], off:new Set(), yc:{}},
@@ -862,6 +890,7 @@ function liveRate(st){
   }
   const rt=offRateFrom(hS,aS,st.H.gone.length,st.A.gone.length);
   rt.hx*=irH; rt.ax*=irA;
+  const _pf=(st.pitch&&st.pitch.play)||1; rt.hx*=_pf; rt.ax*=_pf;      // piso mau = jogo mais pobre
   return rt;
 }
 function liveGoal(st,side,m){
@@ -896,7 +925,7 @@ function liveStep(st){
   st.minute++; const m=st.minute, out=[];
   const IE=(st.userSide&&typeof instrEffect==="function")?instrEffect(1):null;   // energia/faltas não dependem da fadiga
   const uEn=IE?IE.uEnergy:1, uFoul=IE?IE.uFoul:1;
-  const decay=(club,S,side)=>{ const mul=(st.userSide===side)?uEn:1; S.line.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(!p)return; const d=(0.22+Math.max(0,(p.age-30))*0.02)*mul; st.fit[id]=clamp((st.fit[id]==null?100:st.fit[id])-d,0,100);}); };
+  const decay=(club,S,side)=>{ const mul=(st.userSide===side)?uEn:1; S.line.forEach(id=>{const p=club.squad.find(x=>x.id===id); if(!p)return; const d=(0.22+Math.max(0,(p.age-30))*0.02)*mul*((st.pitch&&st.pitch.wear)||1); st.fit[id]=clamp((st.fit[id]==null?100:st.fit[id])-d,0,100);}); };
   decay(st.home,st.H,"H"); decay(st.away,st.A,"A");
   const rt=liveRate(st);
   if(Math.random()<rt.hx/90){ const e=liveGoal(st,"H",m); if(e){out.push(e); if(e.type==="goal")st.hg++;} }
@@ -936,14 +965,14 @@ function aiMaybeSub(st,side){
 }
 function liveBench(st,side){ const S=side==="H"?st.H:st.A, club=side==="H"?st.home:st.away, gone=new Set(S.gone), susp=new Set(club.susp||[]);
   return club.squad.filter(p=>!S.line.includes(p.id)&&!gone.has(p.id)&&!(S.off&&S.off.has(p.id))&&(p.injuredWeeks||0)<=0&&!susp.has(p.id)); }
-function liveResult(st){ if(typeof G!=="undefined"&&G&&st.userSide){ G.lastRefControv=st.refControv||0; G.matchRef=null; } return {hg:st.hg, ag:st.ag, events:st.events, expelledH:st.H.gone.slice(), expelledA:st.A.gone.slice(), maxMinute:st.maxMin, hadET:!!st.et, liveUser:true, userAppeared:[...(st.userSide==="H"?st.H.appeared:st.A.appeared)], refControv:st.refControv||0}; }
+function liveResult(st){ if(typeof G!=="undefined"&&G&&st.userSide){ G.lastRefControv=st.refControv||0; G.matchRef=null; G.matchPitch=null; } return {hg:st.hg, ag:st.ag, events:st.events, expelledH:st.H.gone.slice(), expelledA:st.A.gone.slice(), maxMinute:st.maxMin, hadET:!!st.et, liveUser:true, userAppeared:[...(st.userSide==="H"?st.H.appeared:st.A.appeared)], refControv:st.refControv||0}; }
 function liveApplyEnergy(st){
   const proc=(club,S,full)=>{ club.squad.forEach(p=>{
     if(S.appeared.has(p.id)){ p.apps=(p.apps||0)+1;
       if(full){ const start=(p.energy==null?100:p.energy), endFit=(st.fit[p.id]!=null?st.fit[p.id]:start);
         const loss=Math.round(Math.max(0,start-endFit)*0.35);        // só uma fração do gás gasto vira desgaste persistente
         p.energy=clamp(start-loss,0,100);
-        if((p.injuredWeeks||0)<=0 && endFit<38 && Math.random()<0.02+(38-endFit)/100*0.05){ p.injuredWeeks=rollInjury(); if(club===me())addNews("🤕 "+p.name+" lesionou-se ("+injuryLabel(p.injuredWeeks)+") — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } }
+        if((p.injuredWeeks||0)<=0 && endFit<38 && Math.random()<(0.02+(38-endFit)/100*0.05)*((st.pitch&&st.pitch.injury)||1)){ p.injuredWeeks=rollInjury(); if(club===me())addNews("🤕 "+p.name+" lesionou-se ("+injuryLabel(p.injuredWeeks)+") — fora "+p.injuredWeeks+" jornada"+(p.injuredWeeks>1?"s":"")+"."); } }
     } else if(full){ if((p.injuredWeeks||0)>0){ p.injuredWeeks--; p.energy=clamp((p.energy==null?100:p.energy)+Math.round(recovery(p.age)*0.6),0,100); }
       else { p.energy=clamp((p.energy==null?100:p.energy)+Math.round(recovery(p.age)*2.5),0,100); } }
   }); };
@@ -971,7 +1000,7 @@ function simRound(d,preMy,hasUser){
       if(!hUser)aiEnergyTick(home,hLine);   // desgaste/recuperação de energia dos clubes CPU
       if(!aUser)aiEnergyTick(away,aLine);
     }
-    if(userMatch && !(r&&r.liveUser)){ G.lastRefControv=0; G.matchRef=null; }
+    if(userMatch && !(r&&r.liveUser)){ G.lastRefControv=0; G.matchRef=null; G.matchPitch=null; }
     applyResult(home,away,r.hg,r.ag,r.events);
     applyMatchSuspensions(home,(r.events||[]).filter(e=>e.side==="H"));
     applyMatchSuspensions(away,(r.events||[]).filter(e=>e.side==="A"));
@@ -2270,6 +2299,7 @@ if(typeof module!=="undefined"&&module.exports){
     unavailable,recovery,energyFactor,processEnergyInjuries,negotiateOffer,renewContract,rateUserMatch,avg5,releasePlayer,toggleTransferList,
     rollInjury,injuryLabel,applyMatchSuspensions,
     pickRefCrew,assignMatchRef,refDerived,refIntensity,
+    assignMatchPitch,ensurePitch,_mkPitch,_assignCampo,
     formMult,chemFactor,updateForm,updateChem,teamForm,developPlayer,trainTick,
     updateMorale,playerMeetingResolve,maybeBoardMeeting,resolveBoardMeeting,checkShortObjective,setShortObjective,recentUserResults,userResultAt,
     ensureAcademy,academyCost,youthStars,upgradeAcademy,academyIntake,developYouth,promoteYouth,releaseYouth,loanYouth,setAcademyFocus,

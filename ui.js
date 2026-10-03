@@ -1412,6 +1412,8 @@ function showPostMatch(st, r, onClose){
 function openPreMatch(next, startFn){
   const c=me(), opp=next.oppClub||myClubs()[next.opp];
   const refCrew=(typeof assignMatchRef==="function")?assignMatchRef():null;
+  const _homeCampo=((next.home?c:opp)||{}).campo;
+  const matchPitch=(typeof assignMatchPitch==="function")?assignMatchPitch(_homeCampo):null;
   const myLine=availableLineup(c,G.lineup,G.formation), oppLine=aiPickLineup(opp,"4-4-2");
   const myS=teamStrength(c,myLine,G.formation,G.mentality), opS=teamStrength(opp,oppLine,"4-4-2","Equilibrado");
   const fav=favTier(myS.overall,opS.overall), form=clubRecentForm(opp,5);
@@ -1430,6 +1432,7 @@ function openPreMatch(next, startFn){
     <div class="scorebug"><div class="t">${clubTag(c)}</div><div class="sc" style="font-size:15px">VS</div><div class="t a">${clubTag(opp)}</div></div>
     <div class="muted center" style="font-size:12px;margin-bottom:8px">${opp.name}${oppPos?" · "+oppPos+"º":""}${opp.coach?" · 👔 "+opp.coach:""} · forma: ${fmtForm(form)}</div>
     ${refCrew?`<div class="muted center" style="font-size:11px;margin:-4px 0 8px">🧑‍⚖️ Árbitro: <b>${refCrew.n}</b>${refCrew.fama?` <span style="color:var(--accent)">(${refCrew.fama})</span>`:""} · 🚩 ${refCrew.assist.map(a=>a.n).join(", ")}</div>`:""}
+    ${matchPitch?`<div class="muted center" style="font-size:11px;margin:-4px 0 8px">🌱 Campo: <b>${matchPitch.label}</b> · ${matchPitch.clima==="chuva"?"🌧️ Chuva":(matchPitch.clima==="nublado"?"⛅ Nublado":"☀️ Sol")}</div>`:""}
     <div class="card" style="padding:9px;margin-bottom:8px">
       ${bar("Ataque",Math.round(myS.atk),Math.round(opS.atk))}${bar("Meio-campo",Math.round(myS.mid),Math.round(opS.mid))}${bar("Defesa",Math.round(myS.def),Math.round(opS.def))}
       <div class="center" style="font-size:11px;margin-top:5px"><b>${favTxt}</b> · <span style="color:var(--green2)">tu</span> vs <span style="color:var(--red)">eles</span></div></div>
@@ -1770,7 +1773,7 @@ function boot(){
   document.getElementById("splash")?.remove();
   applyAnimClass();                          // respeita a preferência de animações / reduzir movimento
   requestPersist();                          // pede ao browser para não despejar a gravação
-  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();if(typeof ensureCoach==="function")ensureCoach();if(typeof ensureSupport==="function")ensureSupport();if(typeof ensureCoaches==="function")ensureCoaches();if(G.press&&!G.press.qs)G.press=null;TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
+  if(load()&&G){if(typeof ensureCareer==="function")ensureCareer();if(typeof ensureRoles==="function")ensureRoles();if(typeof ensureDays==="function")ensureDays();if(typeof ensureTraits==="function")ensureTraits();if(typeof ensureInstr==="function")ensureInstr();if(typeof ensureAch==="function")ensureAch();if(typeof ensureCoach==="function")ensureCoach();if(typeof ensureSupport==="function")ensureSupport();if(typeof ensureCoaches==="function")ensureCoaches();if(typeof ensurePitch==="function")ensurePitch();if(G.press&&!G.press.qs)G.press=null;TAB="home";render(); if(hasNewsNew())setTimeout(()=>{ if(G)openNews(); },700);}
   else{ markNewsSeen(); splashScreen(); }
 }
 function downloadText(filename,text){ try{ const blob=new Blob([text],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},600); }catch(e){ toast("Descarregar não disponível — usa o copiar código."); } }

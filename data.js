@@ -38,6 +38,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-10-02", texto:"🌱 Relvados regionais! Cada campo tem agora o seu piso — relva, relva gasta ou pelado (terra) — e o tempo do dia (sol/nublado/chuva). Com chuva a relva fica enlameada. O piso vê-se na antevisão e tem efeito ligeiro: terrenos piores dão jogo mais pobre, mais desgaste e mais lesões. O pelado só existe na 1ª e 2ª divisão. Podes definir o campo de cada clube no data.js." },
     { data:"2026-10-01", texto:"🧑‍⚖️ Equipa de arbitragem! Cada jogo passa a ter um árbitro e dois assistentes, com características próprias (cartão fácil, caseiro, deixa jogar, despistado…) que influenciam de forma MODERADA cartões, descontos, penáltis e foras-de-jogo. Vês o trio na antevisão. Se a arbitragem te prejudicar mesmo, culpá-la na conferência agora cai bem nos adeptos — usada como desculpa, nem por isso. Podes ajustar a intensidade (moderada/suave/desligada) no painel." },
     { data:"2026-10-01", texto:"💬 A tua voz conta! Já podes reportar bugs, dar sugestões ou deixar a tua opinião sem sair do jogo nem te registares — toca no botão 💬 (canto inferior direito) ou em «Reportar bug / Sugestão» no painel. Lemos tudo e ajuda-nos a melhorar o jogo." },
     { data:"2026-09-18", texto:"🎤 Conferências de imprensa muito mais ricas: mais perguntas e respostas, com temas de tática e sobre jogadores pouco utilizados. Quando a pergunta é sobre um jogador, vês agora as estatísticas dele (jogos, golos, cartões e média de pontuação). E há um novo indicador — «Apoio dos adeptos» — no painel, mais volátil que a confiança da direção: sobe e desce com os resultados e com as respostas que dás nas conferências." },
@@ -330,6 +331,17 @@ const GAME_DATA = {
     { n:"Sérgio Antunes",    fama:"equilibrado",      sev:11, crit:13, casa:10, vant:11, desc:11, ego:10,
       assist:[ {n:"João Pinto", prec:13, atencao:12}, {n:"Carlos Sá", prec:12, atencao:13} ] }
   ],
+
+  /* ---- TIPO DE CAMPO (relvado) ----
+     Define o piso de cada clube por NOME. Valores: "relva" · "relva_gasta" · "pelado".
+     Se um clube não estiver aqui, é sorteado automaticamente (clubes de divisões mais baixas
+     têm mais relva gasta). O "pelado" (terra) só é permitido na 1ª e 2ª divisão.
+     O tempo (sol/nublado/chuva) é sorteado por jogo; com chuva a relva fica enlameada.
+     O piso tem efeito LIGEIRO: pior piso = jogo mais pobre, mais desgaste e mais lesões. */
+  campos: {
+    // "GD Gemeos": "pelado",
+    // "FC Prazins Corvite": "relva_gasta"
+  },
 
   /* ---- ADICIONAR clubes novos a uma divisão ----
      Acrescenta ao fim da lista dessa divisão. Mantém, de preferência,
