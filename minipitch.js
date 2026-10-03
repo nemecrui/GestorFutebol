@@ -103,9 +103,33 @@ function buildMiniPitch(container, opts){
     cheerEl.classList.remove("mpcheer-big","mpcheer-sm"); void cheerEl.getBoundingClientRect(); cheerEl.classList.add(cls);
     if(big){ crowd.classList.remove("mpcrowd-cheer"); void crowd.getBoundingClientRect(); crowd.classList.add("mpcrowd-cheer"); }
   }
+  function tifo(side){ if(!anim)return;
+    const c1=(side==="A")?awayC1:homeC1, c2=(side==="A")?"#eef2f7":(homeC2||"#eef2f7");
+    const svg=container.querySelector(".mpsvg"); let t=container.querySelector("#mptifo");
+    if(!t){ t=el("g",{id:"mptifo"}); svg.insertBefore(t, floodTop); } clr(t);
+    const rects=[]; let col=0;
+    for(let x=4;x<396;x+=15){ const rc=el("rect",{x,y:2,width:11,height:20,rx:1,fill:(col++%2?c1:c2),opacity:0}); rc.style.transition="opacity .35s"; t.appendChild(rc); rects.push(rc); }
+    rects.forEach((rc,i)=>setTimeout(()=>rc.setAttribute("opacity","0.92"), i*22));
+    setTimeout(()=>{ rects.forEach(rc=>{rc.style.transition="opacity .6s";rc.setAttribute("opacity","0");}); setTimeout(()=>clr(t),700); }, 2800);
+  }
+  function celebrate(side){ if(!anim)return;
+    const field=container.querySelector("#mpfield"); let g=container.querySelector("#mpceleb");
+    if(!g){ g=el("g",{id:"mpceleb"}); field.insertBefore(g, ball); } clr(g); g.style.opacity="1";
+    const col=(side==="A")?awayC1:homeC1, gx=(side==="H")?358:42;
+    const routine=["slide","run","huddle"][Math.floor(Math.random()*3)];
+    const dots=[]; const N=5; const dir=(side==="H")?1:-1;
+    for(let i=0;i<N;i++){ const c=el("circle",{r:3.8,fill:"#ffffff",stroke:col,"stroke-width":2});
+      c.setAttribute("transform","translate("+(gx+(Math.random()*16-8))+","+(83+(Math.random()*20-10))+")"); g.appendChild(c); dots.push(c); }
+    requestAnimationFrame(()=>dots.forEach((c,i)=>{ c.style.transition="transform 950ms cubic-bezier(.3,.7,.3,1)"; let tx,ty;
+      if(routine==="run"){ tx=200+dir*150; ty=26+i*8; }                                   // corrida ao canto (fila)
+      else if(routine==="huddle"){ const a=i/N*6.283; tx=gx-10*dir+Math.cos(a)*9; ty=83+Math.sin(a)*9; }   // abraço (roda)
+      else { if(i===0){ tx=gx+dir*34; ty=108; } else { tx=gx-dir*(6+i*7); ty=70+i*8; } }   // deslize do marcador + colegas
+      c.setAttribute("transform","translate("+tx+","+ty+")"); }));
+    setTimeout(()=>{ g.style.transition="opacity .5s"; g.style.opacity="0"; setTimeout(()=>clr(g),520); }, 1700);
+  }
   function reset(){ ballTo(200,83,300); }
 
   ambience(!!opts.night, opts.crowd); setSurface(key0); ballTo(200,83,0);
-  return {setSurface, toZone, goal, reset, ambience, cheer, setAnim:v=>{anim=v;}};
+  return {setSurface, toZone, goal, reset, ambience, cheer, tifo, celebrate, setAnim:v=>{anim=v;}};
 }
 if(typeof module!=="undefined"&&module.exports)module.exports={buildMiniPitch};

@@ -38,6 +38,7 @@ const GAME_DATA = {
      Acrescenta uma linha no topo sempre que atualizares. A mais recente fica em cima.
      Formato: { data:"AAAA-MM-DD", texto:"O que mudou" } */
   novidades: [
+    { data:"2026-10-03", texto:"🎉 Tifos e festejos! Nos jogos grandes (dérbis, taça) a bancada faz uma coreografia em mosaico com as cores do clube. E cada golo traz uma comemoração diferente dos jogadores no mini-campo — corrida ao canto, deslize ou abraço de equipa." },
     { data:"2026-10-03", texto:"📣 O público reage! No mini-campo, a bancada ilumina-se e salta nas cores do clube quando marcas golo, e dá um «oooh» nos lances perigosos e penáltis falhados. Mais vida ao estádio." },
     { data:"2026-10-03", texto:"🏟️ Ambiente de estádio no mini-campo! Agora há bancada com público nas cores do clube (mais cheia nos clubes maiores e quando os adeptos estão contentes), uma bolsa de adeptos visitantes, e jogos à noite com holofotes. Junta-se ao piso e ao tempo que já tínhamos." },
     { data:"2026-10-02", texto:"⚽ Mini-campo no jogo ao vivo! Durante o jogo vês agora um campo visto de cima, com a bola a seguir a jogada e a piscar nos golos. O relvado muda conforme o piso do campo (relva, relva gasta, pelado/terra) e o tempo (enlameado à chuva). Respeita o botão de animações — se as desligares, o jogo continua só em texto." },
