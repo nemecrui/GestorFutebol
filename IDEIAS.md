@@ -78,7 +78,7 @@ Ideias para dar mais imagem e diversão ao jogo (tudo viável no PWA, SVG/Canvas
 **Durante a partida**
 - ✅ 🔧 **Mini-campo animado** — campo visto de cima no jogo ao vivo; a bola segue a jogada e pisca no golo; o relvado reflete o piso (relva/gasta/pelado/enlameado); respeita o botão de animações.
 - ✅ 🔧 **Relvados regionais (piso + tempo)** — tipo de campo por clube no data.js (relva / relva gasta / pelado; pelado só 1ª/2ª div; aleatório se não definido) + tempo do dia (sol/nublado/chuva → enlameia). Efeito ligeiro na jogabilidade, desgaste e lesões; visível na antevisão. (Falta o render do mini-campo no jogo.)
-- ✅ 🔧 **Ambiente de estádio** — bancada com público nas cores do clube (densidade por divisão + apoio dos adeptos), bolsa de visitantes, e jogos à noite com holofotes, no mini-campo.
+- ✅ 🔧 **Ambiente de estádio** — bancada com público nas cores do clube (densidade por divisão + apoio dos adeptos), bolsa de visitantes, e jogos à noite com holofotes, no mini-campo Inclui **reação do público** (festeja/salta no golo, «oooh» nos lances perigosos).
 - ⬜ 🏗️ **Tifos e coreografias** — coreografia animada da bancada nos jogos grandes (dérbi, decisão), ligada ao apoio dos adeptos.
 - ⬜ ⚡ **Comemorações de golo variadas** — além do confete, animações diferentes (deslize de joelhos, corrida ao banco, abraço de equipa) nas cores do clube.
 

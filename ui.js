@@ -1161,11 +1161,11 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       goalCelebrate(e.side,nm);addEvLine(e.side,"⚽",{m,name:nm});tlDot(m,"#ffcf33");
       scorers[e.side].push({n:lastName(realName)+(own?" (ag)":""),m});refreshScorers();
       if(userSide){ if(!own&&e.side===userSide){bumpR(e.scorer,1.3);if(mk[e.scorer])mk[e.scorer].g++;} else if(own&&e.ogSide===userSide)bumpR(e.ogPid,-1.0); else if(e.side!==userSide)concedePenalty(); }
-      setComment("GOLO do "+nameOf(e.side)+"! "+nm,4);pauseUntil=Date.now()+2600; if(mp)mp.goal(e.side); }
+      setComment("GOLO do "+nameOf(e.side)+"! "+nm,4);pauseUntil=Date.now()+2600; if(mp){mp.goal(e.side);mp.cheer(e.side,true);} }
     else if(e.type==="yellow"){ addEvLine(e.side,"🟨",{m,name:nameByPid(e.side,e.pid)});tlDot(m,"#f2c200"); if(userSide&&e.side===userSide){bumpR(e.pid,-0.3);if(mk[e.pid])mk[e.pid].yc=true;} setComment("Amarelo — "+nameOf(e.side)+" · "+nameByPid(e.side,e.pid),2);pauseUntil=Date.now()+1500; }
     else if(e.type==="red"){ addEvLine(e.side,"🟥",{m,name:nameByPid(e.side,e.pid)+(e.second?" (2º amarelo)":"")});tlDot(m,"#ef4657"); if(userSide&&e.side===userSide){bumpR(e.pid,-1.3);if(mk[e.pid])mk[e.pid].red=true;} setComment("Vermelho para o "+nameOf(e.side)+"! "+nameByPid(e.side,e.pid),4);pauseUntil=Date.now()+2000; }
     else if(e.type==="disallowed"){ addEvLine(e.side,"🚫",{m,name:"golo anulado"});stat[e.side].sot++;setComment("Golo anulado ao "+nameOf(e.side)+"!",3);pauseUntil=Date.now()+1700; }
-    else if(e.type==="penmiss"){ addEvLine(e.side,"❌",{m,name:nameByPid(e.side,e.pid)+" — penálti falhado"});stat[e.side].sh++;stat[e.side].sot++; if(userSide&&e.side===userSide)bumpR(e.pid,-0.8); setComment("Penálti falhado — "+nameOf(e.side)+" · "+nameByPid(e.side,e.pid),3);pauseUntil=Date.now()+1800; }
+    else if(e.type==="penmiss"){ if(mp)mp.cheer(e.side,false); addEvLine(e.side,"❌",{m,name:nameByPid(e.side,e.pid)+" — penálti falhado"});stat[e.side].sh++;stat[e.side].sot++; if(userSide&&e.side===userSide)bumpR(e.pid,-0.8); setComment("Penálti falhado — "+nameOf(e.side)+" · "+nameByPid(e.side,e.pid),3);pauseUntil=Date.now()+1800; }
     else if(e.type==="fkmiss"){ addEvLine(e.side,"🧱",{m,name:nameByPid(e.side,e.pid)+" — livre desperdiçado"});stat[e.side].sh++; setComment("Livre desperdiçado — "+nameOf(e.side)+" · "+nameByPid(e.side,e.pid),2);pauseUntil=Date.now()+1500; }
     else if(e.type==="sub"){ const outN=lastName(nameByPid(e.side,e.outId)), inN=lastName(nameByPid(e.side,e.inId));
       addEvLine(e.side,"🔁",{m,name:"sai "+outN+", entra "+inN});tlDot(m,"#3b8cff");
@@ -1306,6 +1306,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       return seq.reveal;
     }); }
   function startFailedChance(side){ if(typeof relatoSeq!=="function")return false;
+    if(mp)mp.cheer(side,false);
     const ctx=mkCtx(side,{}); let seq=null, isSave=false, animKind=null, animBranch=null;
     if(typeof relatoLance==="function" && Math.random()<0.22){ seq=relatoLance("miss",ctx); animBranch="out"; }  // ocasião estragada pelo insólito
     if(!seq){ const kind=pick(["chance","solo","header","counter"]);

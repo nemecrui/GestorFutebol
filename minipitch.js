@@ -22,6 +22,7 @@ function buildMiniPitch(container, opts){
     <!-- bancada / sky -->
     <rect id="mpsky" width="400" height="24" fill="#121824"/>
     <g id="mpcrowd"></g>
+    <rect id="mpcheer" width="400" height="24" fill="#fff" opacity="0" style="pointer-events:none"></rect>
     <g id="mpfloodtop"></g>
     <rect x="0" y="23.5" width="400" height="2" fill="#0a0e16"/>
     <!-- campo (deslocado 26px para baixo para abrir espaço à bancada) -->
@@ -42,7 +43,7 @@ function buildMiniPitch(container, opts){
   </svg><div class="mpflash" id="mpflash"></div></div>`;
   const q=s=>container.querySelector(s);
   const base=q("#mpbase"),stripes=q("#mpstripes"),patch=q("#mppatch"),lines=q("#mplines"),rain=q("#mprain"),ball=q("#mpball"),flash=q("#mpflash");
-  const sky=q("#mpsky"),crowd=q("#mpcrowd"),floodTop=q("#mpfloodtop"),nightEl=q("#mpnight"),floodGlow=q("#mpfloodglow");
+  const sky=q("#mpsky"),crowd=q("#mpcrowd"),floodTop=q("#mpfloodtop"),nightEl=q("#mpnight"),floodGlow=q("#mpfloodglow"),cheerEl=q("#mpcheer");
   function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
   function clr(g){while(g.firstChild)g.removeChild(g.firstChild);}
   function rng(seed){return function(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};}
@@ -96,9 +97,15 @@ function buildMiniPitch(container, opts){
   function ballTo(x,y,ms){ ball.style.transition="transform "+(anim?ms:0)+"ms cubic-bezier(.5,.05,.4,1)"; ball.setAttribute("transform","translate("+x+","+y+")"); }
   function toZone(side,ms){ const R=Math.random; if(side==="H")ballTo(246+R()*112,44+R()*76,ms||650); else if(side==="A")ballTo(42+R()*112,44+R()*76,ms||650); }
   function goal(side){ ballTo(side==="H"?390:10,83,260); if(anim){flash.classList.remove("show");void flash.offsetWidth;flash.classList.add("show");} setTimeout(()=>ballTo(200,83,420),1300); }
+  function cheer(side, big){ if(!anim||!cheerEl)return;
+    cheerEl.setAttribute("fill", side==="A"?awayC1:homeC1);
+    const cls=big?"mpcheer-big":"mpcheer-sm";
+    cheerEl.classList.remove("mpcheer-big","mpcheer-sm"); void cheerEl.getBoundingClientRect(); cheerEl.classList.add(cls);
+    if(big){ crowd.classList.remove("mpcrowd-cheer"); void crowd.getBoundingClientRect(); crowd.classList.add("mpcrowd-cheer"); }
+  }
   function reset(){ ballTo(200,83,300); }
 
   ambience(!!opts.night, opts.crowd); setSurface(key0); ballTo(200,83,0);
-  return {setSurface, toZone, goal, reset, ambience, setAnim:v=>{anim=v;}};
+  return {setSurface, toZone, goal, reset, ambience, cheer, setAnim:v=>{anim=v;}};
 }
 if(typeof module!=="undefined"&&module.exports)module.exports={buildMiniPitch};

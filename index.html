@@ -87,6 +87,12 @@
   @keyframes mpflash{0%{opacity:0}15%{opacity:1}70%{opacity:.5}100%{opacity:0}}
   .livefield #mprain{animation:mprain .5s linear infinite}
   @keyframes mprain{from{transform:translateY(-12px)}to{transform:translateY(0)}}
+  .livefield #mpcheer.mpcheer-big{animation:mpcheerB 1s ease both}
+  .livefield #mpcheer.mpcheer-sm{animation:mpcheerS .7s ease both}
+  @keyframes mpcheerB{0%{opacity:0}16%{opacity:.6}100%{opacity:0}}
+  @keyframes mpcheerS{0%{opacity:0}25%{opacity:.26}100%{opacity:0}}
+  .livefield #mpcrowd.mpcrowd-cheer{animation:mpbounce .55s ease}
+  @keyframes mpbounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-2px)}}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{padding:7px 3px;text-align:center;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-size:11px;text-transform:uppercase}
