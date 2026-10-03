@@ -79,6 +79,14 @@
     font-size:23px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;
     box-shadow:0 8px 22px rgba(0,0,0,.5);padding:0}
   #fabFb:active{transform:scale(.93)}
+  .livefield{margin:6px 0;border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:0 8px 20px rgba(0,0,0,.4);position:relative}
+  .livefield .mpwrap{position:relative;line-height:0}
+  .livefield .mpsvg{display:block;width:100%;height:auto}
+  .livefield .mpflash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.55),rgba(255,255,255,0) 60%)}
+  .livefield .mpflash.show{animation:mpflash 1.2s ease both}
+  @keyframes mpflash{0%{opacity:0}15%{opacity:1}70%{opacity:.5}100%{opacity:0}}
+  .livefield #mprain{animation:mprain .5s linear infinite}
+  @keyframes mprain{from{transform:translateY(-12px)}to{transform:translateY(0)}}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{padding:7px 3px;text-align:center;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-size:11px;text-transform:uppercase}
@@ -294,6 +302,7 @@
 <script src="chars.js"></script>
 <script src="media.js"></script>
 <script src="feedback.js"></script>
+<script src="minipitch.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

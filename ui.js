@@ -1093,6 +1093,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     <div class="center muted livemin" id="liveMin">0'</div>
     <div id="liveTL"><i id="liveTLfill"></i></div>
     <div id="liveMom"><i id="liveMomH"></i><i id="liveMomA"></i></div>
+    <div id="liveField" class="livefield"></div>
     <div class="livecomment" id="liveComment">Apito inicial — rola a bola!</div>
     <div id="liveAnim" style="margin:4px 0" hidden></div>
     <div class="livestats" id="liveStats">
@@ -1111,6 +1112,8 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
   function hideAnim(){ if(animEl){ if(animEl._raT)clearTimeout(animEl._raT); animEl.hidden=true; animEl.innerHTML=""; } }
   function showAnim(kind,branch,side){ if(typeof showRelatoAnim!=="function"||!animEl)return; const cl=side==="H"?home:away; showRelatoAnim(animEl,kind,branch,cl&&cl.c1); }
   function showAnimType(type){ if(typeof showRelatoAnimType!=="function"||!animEl||!type)return; showRelatoAnimType(animEl,type,"#f2c200"); }
+  const fieldEl=mo.querySelector("#liveField"); let mp=null;
+  if(fieldEl && typeof buildMiniPitch==="function" && animOn()){ mp=buildMiniPitch(fieldEl,(st.pitch&&st.pitch.key)||"relva"); mp.setAnim(animOn()); } else if(fieldEl){ fieldEl.style.display="none"; }
   let timer,pauseUntil=0,paused=false,htDone=false,mom=50,momSumH=0,momSumA=0,commentHold=0,windowsUsed=0;
   let seqActive=false,seqTimer=null,seqSkip=null,evQueue=[],lastSeqAt=-99999,possSide=null,speed=1;
   const aiSide = userSide==="H"?"A":userSide==="A"?"H":null;
@@ -1158,7 +1161,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
       goalCelebrate(e.side,nm);addEvLine(e.side,"⚽",{m,name:nm});tlDot(m,"#ffcf33");
       scorers[e.side].push({n:lastName(realName)+(own?" (ag)":""),m});refreshScorers();
       if(userSide){ if(!own&&e.side===userSide){bumpR(e.scorer,1.3);if(mk[e.scorer])mk[e.scorer].g++;} else if(own&&e.ogSide===userSide)bumpR(e.ogPid,-1.0); else if(e.side!==userSide)concedePenalty(); }
-      setComment("GOLO do "+nameOf(e.side)+"! "+nm,4);pauseUntil=Date.now()+2600; }
+      setComment("GOLO do "+nameOf(e.side)+"! "+nm,4);pauseUntil=Date.now()+2600; if(mp)mp.goal(e.side); }
     else if(e.type==="yellow"){ addEvLine(e.side,"🟨",{m,name:nameByPid(e.side,e.pid)});tlDot(m,"#f2c200"); if(userSide&&e.side===userSide){bumpR(e.pid,-0.3);if(mk[e.pid])mk[e.pid].yc=true;} setComment("Amarelo — "+nameOf(e.side)+" · "+nameByPid(e.side,e.pid),2);pauseUntil=Date.now()+1500; }
     else if(e.type==="red"){ addEvLine(e.side,"🟥",{m,name:nameByPid(e.side,e.pid)+(e.second?" (2º amarelo)":"")});tlDot(m,"#ef4657"); if(userSide&&e.side===userSide){bumpR(e.pid,-1.3);if(mk[e.pid])mk[e.pid].red=true;} setComment("Vermelho para o "+nameOf(e.side)+"! "+nameByPid(e.side,e.pid),4);pauseUntil=Date.now()+2000; }
     else if(e.type==="disallowed"){ addEvLine(e.side,"🚫",{m,name:"golo anulado"});stat[e.side].sot++;setComment("Golo anulado ao "+nameOf(e.side)+"!",3);pauseUntil=Date.now()+1700; }
@@ -1261,7 +1264,7 @@ function animateMatch(st, userClub, userLine, onFinish, cupPens){
     const cl=side==="H"?home:away, c=cl.c1||"#888";
     commentEl.style.background="linear-gradient("+(side==="H"?"90deg":"270deg")+","+hexA(c,0.32)+","+hexA(c,0.04)+")";
     commentEl.style.borderRadius="8px"; commentEl.style.padding="4px 10px";
-    commentEl.style.borderLeft=(side==="H"?"4px solid "+c:"none"); commentEl.style.borderRight=(side==="A"?"4px solid "+c:"none"); }
+    commentEl.style.borderLeft=(side==="H"?"4px solid "+c:"none"); commentEl.style.borderRight=(side==="A"?"4px solid "+c:"none"); if(mp)mp.toZone(side); }
   function fadeComment(){ if(commentEl.textContent){ commentEl.style.opacity="0"; setTimeout(()=>{ if(commentEl.style.opacity==="0")commentEl.textContent=""; },300); } }
   function playSeq(buildLines,onReveal){
     seqActive=true; paused=true; let i=0, done=false; hideAnim();
