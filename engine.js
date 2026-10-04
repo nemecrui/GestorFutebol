@@ -201,6 +201,8 @@ function pick(a){return a[Math.floor(Math.random()*a.length)]}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function money(m){ if(m>=1)return "€"+(Math.round(m*10)/10)+"M"; return "€"+Math.round(m*1000)+"K"; }
 function randName(){return pick(FIRST)+" "+pick(LAST);}
+function _hash32(s){ s=String(s); let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function _seededRng(seed){ let a=(seed>>>0)||1; return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
 /* ---------- ratings a partir de atributos ---------- */
 function roleRatingAttrs(a,pos){
@@ -217,22 +219,27 @@ function chemFactor(){ const c=(typeof G!=="undefined"&&G&&G.chem!=null)?G.chem:
 function effAt(p,pos){return Math.round(roleRating(p,pos)*fam(p.pos,pos)*formMult(p));}  // nota efetiva num slot (com forma)
 
 /* ---------- geração de jogadores ---------- */
-function makePlayer(pos,level){
+function makePlayer(pos,level,seed){
+  const R=(seed!=null)?_seededRng(seed):Math.random;
+  const _rn=(a,b)=>a+R()*(b-a);
+  const _rint=(a,b)=>Math.floor(_rn(a,b+1));
+  const _pk=arr=>arr[Math.floor(R()*arr.length)];
   const prof=PROFILES[pos]||{};
   const a={};
   ATTR_KEYS.forEach(k=>{
     const emph=prof[k]?prof[k]*0.9:-1.5;
-    a[k]=clamp(Math.round(level+emph+rnd(-2.2,2.2)),1,20);
+    a[k]=clamp(Math.round(level+emph+_rn(-2.2,2.2)),1,20);
   });
-  if(pos!=="GR")a.gr=clamp(Math.round(rnd(1,6)),1,20);   // só GR guarda bem
+  if(pos!=="GR")a.gr=clamp(Math.round(_rn(1,6)),1,20);   // só GR guarda bem
   const tall=["GR","DC","PL"].includes(pos)?184:176;
-  const altura=clamp(Math.round(tall+rnd(-6,8)),162,201);
-  const age=ri(16,36);
+  const altura=clamp(Math.round(tall+_rn(-6,8)),162,201);
+  const age=_rint(16,36);
   const abil=roleRatingAttrs(a,pos);
-  const potential=clamp(abil+(age<23?ri(3,14):ri(-2,4)),abil,99);
+  const potential=clamp(abil+(age<23?_rint(3,14):_rint(-2,4)),abil,99);
   const value=Math.max(0.03,Math.round(Math.pow(abil/60,3.4)*0.16*(age<30?1:0.6)*100)/100);
-  const p={id:PID++, name:randName(), pos, attrs:a, altura, age, potential,
-    value, contractYears:ri(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, morale:clamp(65+ri(-5,10),0,100), trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, banMatches:0, ycBanned:0, wage:0};
+  const nm=(seed!=null)?(_pk(FIRST)+" "+_pk(LAST)):randName();
+  const p={id:PID++, name:nm, pos, attrs:a, altura, age, potential,
+    value, contractYears:_rint(1,4), energy:100, injuredWeeks:0, transferListed:false, form:0, morale:clamp(65+_rint(-5,10),0,100), trainFocus:"Equilibrado", goals:0, apps:0, yc:0, rc:0, banMatches:0, ycBanned:0, wage:0};
   assignTraits(p);
   p.wage=wageFor(p); return p;
 }
@@ -258,7 +265,11 @@ function ensureTraits(){ const apply=arr=>(arr||[]).forEach(p=>{ if(p&&!p.traits
   if(G.academy)apply(G.academy.youth); apply(G.freeAgents);
   (G.loans||[]).forEach(L=>{ if(L&&L.player&&!L.player.traits)assignTraits(L.player); });
 }
-function makeSquad(level){ return SQUAD_TEMPLATE.map(pos=>makePlayer(pos, level+rnd(-1.5,2))); }
+function makeSquad(level,clubName){ return SQUAD_TEMPLATE.map((pos,i)=>{
+  if(clubName==null)return makePlayer(pos, level+rnd(-1.5,2));
+  const lv=level+(_seededRng(_hash32(clubName+"@L"+i))()*3.5-1.5);
+  return makePlayer(pos, lv, _hash32(clubName+"@"+i));
+}); }
 function applyRosterEntry(p,r){                 // aplica overrides opcionais de um jogador definido à mão
   if(r.idade!=null)p.age=clamp(Math.round(r.idade),15,42);
   if(r.altura!=null)p.altura=clamp(Math.round(r.altura),150,215);
@@ -271,17 +282,18 @@ function applyRosterEntry(p,r){                 // aplica overrides opcionais de
   }
   return p;
 }
-function makeSquadFromRoster(roster,level){
-  const squad=roster.map(r=>{const p=makePlayer(r.p, r.nivel!=null?clamp(r.nivel,1,20):level); p.name=r.n; return applyRosterEntry(p,r);});
-  let gk=squad.filter(p=>p.pos==="GR").length; while(gk<3){ squad.push(makePlayer("GR",level)); gk++; }
+function makeSquadFromRoster(roster,level,clubName){
+  const sd=(clubName==null)?(()=>null):(key=>_hash32(clubName+"|"+key));
+  const squad=roster.map((r,i)=>{const p=makePlayer(r.p, r.nivel!=null?clamp(r.nivel,1,20):level, sd(r.n+"|"+r.p+"|"+i)); p.name=r.n; p.real=true; return applyRosterEntry(p,r);});
+  let gk=squad.filter(p=>p.pos==="GR").length, gi=0; while(gk<3){ squad.push(makePlayer("GR",level, sd("gk"+gi))); gk++; gi++; }
   const fillPos=["DC","LD","LE","DC","MC","MDC","MC","ME","MD","MO","PL","ED","EE","PL","DC","MC","PL","LE","LD","DC","MC","MO"];
-  let fi=0; while(squad.length<27){ squad.push(makePlayer(fillPos[fi%fillPos.length],level)); fi++; }
+  let fi=0; while(squad.length<27){ squad.push(makePlayer(fillPos[fi%fillPos.length],level, sd("fill"+fi))); fi++; }
   return squad;
 }
 function clubFromDef(d,id){
   const level=clamp(Math.round(d.str/5),4,16);
   return {id, name:d.n, short:d.s, c1:d.c1, c2:d.c2, strength:d.str, crest:d.crest||null,
-    budget:Math.round(rnd(0.06,0.28)*100)/100, squad:(d.roster?makeSquadFromRoster(d.roster,level):makeSquad(level)),
+    budget:Math.round(rnd(0.06,0.28)*100)/100, squad:(d.roster?makeSquadFromRoster(d.roster,level,d.n):makeSquad(level,d.n)),
     susp:[], P:0,W:0,D:0,L:0,GF:0,GA:0,Pts:0};
 }
 

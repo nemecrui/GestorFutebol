@@ -447,6 +447,10 @@ function viewHome(){
   const rank=table.findIndex(x=>x.id===G.myId)+1;
   const next=nextFixture(), done=d.week>=d.fixtures.length;
   let h="";
+  h+=`<div class="card" style="border-color:var(--accent);display:flex;gap:10px;align-items:center">
+      <div style="font-size:26px">📇</div>
+      <div style="flex:1"><div style="font-weight:800;font-size:14px">Encontra-te no jogo</div><div class="muted" style="font-size:11px">Procura o teu clube e o teu nome — e partilha o teu cartão de jogador.</div></div>
+      <button class="btn small" id="btnFindMe">Abrir</button></div>`;
   if(canInstall()){
     h+=`<div class="card" style="border-color:var(--accent);display:flex;gap:10px;align-items:center">
       <div style="font-size:28px">📲</div>
@@ -1663,6 +1667,7 @@ function bindView(){
   { const pd=$("#pressDone"); if(pd)pd.onclick=()=>{if(typeof closePress==="function")closePress();TAB="home";render();}; }
   document.querySelectorAll("[data-preq]").forEach(b=>b.onclick=()=>{if(typeof resolvePlayerRequest==="function")resolvePlayerRequest(b.dataset.preq);TAB="home";render();});
   const meetBlock=()=>{ if(G.meeting&&G.meeting.active){ toast("Responde primeiro à reunião com a direção.");TAB="home";render();return true; } if(G.capMeeting&&G.capMeeting.active){ toast("Responde primeiro à reunião sobre o capitão.");TAB="home";render();return true; } if(G.discipline&&G.discipline.active){ toast("Resolve primeiro o caso de indisciplina.");TAB="home";render();return true; } if(G.press&&G.press.active){ toast("Responde primeiro à conferência de imprensa.");TAB="home";render();return true; } if(G.playerReq&&G.playerReq.active){ toast("Responde primeiro ao pedido do jogador.");TAB="home";render();return true; } return false; };
+  { const bfm=$("#btnFindMe"); if(bfm)bfm.onclick=()=>{ if(typeof openFindYourself==="function")openFindYourself(); }; }
   const bco=$("#btnContinue");if(bco)bco.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const r=(typeof advanceToNextStop==="function")?advanceToNextStop():"match";render();if(r==="offer")toast("📩 Recebeste uma proposta.");else if(r==="match")toast("🗓️ Dia de jogo!");};
   const bp=$("#btnPlay");if(bp)bp.onclick=()=>{if(meetBlock())return;if(cupBlocksLeague()){toast("Joga primeiro a eliminatória da Taça (jornada "+cupRoundDue()+")");TAB="home";render();return;}const st=(typeof flushToMatch==="function")?flushToMatch():null;if(st){render();return;}if(!ensureValidXI())return;const nx=nextFixture();if(!nx){playWeek();render();return;}openPreMatch(nx,(boost)=>playMatchAnimated(boost));};
   const bcup=$("#btnCup");if(bcup)bcup.onclick=()=>{if(meetBlock())return;playCupTie();};
