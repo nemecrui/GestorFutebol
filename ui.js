@@ -447,10 +447,6 @@ function viewHome(){
   const rank=table.findIndex(x=>x.id===G.myId)+1;
   const next=nextFixture(), done=d.week>=d.fixtures.length;
   let h="";
-  h+=`<div class="card" style="border-color:var(--accent);display:flex;gap:10px;align-items:center">
-      <div style="font-size:26px">📇</div>
-      <div style="flex:1"><div style="font-weight:800;font-size:14px">Encontra-te no jogo</div><div class="muted" style="font-size:11px">Procura o teu clube e o teu nome — e partilha o teu cartão de jogador.</div></div>
-      <button class="btn small" id="btnFindMe">Abrir</button></div>`;
   if(canInstall()){
     h+=`<div class="card" style="border-color:var(--accent);display:flex;gap:10px;align-items:center">
       <div style="font-size:28px">📲</div>
@@ -629,6 +625,10 @@ function viewHome(){
       return `<div class="fx" style="${mine?'border-color:var(--accent)':''}"><div class="t">${clubTagFull(H)}</div><div class="sc">${r.hg} - ${r.ag}</div><div class="t a">${clubTagFull(A)}</div></div>`;}).join("")+`</div>`;
   }
   h+=`<div class="card"><h2>Notícias</h2>${(G.news||[]).slice(0,5).map(n=>`<div class="ev">${n.t}</div>`).join("")||'<div class="muted">Sem notícias.</div>'}</div>`;
+  h+=`<div class="card" style="border-color:var(--accent);display:flex;gap:10px;align-items:center">
+      <div style="font-size:26px">📇</div>
+      <div style="flex:1"><div style="font-weight:800;font-size:14px">Encontra-te no jogo</div><div class="muted" style="font-size:11px">Procura o teu clube e o teu nome — e partilha o teu cartão de jogador.</div></div>
+      <button class="btn small" id="btnFindMe">Abrir</button></div>`;
   if(G.manager){
     const st=G.manager.stats||{P:0,W:0,D:0,L:0,GF:0,GA:0}, tr=G.manager.trophies||[];
     h+=`<div class="card"><h2>🏅 Palmarés · ${G.manager.name}</h2>

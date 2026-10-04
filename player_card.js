@@ -111,21 +111,22 @@ function openFindYourself(){
 
   function divisions(){
     let h=header("📇 Encontra-te no jogo")+`<div class="muted center" style="font-size:12px;margin-bottom:12px">Escolhe a divisão, o teu clube e o teu nome — e partilha o teu cartão.</div>`;
-    (G.divisions||[]).forEach((d,i)=>{ h+=`<button class="btn sec" data-div="${i}" style="width:100%;margin-bottom:6px">${d.name}</button>`; });
+    (G.divisions||[]).forEach((d,i)=>{ if(!d.clubs.some(c=>c.squad.some(p=>p.real)))return; h+=`<button class="btn sec" data-div="${i}" style="width:100%;margin-bottom:6px">${d.name}</button>`; });
     box.innerHTML=h; bindX();
     box.querySelectorAll("[data-div]").forEach(b=>b.onclick=()=>clubs(+b.dataset.div));
   }
   function clubs(di){
-    const d=G.divisions[di]; let cl=d.clubs.filter(c=>c.squad.some(p=>p.real)); if(!cl.length)cl=d.clubs.slice(); cl=cl.sort((a,b)=>a.name.localeCompare(b.name,"pt"));
+    const d=G.divisions[di]; const cl=d.clubs.filter(c=>c.squad.some(p=>p.real)).sort((a,b)=>a.name.localeCompare(b.name,"pt"));
     let h=header(d.name)+`<button class="btn sec small" id="fyBack" style="margin-bottom:8px">← Divisões</button>`;
     cl.forEach(c=>{ h+=`<button class="btn sec" data-c="${encodeURIComponent(c.name)}" style="width:100%;margin-bottom:6px;display:flex;align-items:center;gap:8px;justify-content:flex-start">${sw(c,true)}<span>${c.name}</span></button>`; });
+    if(!cl.length)h+=`<div class="muted center" style="font-size:12px;margin-top:8px">Ainda sem plantéis reais nesta divisão.</div>`;
     box.innerHTML=h; bindX();
     box.querySelector("#fyBack").onclick=divisions;
     box.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>players(di,decodeURIComponent(b.dataset.c)));
   }
   function players(di,cname){
     const d=G.divisions[di], c=d.clubs.find(x=>x.name===cname);
-    let sq=c.squad.filter(p=>p.real); if(!sq.length)sq=c.squad.slice(); sq=sq.sort((a,b)=>ab(b)-ab(a));
+    const sq=c.squad.filter(p=>p.real).sort((a,b)=>ab(b)-ab(a));
     let h=header(c.name)+`<button class="btn sec small" id="fyBack" style="margin-bottom:8px">← Clubes</button>
       <div class="muted center" style="font-size:11px;margin-bottom:8px">Toca no teu nome para gerar o cartão</div>`;
     sq.forEach(p=>{ h+=`<button class="btn sec" data-pid="${p.id}" style="width:100%;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center">
