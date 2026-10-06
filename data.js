@@ -305,7 +305,8 @@ const GAME_DATA = {
      Sem logo nem svg, mostra um crachá com as iniciais na cor "cor". */
   orgaos: [
     // { nome:"Correio do Exemplo", tipo:"Jornal", cor:"#c1121f", logo:"media/exemplo.png" }
-    { nome:"Grande Área – Rádio Alto Ave", tipo:"Rádio", cor:"#0ea5e9", jornalista:"António Silva", logo:"media/radio_alto_ave.png" }
+    { nome:"Grande Área – Rádio Alto Ave", tipo:"Rádio", cor:"#0ea5e9", jornalista:"António Silva", logo:"media/radio_alto_ave.png" },
+	{ nome:"AF Braga | 1ª Divisão Série F", tipo:"Jornal", cor:"#0ea5e9", logo:"media/serie_f.png" }
   ],
 
   /* ---- ARBITRAGEM ----

@@ -22,7 +22,14 @@ const NEWS_PAPERS = [
   { nome:"Bola do Ave",     cor:"#15803d", lema:"A paixão do futebol do Vale do Ave" }
 ];
 
-function _npPaper(){ return NEWS_PAPERS[Math.floor(Math.random()*NEWS_PAPERS.length)]; }
+function _npPaper(){
+  let pool=NEWS_PAPERS.slice();
+  try{ if(typeof GAME_DATA!=="undefined"&&GAME_DATA&&Array.isArray(GAME_DATA.orgaos)){
+    GAME_DATA.orgaos.forEach(function(o){ if(o&&o.tipo==="Jornal"&&o.nome)
+      pool.push({nome:o.nome, cor:o.cor||"#1d4ed8", lema:o.lema||"", real:true, logo:o.logo||null}); });
+  } }catch(e){}
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 function _npPick(a){ return a[Math.floor(Math.random()*a.length)]; }
 function _npLast(name){ return (name||"").split(" ").slice(-1)[0]; }
 
@@ -190,9 +197,14 @@ async function genNewspaper(info){
   const line=(y,w)=>{ x.strokeStyle=RULE; x.lineWidth=w||2; x.beginPath(); x.moveTo(M,y); x.lineTo(W-M,y); x.stroke(); };
 
   // ---- masthead ----
+  const _plogo = info.paper.logo ? await _npLoadImg(info.paper.logo) : null;
   x.textAlign="center"; x.fillStyle=INK;
-  x.font="700 76px "+SERIF; x.fillText(info.paper.nome, W/2, 104);
-  x.font="italic 24px "+SERIF; x.fillStyle=MUT; x.fillText(info.paper.lema, W/2, 138);
+  const _nameMax = _plogo ? (W-2*M-220) : (W-2*M);
+  let _mfs=76; x.font="700 "+_mfs+"px "+SERIF;
+  while(x.measureText(info.paper.nome).width>_nameMax && _mfs>30){ _mfs-=2; x.font="700 "+_mfs+"px "+SERIF; }
+  x.fillText(info.paper.nome, W/2, 104);
+  if(info.paper.lema){ x.font="italic 24px "+SERIF; x.fillStyle=MUT; x.fillText(info.paper.lema, W/2, 138); }
+  if(_plogo){ const _ls=96; x.drawImage(_plogo, M, 40, _ls, _ls); }
   line(158,4); line(166,1.5);
   x.font="700 20px "+SANS; x.fillStyle=MUT; x.textAlign="left";
   x.fillText("ÉPOCA "+info.season+(info.divName?"  ·  "+info.divName.toUpperCase():""), M, 192);
@@ -264,7 +276,7 @@ async function genNewspaper(info){
   x.fillStyle=acc; x.fillRect(0, H-96, W, 96);
   x.textAlign="left"; x.fillStyle="#fff"; x.font="800 40px "+SERIF; x.fillText("gestorfutebol.pt", M, H-40);
   x.textAlign="right"; x.font="700 22px "+SANS; x.fillStyle="rgba(255,255,255,.88)";
-  x.fillText("capa fictícia · "+info.paper.nome, W-M, H-40);
+  x.fillText((info.paper.real?"edição regional · ":"capa fictícia · ")+info.paper.nome, W-M, H-40);
 
   return cv.toDataURL("image/png");
 }
